@@ -1,0 +1,47 @@
+app:
+  version: ${project.version} # Replaced by Gradle
+  security:
+    encryptionKeyBase64: # Override in application-local.yml, see local/readme.md
+  frontend:
+    host: http://localhost:3000
+    basePath: /kiri
+    cookiesDomain: localhost
+  database:
+    postgres:
+      host: localhost
+      port: 5432
+      db-name: kiri
+      username: postgres
+      password: postgres
+  integration:
+    telegram:
+      apiKey: # Override in application-local.yml, see local/readme.md
+    anthropic:
+      apiKey: # Override in application-local.yml, see local/readme.md
+    openai:
+      apiKey: # Override in application-local.yml, see local/readme.md
+
+server:
+  port: 8080
+
+spring:
+  config:
+    import: "optional:file:./local/application-local.yml"
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  jpa:
+    open-in-view: false
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+logging:
+  level:
+    root: INFO
+    io:
+      ktor: OFF
