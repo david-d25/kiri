@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 /**
  * Represents the options used for link preview generation.
- *
- * [Reference](https://core.telegram.org/bots/api#linkpreviewoptions)
  */
 data class TelegramLinkPreviewOptions (
     /**

@@ -1,10 +1,5 @@
 package space.davids_digital.kiri.model.telegram
 
-/**
- * Represents a video file.
- *
- * [Reference](https://core.telegram.org/bots/api#video)
- */
 data class TelegramVideo (
     /**
      * Identifier for this file, which can be used to download or reuse the file.

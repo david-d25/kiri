@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 /**
  * Telegram chat photo model.
- *
- * [Reference](https://core.telegram.org/bots/api#chatphoto)
  */
 data class TelegramChatPhoto (
     /**

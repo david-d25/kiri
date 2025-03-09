@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 /**
  * Represents paid media added to a message.
- *
- * [Reference](https://core.telegram.org/bots/api#paidmediainfo)
  */
 data class TelegramPaidMediaInfo (
     /**

@@ -1,8 +1,5 @@
 package space.davids_digital.kiri.model.telegram
 
-/**
- * [Reference](https://core.telegram.org/bots/api#story)
- */
 data class TelegramStory (
     /**
      * Chat that posted the story.

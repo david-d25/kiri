@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 /**
  * Represents a document that can be sent to a Telegram chat.
- *
- * [Reference](https://core.telegram.org/bots/api#document)
  */
 data class TelegramDocument (
     /**

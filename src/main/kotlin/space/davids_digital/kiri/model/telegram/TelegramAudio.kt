@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 /**
  * Represents an audio file to be treated as music by the Telegram clients.
- *
- * [Reference](https://core.telegram.org/bots/api#audio)
  */
 data class TelegramAudio (
     /**
