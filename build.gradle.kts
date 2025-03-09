@@ -31,7 +31,7 @@ dependencies {
     implementation("com.aallam.openai:openai-client")
 
     // Anthropic
-    implementation("com.anthropic:anthropic-java:0.5.0")
+    implementation("com.anthropic:anthropic-java:0.7.0")
 
     runtimeOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.10")

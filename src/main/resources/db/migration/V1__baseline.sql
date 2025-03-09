@@ -1,3 +1,7 @@
+create table telegram_chats (
+    id bigint primary key
+);
+
 create table user_sessions (
     id                      uuid primary key,
     user_id                 bigint not null,
