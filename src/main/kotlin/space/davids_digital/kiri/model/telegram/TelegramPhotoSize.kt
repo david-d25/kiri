@@ -3,7 +3,6 @@ package space.davids_digital.kiri.model.telegram
 /**
  * Represents one size of a photo or a file / sticker thumbnail.
  * TODO links
- * [Reference](https://core.telegram.org/bots/api#photosize)
  */
 data class TelegramPhotoSize (
     /**

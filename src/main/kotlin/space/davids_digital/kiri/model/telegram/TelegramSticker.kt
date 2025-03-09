@@ -1,8 +1,5 @@
 package space.davids_digital.kiri.model.telegram
 
-/**
- * [Reference](https://core.telegram.org/bots/api#sticker)
- */
 data class TelegramSticker (
     /**
      * Identifier for this file, which can be used to download or reuse the file.

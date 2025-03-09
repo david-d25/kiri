@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 /**
  * Represents a phone contact.
- *
- * [Reference](https://core.telegram.org/bots/api#contact)
  */
 data class TelegramContact(
     /**

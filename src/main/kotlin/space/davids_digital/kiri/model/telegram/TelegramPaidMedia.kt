@@ -1,10 +1,5 @@
 package space.davids_digital.kiri.model.telegram
 
-/**
- * Represents paid media.
- *
- * [Reference](https://core.telegram.org/bots/api#paidmedia)
- */
 sealed class TelegramPaidMedia {
     /**
      * The paid media isn't available before the payment.

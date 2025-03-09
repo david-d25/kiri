@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 /**
  * Represents information about a message that is being replied to, which may come from another chat or forum topic.
- *
- * [Reference](https://core.telegram.org/bots/api#externalreplyinfo)
  */
 data class TelegramExternalReplyInfo (
     /**

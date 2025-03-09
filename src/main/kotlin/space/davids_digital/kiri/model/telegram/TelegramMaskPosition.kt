@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 /**
  * Represents the position on faces where a mask should be placed by default.
- *
- * [Reference](https://core.telegram.org/bots/api#maskposition)
  */
 data class TelegramMaskPosition (
     /**

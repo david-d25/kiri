@@ -4,8 +4,6 @@ typealias TelegramUserId = Long
 
 /**
  * Represents a Telegram user or bot.
- *
- * [Reference](https://core.telegram.org/bots/api#user)
  */
 data class TelegramUser (
     /**
