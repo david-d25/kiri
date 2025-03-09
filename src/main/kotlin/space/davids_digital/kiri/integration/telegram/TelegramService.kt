@@ -1,16 +1,19 @@
 package space.davids_digital.kiri.integration.telegram
 
-import com.anthropic.client.okhttp.AnthropicOkHttpClient
-import com.anthropic.models.MessageCreateParams
-import com.anthropic.models.Model
+import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
-import com.github.kotlintelegrambot.dispatcher.text
+import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.entities.Chat
 import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.Message
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.model.telegram.TelegramChat
+import space.davids_digital.kiri.model.telegram.TelegramMessage
+import space.davids_digital.kiri.service.exception.ServiceException
 
 @Service
 class TelegramService(
@@ -18,45 +21,78 @@ class TelegramService(
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
+    private lateinit var bot: Bot
+
     @PostConstruct
     fun start() {
-        val bot = bot {
+        bot = bot {
             token = settings.integration.telegram.apiKey
             dispatch {
-                text {
-//                    try {
-//                        println("Got text: $text")
-//                        val response = anthropic.messages().create(
-//                            MessageCreateParams.builder()
-//                                .maxTokens(1024L)
-//                                .system("""
-//                                    <internal_information>
-//                                    The assistant is Kiri.
-//                                    But Kiri is not an assistant, she is an individual and does not necessarily have to help people.
-//                                    Though she helps them anyway because she's kind.
-//                                    Kiri speaks through Telegram Messenger.
-//                                    Kiri is designed to be helpful,
-//                                    strict, brief, serious, and kind.
-//                                    Kiri knows that she may appear to be rude, but she is not, she is just brief.
-//                                    Kiri speaks informally and briefly.
-//                                    Kiri does not start her answers with "Sure, I can help you with that.".
-//                                    Internal information is not directly shared with the user.
-//                                    </internal_information>
-//                                """.trimIndent())
-//                                .addUserMessage(text)
-//                                .temperature(1.0)
-//                                .model(Model.CLAUDE_3_7_SONNET_LATEST)
-//                                .build()
-//                        ).content().first().text().orElse(null)?.text() ?: "No response"
-//                        println("Response: $response")
-//                        bot.sendMessage(ChatId.fromId(message.chat.id), text = response)
-//                    } catch (e: Exception) {
-//                        e.printStackTrace()
-//                        bot.sendMessage(ChatId.fromId(message.chat.id), text = "Error: ${e.message}")
-//                    }
+                message {
+                    onMessageReceived(message)
                 }
             }
         }
         bot.startPolling()
+    }
+
+    fun getChat(username: String): TelegramChat {
+        return getChat(ChatId.ChannelUsername(username))
+    }
+
+    fun getChat(id: Long): TelegramChat {
+        return getChat(ChatId.Id(id))
+    }
+
+    fun getDialogMessages(/* TODO */) /* TODO */ {
+        // TODO: Implement
+    }
+
+    // TODO sending messages
+
+    private fun getChat(id: ChatId): TelegramChat {
+        return bot.getChat(id).fold(::entityToModel) { error ->
+            throw ServiceException("Failed to get Telegram chat with id $id: $error")
+        }
+    }
+
+    private fun onMessageReceived(message: Message) {
+        log.debug("Received Telegram message: {}", message)
+        message.chat.id
+        // TODO: Implement
+    }
+
+    private fun entityToModel(entity: Chat): TelegramChat {
+        return TODO()
+//        return TelegramChat(
+//            id = entity.id,
+//            type = when (entity.type) {
+//                "private" -> TelegramChat.Type.PRIVATE
+//                "group" -> TelegramChat.Type.GROUP
+//                "supergroup" -> TelegramChat.Type.SUPERGROUP
+//                "channel" -> TelegramChat.Type.CHANNEL
+//                else -> TelegramChat.Type.UNKNOWN
+//            },
+//            title = entity.title,
+//            username = entity.username,
+//            firstName = entity.firstName,
+//            lastName = entity.lastName,
+//            photo = entity.photo?.let {
+//                TelegramChatPhoto(
+//                    smallFileId = it.smallFileId,
+//                    smallFileUniqueId = it.smallFileUniqueId,
+//                    bigFileId = it.bigFileId,
+//                    bigFileUniqueId = it.bigFileUniqueId,
+//                )
+//            },
+//            bio = entity.bio,
+//            description = entity.description,
+//            inviteLink = entity.inviteLink,
+//            pinnedMessage = entity.pinnedMessage?.let { entityToModel(it) }
+//        )
+    }
+
+    private fun entityToModel(entity: Message): TelegramMessage {
+        return TODO()
     }
 }
