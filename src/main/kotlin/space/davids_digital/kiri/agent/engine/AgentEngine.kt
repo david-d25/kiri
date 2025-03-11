@@ -12,16 +12,20 @@ import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppSystem
 import space.davids_digital.kiri.agent.frame.Frame
 import space.davids_digital.kiri.agent.frame.FrameRenderer
+import space.davids_digital.kiri.agent.tool.AgentToolMethod
+import space.davids_digital.kiri.agent.tool.AgentToolNamespace
+import space.davids_digital.kiri.agent.tool.AgentToolProvider
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
 import java.util.LinkedList
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Service
+@AgentToolNamespace("engine")
 class AgentEngine(
     private val appSystem: AppSystem,
     private val frameRenderer: FrameRenderer,
     private val anthropicMessagesService: AnthropicMessagesService,
-) {
+) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 5000L
     }
@@ -95,7 +99,14 @@ class AgentEngine(
 
     private suspend fun tick() {
         val input = frameRenderer.render(frames)
-
+        // TODO
         delay(5000)
+    }
+
+    override fun getAvailableAgentToolMethods() = listOf(::think)
+
+    @AgentToolMethod(name = "think", description = "Think to yourself")
+    private fun think(thoughts: String) {
+        addFrame { type = "thought"; content = thoughts }
     }
 }
