@@ -62,7 +62,7 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
         tools(buildTools(request.tools))
         toolChoice(
             when (request.tools.choice) {
-                LlmMessageRequest.Tools.ToolChoice.AUTO ->ToolChoice.ofAuto(
+                LlmMessageRequest.Tools.ToolChoice.AUTO -> ToolChoice.ofAuto(
                     ToolChoiceAuto.builder()
                         .disableParallelToolUse(!request.tools.allowParallelUse)
                         .build()
@@ -146,7 +146,7 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
                         ToolUseBlockParam.builder()
                             .id(contentItem.id)
                             .name(contentItem.name)
-                            .input(JsonValue.fromJsonNode(contentItem.parameters))
+                            .input(JsonValue.fromJsonNode(contentItem.input))
                             .build()
                     )
                     is Message.ContentItem.ToolResult -> ContentBlockParam.ofToolResult(

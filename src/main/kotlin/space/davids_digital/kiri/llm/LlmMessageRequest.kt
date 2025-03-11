@@ -16,7 +16,7 @@ data class LlmMessageRequest<MODEL> (
         sealed class ContentItem {
             data class Text (val text: String) : ContentItem(), ContentValueItem
             data class Image (val data: ByteArray, val mediaType: MediaType) : ContentItem(), ContentValueItem
-            data class ToolUse (val id: String, val name: String, val parameters: JsonNode) : ContentItem()
+            data class ToolUse (val id: String, val name: String, val input: JsonNode) : ContentItem()
             data class ToolResult (val toolUseId: String, val content: List<ContentValueItem>) : ContentItem()
             enum class MediaType { JPEG, PNG, GIF, WEBP }
         }
