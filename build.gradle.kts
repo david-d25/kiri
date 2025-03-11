@@ -16,6 +16,10 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+tasks.test {
+    useJUnitPlatform()
+}
+
 tasks.processResources {
     filesMatching("*") {
         expand(project.properties)
@@ -68,6 +72,9 @@ dependencies {
     implementation("org.springframework:spring-context:6.2.3")
     implementation("org.springframework:spring-web:6.2.3")
     implementation("org.springframework:spring-webmvc:6.2.3")
+
+    // Tests
+    testImplementation(kotlin("test"))
 }
 
 repositories {
