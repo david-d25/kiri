@@ -95,7 +95,7 @@ class AgentEngine(
 
     private suspend fun tick() {
         val input = frameRenderer.render(frames)
-        val response = anthropicMessagesService.createTemp(input)
+
         delay(5000)
     }
 }
