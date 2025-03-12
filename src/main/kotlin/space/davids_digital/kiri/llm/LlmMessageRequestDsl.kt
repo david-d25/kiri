@@ -35,7 +35,7 @@ class LlmMessageRequestBuilder<MODEL> {
         tools = LlmMessageRequestToolsBuilder().apply(block).build()
     }
 
-    fun build(): LlmMessageRequest<Any> {
+    fun build(): LlmMessageRequest<MODEL> {
         requireNotNull(model) { "model must be set" }
         return LlmMessageRequest(model!!, system, messages, maxOutputTokens, temperature, tools)
     }

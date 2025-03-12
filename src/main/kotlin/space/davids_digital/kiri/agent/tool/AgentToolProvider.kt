@@ -17,4 +17,11 @@ interface AgentToolProvider {
      * using [Any.toString].
      */
     fun getAvailableAgentToolMethods(): Collection<Function<*>>
+
+    /**
+     * Returns a collection of providers for which this provider is parent.
+     * When a provider has sub-providers, it must have a non-empty namespace.
+     * @see AgentToolNamespace
+     */
+    fun getSubProviders(): Collection<AgentToolProvider> = emptySet()
 }

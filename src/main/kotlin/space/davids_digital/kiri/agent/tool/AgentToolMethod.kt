@@ -9,6 +9,9 @@ package space.davids_digital.kiri.agent.tool
 annotation class AgentToolMethod(
     /**
      * Method name for agent. Leave blank to use component method name by default.
+     *
+     * Name should only contain alphanumeric characters and underscores.
+     * @see AgentToolScanner.validateMethodName
      */
     val name: String = "",
 
