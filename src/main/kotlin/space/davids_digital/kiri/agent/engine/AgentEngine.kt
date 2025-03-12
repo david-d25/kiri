@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.agent.engine
 
+import com.anthropic.models.Model
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,10 +13,15 @@ import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppSystem
 import space.davids_digital.kiri.agent.frame.Frame
 import space.davids_digital.kiri.agent.frame.FrameRenderer
+import space.davids_digital.kiri.agent.tool.AgentToolMapper
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
+import space.davids_digital.kiri.agent.tool.AgentToolRegistry
+import space.davids_digital.kiri.agent.tool.AgentToolScanner
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
+import space.davids_digital.kiri.llm.LlmMessageRequest
+import space.davids_digital.kiri.llm.llmMessageRequest
 import java.util.LinkedList
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -92,15 +98,38 @@ class AgentEngine(
             content = "System started."
         }
         addFrame {
-            type = "tips"
+            type = "system"
             content = "System is cold-started. Please explore the environment to warm up your memory."
         }
     }
 
     private suspend fun tick() {
         val input = frameRenderer.render(frames)
+        val toolRegistry = AgentToolRegistry()
+        val toolScanner = AgentToolScanner()
+        toolScanner.scan(this, toolRegistry)
+        val request = buildRequest(input)
+        anthropicMessagesService.request(request)
         // TODO
         delay(5000)
+    }
+
+    private fun buildRequest(input: String): LlmMessageRequest<Model> {
+        val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
+        return llmMessageRequest {
+            model = Model.CLAUDE_3_7_SONNET_LATEST
+            system = systemText ?: ""
+            userMessage {
+                text(input)
+            }
+            maxOutputTokens = 1024
+            temperature = 0.5
+            tools {
+                choice = LlmMessageRequest.Tools.ToolChoice.REQUIRED
+                allowParallelUse = false
+                functions = TODO()
+            }
+        }
     }
 
     override fun getAvailableAgentToolMethods() = listOf(::think)
