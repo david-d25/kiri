@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component
  * How methods are resolved:
  * - Each method is registered with a path and a name.
  * - The path is a list of namespaces.
- * - Namespaces and the name are separated by a dot.
+ * - Namespaces and the name are separated by an underscore.
  *
- * Foe example, the method `foo.bar.baz` would be registered with the path `["foo", "bar"]` and the name `baz`.
+ * Foe example, the method `foo_bar_baz` would be registered with the path `["foo", "bar"]` and the name `baz`.
  */
 @Component
 class AgentToolRegistry {
@@ -50,7 +50,7 @@ class AgentToolRegistry {
      * For example, `foo.bar.baz` would be resolved with the path `["foo", "bar"]` and the name `baz`.
      */
     fun find(fullName: String): Entry? {
-        val parts = fullName.split('.')
+        val parts = fullName.split('_')
         return find(parts.dropLast(1), parts.last())
     }
 
@@ -97,7 +97,9 @@ class AgentToolRegistry {
         val name: String,
         val description: String?,
         val callable: Function<*>
-    )
+    ) {
+        val fullName = (path + name).joinToString("_")
+    }
 
     private class Node {
         val functions = mutableMapOf<String, Entry>()

@@ -12,6 +12,20 @@ class AgentToolScanner {
     }
 
     /**
+     * Scans a collection of tool providers for methods annotated with [AgentToolMethod] and registers them in the
+     * [AgentToolRegistry].
+     *
+     * @return the total number of methods registered
+     */
+    fun scan(toolProviders: Iterable<AgentToolProvider>, registry: AgentToolRegistry): Int {
+        var count = 0
+        for (toolProvider in toolProviders) {
+            count += scan(toolProvider, registry)
+        }
+        return count
+    }
+
+    /**
      * Scans a tool provider for methods annotated with [AgentToolMethod] and registers them in the [AgentToolRegistry].
      *
      * @return the number of methods registered
@@ -64,10 +78,10 @@ class AgentToolScanner {
     }
 
     private fun validateNamespace(namespace: String): Boolean {
-        return namespace.matches(Regex("[a-zA-Z0-9_]*"))
+        return namespace.matches(Regex("[a-zA-Z0-9]*"))
     }
 
     private fun validateMethodName(name: String): Boolean {
-        return name.matches(Regex("[a-zA-Z0-9_]+"))
+        return name.matches(Regex("[a-zA-Z0-9]+"))
     }
 }

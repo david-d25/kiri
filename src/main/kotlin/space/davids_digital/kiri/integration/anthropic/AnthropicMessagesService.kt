@@ -189,39 +189,60 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
     }
 
     private fun buildInputSchema(parameters: ParameterValue.ObjectValue): Tool.InputSchema {
-        return Tool.InputSchema.builder()
+        val builder = Tool.InputSchema.builder()
             .type(JsonValue.from("object"))
-            .properties(JsonValue.from(parameters.properties.mapValues { mapParamToJson(it.value) }))
-            .additionalProperties(mapOf(
+            .properties(JsonValue.from(parameters.properties.mapValues { mapParameterToJson(it.value) }))
+
+        if (parameters.required.isNotEmpty()) {
+            builder.additionalProperties(mapOf(
                 "required" to JsonValue.from(parameters.required),
             ))
-            .build()
+        }
+
+        return builder.build()
     }
 
-    private fun mapParamToJson(value: ParameterValue): JsonValue {
+    private fun mapParameterToJson(value: ParameterValue): JsonValue {
         return when (value) {
-            is ParameterValue.ObjectValue -> JsonValue.from(
-                value.properties.mapValues { mapParamToJson(it.value) }.toMap()
-            )
-            is ParameterValue.StringValue -> JsonValue.from(
-                mapOf(
-                    "type" to JsonValue.from("string"),
-                    "description" to JsonValue.from(value.description),
-                    "enum" to JsonValue.from(value.enum),
+            is ParameterValue.ObjectValue -> {
+                val map = mutableMapOf(
+                    "type" to JsonValue.from("object"),
+                    "properties" to JsonValue.from(value.properties.mapValues { mapParameterToJson(it.value) }),
                 )
-            )
-            is ParameterValue.NumberValue -> JsonValue.from(
-                mapOf(
-                    "type" to JsonValue.from("number"),
-                    "description" to JsonValue.from(value.description),
-                )
-            )
-            is ParameterValue.BooleanValue -> JsonValue.from(
-                mapOf(
-                    "type" to JsonValue.from("boolean"),
-                    "description" to JsonValue.from(value.description),
-                )
-            )
+                if (value.required.isNotEmpty()) {
+                    map["required"] = JsonValue.from(value.required)
+                }
+                if (value.description != null) {
+                    map["description"] = JsonValue.from(value.description)
+                }
+                JsonValue.from(map)
+            }
+
+            is ParameterValue.StringValue -> {
+                val map = mutableMapOf("type" to JsonValue.from("string"))
+                if (value.description != null) {
+                    map["description"] = JsonValue.from(value.description)
+                }
+                if (value.enum?.isNotEmpty() == true) {
+                    map["enum"] = JsonValue.from(value.enum)
+                }
+                JsonValue.from(map)
+            }
+
+            is ParameterValue.NumberValue -> {
+                val map = mutableMapOf("type" to JsonValue.from("number"))
+                if (value.description != null) {
+                    map["description"] = JsonValue.from(value.description)
+                }
+                JsonValue.from(map)
+            }
+            is ParameterValue.BooleanValue -> {
+                val map = mutableMapOf("type" to JsonValue.from("boolean"))
+                if (value.description != null) {
+                    map["description"] = JsonValue.from(value.description)
+                }
+                JsonValue.from(map)
+            }
         }
     }
 

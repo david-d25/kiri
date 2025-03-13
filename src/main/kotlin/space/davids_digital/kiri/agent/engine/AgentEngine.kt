@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppSystem
 import space.davids_digital.kiri.agent.frame.Frame
 import space.davids_digital.kiri.agent.frame.FrameRenderer
+import space.davids_digital.kiri.agent.memory.MemorySystem
 import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Service
 class AgentEngine(
     private val appSystem: AppSystem,
+    private val memorySystem: MemorySystem,
     private val frameRenderer: FrameRenderer,
     private val anthropicMessagesService: AnthropicMessagesService,
     private val toolRegistry: AgentToolRegistry,
@@ -58,33 +60,19 @@ class AgentEngine(
                         tick()
                     }
                 } catch (e: Exception) {
-                    log.error("Engine error", e)
-                    addFrame {
-                        type = "system"
-                        content = "Engine error: ${e.message}"
-                    }
-                    if (running.get()) {
-                        log.info("Will try to recover in $RECOVERY_TIMEOUT_MS ms")
-                    }
-                    // Try to recover
-                    delay(RECOVERY_TIMEOUT_MS)
-                    if (running.get()) {
-                        addFrame {
-                            type = "system"
-                            content = "Attempting to recover..."
-                        }
-                        start()
-                    }
+                    handleError(e)
                 }
             }
         }
     }
 
     fun softStop() {
+        log.info("Soft stopping Kiri engine")
         running.set(false)
     }
 
     fun hardStop() {
+        log.info("Hard stopping Kiri engine")
         running.set(false)
         engineScope.cancel()
         log.info("Kiri engine stopped")
@@ -109,12 +97,13 @@ class AgentEngine(
     }
 
     private suspend fun tick() {
+        updateToolRegistry()
         val input = frameRenderer.render(frames)
-        toolRegistry.clear()
-        toolScanner.scan(this, toolRegistry)
         val request = buildRequest(input)
-        anthropicMessagesService.request(request)
+        val response = anthropicMessagesService.request(request)
         // TODO: Handle response
+        println(response)
+        softStop()
         delay(5000)
     }
 
@@ -133,13 +122,38 @@ class AgentEngine(
                 allowParallelUse = false
                 toolRegistry.iterate().forEach {
                     function {
-                        name = it.name
+                        name = it.fullName
                         description = it.description
                         parameters = agentToolParameterMapper.map(it.callable)
                     }
                 }
             }
         }
+    }
+
+    private suspend fun handleError(e: Exception) {
+        log.error("Engine error", e)
+        addFrame {
+            type = "system"
+            content = "Engine error: ${e.message}"
+        }
+        if (running.get()) {
+            log.info("Will try to recover in $RECOVERY_TIMEOUT_MS ms")
+        }
+        // Try to recover
+        delay(RECOVERY_TIMEOUT_MS)
+        if (running.get()) {
+            addFrame {
+                type = "system"
+                content = "Attempting to recover..."
+            }
+            start()
+        }
+    }
+
+    private fun updateToolRegistry() {
+        toolRegistry.clear()
+        toolScanner.scan(listOf(this, appSystem, memorySystem), toolRegistry)
     }
 
     override fun getAvailableAgentToolMethods() = listOf(::think)

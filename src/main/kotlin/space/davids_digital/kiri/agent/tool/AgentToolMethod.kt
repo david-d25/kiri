@@ -10,7 +10,7 @@ annotation class AgentToolMethod(
     /**
      * Method name for agent. Leave blank to use component method name by default.
      *
-     * Name should only contain alphanumeric characters and underscores.
+     * Name should only contain alphanumeric characters.
      * @see AgentToolScanner.validateMethodName
      */
     val name: String = "",
