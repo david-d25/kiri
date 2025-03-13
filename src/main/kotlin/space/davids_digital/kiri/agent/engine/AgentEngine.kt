@@ -80,7 +80,11 @@ class AgentEngine(
         }
     }
 
-    fun stop() {
+    fun softStop() {
+        running.set(false)
+    }
+
+    fun hardStop() {
         running.set(false)
         engineScope.cancel()
         log.info("Kiri engine stopped")

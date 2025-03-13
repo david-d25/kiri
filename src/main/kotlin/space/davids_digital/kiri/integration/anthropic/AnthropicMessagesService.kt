@@ -178,8 +178,12 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
         ToolUnion.ofTool(
             Tool.builder()
                 .name(function.name)
-                .description(function.description)
                 .inputSchema(buildInputSchema(function.parameters))
+                .also {
+                    if (function.description != null) {
+                        it.description(function.description)
+                    }
+                }
                 .build()
         )
     }
