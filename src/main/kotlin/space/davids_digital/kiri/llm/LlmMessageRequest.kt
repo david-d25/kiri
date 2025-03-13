@@ -23,7 +23,7 @@ data class LlmMessageRequest<MODEL> (
     }
     data class Tools (val choice: ToolChoice, val allowParallelUse: Boolean, val functions: List<Function>) {
         enum class ToolChoice { AUTO, NONE, REQUIRED }
-        data class Function (val name: String, val description: String, val parameters: ParameterValue.ObjectValue) {
+        data class Function (val name: String, val description: String?, val parameters: ParameterValue.ObjectValue) {
             sealed class ParameterValue {
                 data class ObjectValue (
                     val description: String?,

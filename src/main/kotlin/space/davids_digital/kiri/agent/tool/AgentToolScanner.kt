@@ -1,9 +1,11 @@
 package space.davids_digital.kiri.agent.tool
 
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.functions
 
+@Component
 class AgentToolScanner {
     companion object {
         private val log = LoggerFactory.getLogger(this::class.java)
@@ -16,7 +18,7 @@ class AgentToolScanner {
      */
     fun scan(toolProvider: AgentToolProvider, registry: AgentToolRegistry) = scan(toolProvider, registry, emptyList())
 
-    private fun scan(toolProvider: AgentToolProvider, registry: AgentToolRegistry, path: List<String>): Int {
+    private fun scan(toolProvider: AgentToolProvider, registry: AgentToolRegistry, basePath: List<String>): Int {
         var count = 0
         val namespaceAnnotation = toolProvider::class.java.getAnnotation(AgentToolNamespace::class.java)
         val namespace = namespaceAnnotation?.value
@@ -30,13 +32,14 @@ class AgentToolScanner {
             return 0
         }
 
-        val namespacePath = if (namespace.isNullOrBlank()) path else path + namespace
+        val namespacePath = if (namespace.isNullOrBlank()) basePath else basePath + namespace
         for (method in toolProvider::class.functions) {
             val methodAnnotation = method.findAnnotation<AgentToolMethod>() ?: continue
             var methodName = methodAnnotation.name
             if (methodName.isBlank()) {
                 methodName = method.name
             }
+            val methodDescription = methodAnnotation.description
             if (!validateMethodName(methodName)) {
                 log.error("Invalid tool method name '$methodName' in provider $toolProvider, skipping")
                 continue
@@ -45,7 +48,12 @@ class AgentToolScanner {
                 log.warn("Method '$methodName' in namespace '$namespacePath' is already registered, skipping")
                 continue
             }
-            registry.register(namespacePath, methodName, method)
+            registry.put {
+                path = namespacePath
+                name = methodName
+                callable = method
+                description = methodDescription
+            }
             count++
         }
 

@@ -85,7 +85,7 @@ class LlmMessageRequestToolsBuilder {
 @LlmMessageRequestDsl
 class LlmMessageRequestToolsFunctionBuilder {
     var name: String = ""
-    var description: String = ""
+    var description: String? = null
     var parameters: LlmMessageRequest.Tools.Function.ParameterValue.ObjectValue =
         LlmMessageRequest.Tools.Function.ParameterValue.ObjectValue(
             null,
