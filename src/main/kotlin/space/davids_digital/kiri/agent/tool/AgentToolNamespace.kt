@@ -17,5 +17,5 @@ annotation class AgentToolNamespace(
      * Namespace should only contain alphanumeric characters and underscores.
      * @see AgentToolScanner.validateNamespace
      */
-    val value: String
+    val value: String = ""
 )

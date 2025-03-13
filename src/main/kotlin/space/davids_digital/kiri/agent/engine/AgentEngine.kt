@@ -13,9 +13,8 @@ import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppSystem
 import space.davids_digital.kiri.agent.frame.Frame
 import space.davids_digital.kiri.agent.frame.FrameRenderer
-import space.davids_digital.kiri.agent.tool.AgentToolMapper
+import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
-import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
 import space.davids_digital.kiri.agent.tool.AgentToolRegistry
 import space.davids_digital.kiri.agent.tool.AgentToolScanner
@@ -26,11 +25,13 @@ import java.util.LinkedList
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Service
-@AgentToolNamespace("engine")
 class AgentEngine(
     private val appSystem: AppSystem,
     private val frameRenderer: FrameRenderer,
     private val anthropicMessagesService: AnthropicMessagesService,
+    private val toolRegistry: AgentToolRegistry,
+    private val toolScanner: AgentToolScanner,
+    private val agentToolParameterMapper: AgentToolParameterMapper,
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 5000L
@@ -105,12 +106,11 @@ class AgentEngine(
 
     private suspend fun tick() {
         val input = frameRenderer.render(frames)
-        val toolRegistry = AgentToolRegistry()
-        val toolScanner = AgentToolScanner()
+        toolRegistry.clear()
         toolScanner.scan(this, toolRegistry)
         val request = buildRequest(input)
         anthropicMessagesService.request(request)
-        // TODO
+        // TODO: Handle response
         delay(5000)
     }
 
@@ -127,7 +127,13 @@ class AgentEngine(
             tools {
                 choice = LlmMessageRequest.Tools.ToolChoice.REQUIRED
                 allowParallelUse = false
-                functions = TODO()
+                toolRegistry.iterate().forEach {
+                    function {
+                        name = it.name
+                        description = it.description
+                        parameters = agentToolParameterMapper.map(it.callable)
+                    }
+                }
             }
         }
     }
