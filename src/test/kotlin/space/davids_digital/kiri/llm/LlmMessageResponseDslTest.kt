@@ -6,6 +6,10 @@ import space.davids_digital.kiri.llm.LlmMessageResponse.ContentItem
 import space.davids_digital.kiri.llm.LlmToolUse.Input
 import space.davids_digital.kiri.llm.dsl.llmMessageResponse
 
+/**
+ * I wrote these tests with AI because I'm lazy.
+ * Feel free to rewrite them in a more human way.
+ */
 class LlmMessageResponseDslTest {
 
     @Test

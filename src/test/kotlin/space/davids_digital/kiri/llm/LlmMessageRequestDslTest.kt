@@ -8,6 +8,10 @@ import space.davids_digital.kiri.llm.LlmMessageRequest.Tools
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.Function.ParameterValue
 import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 
+/**
+ * I wrote these tests with AI because I'm lazy.
+ * Feel free to rewrite them in a more human way.
+ */
 class LlmMessageRequestDslTest {
 
     @Test
