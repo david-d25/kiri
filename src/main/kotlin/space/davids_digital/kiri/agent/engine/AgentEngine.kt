@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.agent.engine
 
+import com.aallam.openai.api.chat.toolMessage
 import com.anthropic.models.Model
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.CoroutineScope
@@ -11,8 +12,11 @@ import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppSystem
+import space.davids_digital.kiri.agent.frame.DynamicDataFrame
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.FrameRenderer
+import space.davids_digital.kiri.agent.frame.StaticDataFrame
+import space.davids_digital.kiri.agent.frame.ToolCallFrame
 import space.davids_digital.kiri.agent.memory.MemorySystem
 import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
@@ -21,6 +25,8 @@ import space.davids_digital.kiri.agent.tool.AgentToolRegistry
 import space.davids_digital.kiri.agent.tool.AgentToolScanner
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
+import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
+import space.davids_digital.kiri.llm.LlmMessageResponse
 import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -93,8 +99,13 @@ class AgentEngine(
         updateToolRegistry()
         val request = buildRequest()
         val response = anthropicMessagesService.request(request)
+        handleResponse(response)
+    }
 
-        // TODO: Handle response
+    private fun handleResponse(response: LlmMessageResponse) {
+        for (item in response.content) {
+            TODO()
+        }
     }
 
     private fun buildRequest(): LlmMessageRequest<Model> {
@@ -102,19 +113,43 @@ class AgentEngine(
         return llmMessageRequest {
             model = Model.CLAUDE_3_7_SONNET_LATEST
             system = systemText ?: ""
-//            userMessage {
-//                text(input)
-//            }
             maxOutputTokens = 1024
             temperature = 0.5
             tools {
-                choice = LlmMessageRequest.Tools.ToolChoice.REQUIRED
+                choice = REQUIRED
                 allowParallelUse = false
                 toolRegistry.iterate().forEach {
                     function {
                         name = it.fullName
                         description = it.description
                         parameters = toolParameterMapper.map(it.callable)
+                    }
+                }
+            }
+
+
+            for (frame in frames) {
+                when (frame) {
+                    is StaticDataFrame -> {
+                        userMessage {
+                            text(frameRenderer.render(frame))
+                        }
+                    }
+                    is DynamicDataFrame -> {
+                        // TODO: Not yet supported
+                    }
+                    is ToolCallFrame -> {
+                        assistantMessage {
+                            toolUse {
+                                id = frame.toolUse.id
+                                name = frame.toolUse.name
+                                input = frame.toolUse.input
+                            }
+                            toolResult {
+                                id = frame.result.toolUseId
+                                output = frame.result.output
+                            }
+                        }
                     }
                 }
             }
