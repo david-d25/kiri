@@ -1,8 +1,8 @@
-package space.davids_digital.kiri.llm
+package space.davids_digital.kiri.llm.dsl
 
+import space.davids_digital.kiri.llm.LlmMessageResponse
 import space.davids_digital.kiri.llm.LlmMessageResponse.ContentItem
 import space.davids_digital.kiri.llm.LlmMessageResponse.ContentItem.ToolUse
-import space.davids_digital.kiri.llm.LlmMessageResponse.ContentItem.ToolUse.Input
 import space.davids_digital.kiri.llm.LlmMessageResponse.StopReason
 import space.davids_digital.kiri.llm.LlmMessageResponse.Usage
 
@@ -10,8 +10,6 @@ import space.davids_digital.kiri.llm.LlmMessageResponse.Usage
 annotation class LlmMessageResponseDsl
 
 fun llmMessageResponse(block: LlmMessageResponseBuilder.() -> Unit) = LlmMessageResponseBuilder().apply(block).build()
-fun toolUseInput(block: LlmMessageResponseToolUseInputBuilder.() -> Unit) =
-    LlmMessageResponseToolUseInputBuilder().apply(block).build()
 
 @LlmMessageResponseDsl
 class LlmMessageResponseBuilder {
@@ -39,48 +37,8 @@ class LlmMessageResponseContentBuilder: ArrayList<ContentItem>() {
         add(ContentItem.Text(text))
     }
 
-    fun toolUse(block: LlmMessageResponseToolUseBuilder.() -> Unit) {
-        add(LlmMessageResponseToolUseBuilder().apply(block).build())
-    }
-}
-
-@LlmMessageResponseDsl
-class LlmMessageResponseToolUseBuilder {
-    var id: String = ""
-    var name: String = ""
-    var input: Input = Input.ObjectValue(emptyMap())
-
-    fun build(): ToolUse {
-        return ToolUse(id, name, input)
-    }
-}
-
-@LlmMessageResponseDsl
-class LlmMessageResponseToolUseInputBuilder {
-    private var value: Input = Input.ObjectValue(emptyMap())
-
-    fun boolean(boolean: Boolean) {
-        value = Input.BooleanValue(boolean)
-    }
-
-    fun number(number: Double) {
-        value = Input.NumberValue(number)
-    }
-
-    fun text(text: String) {
-        value = Input.TextValue(text)
-    }
-
-    fun array(block: MutableList<Input>.() -> Unit) {
-        value = Input.ArrayValue(ArrayList<Input>().apply(block))
-    }
-
-    fun `object`(block: MutableMap<String, Input>.() -> Unit) {
-        value = Input.ObjectValue(HashMap<String, Input>().apply(block))
-    }
-
-    fun build(): Input {
-        return value
+    fun toolUse(block: LlmToolUseBuilder.() -> Unit) {
+        add(ToolUse(LlmToolUseBuilder().apply(block).build()))
     }
 }
 

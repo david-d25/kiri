@@ -28,15 +28,22 @@ import com.anthropic.models.ToolChoiceNone
 import com.anthropic.models.ToolResultBlockParam
 import com.anthropic.models.ToolUnion
 import com.anthropic.models.ToolUseBlockParam
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.llm.LlmImageType
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Message
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.Function.ParameterValue
 import space.davids_digital.kiri.llm.LlmMessageResponse
-import space.davids_digital.kiri.llm.llmMessageResponse
-import space.davids_digital.kiri.llm.toolUseInput
+import space.davids_digital.kiri.llm.LlmToolUse
+import space.davids_digital.kiri.llm.LlmToolUseResult
+import space.davids_digital.kiri.llm.dsl.LlmToolUseInputArrayBuilder
+import space.davids_digital.kiri.llm.dsl.LlmToolUseInputBuilder
+import space.davids_digital.kiri.llm.dsl.LlmToolUseInputObjectBuilder
+import space.davids_digital.kiri.llm.dsl.llmMessageResponse
 import space.davids_digital.kiri.service.LlmService
 import java.util.Base64
 import kotlin.jvm.optionals.getOrNull
@@ -96,7 +103,9 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
                     toolUse {
                         id = toolUse.id()
                         name = toolUse.name()
-                        input = parseToolUseInput(toolUse._input())
+                        input {
+                            parseToolUseInput(toolUse._input())
+                        }
                     }
                 } else {
                     log.warn("Unsupported content block type: {}", contentBlock)
@@ -109,21 +118,51 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
         }
     }
 
-    private fun parseToolUseInput(input: JsonValue): LlmMessageResponse.ContentItem.ToolUse.Input {
-        return toolUseInput {
-            when (input) {
-                is JsonBoolean -> boolean(input.value)
-                is JsonNumber -> number(input.value.toDouble())
-                is JsonString -> text(input.value)
-                is JsonArray -> array {
-                    input.values.forEach { add(parseToolUseInput(it)) }
-                }
-                is JsonObject -> `object` {
-                    input.values.entries.forEach { (key, value) -> put(key, parseToolUseInput(value)) }
-                }
-                is JsonMissing -> null
-                is JsonNull -> null
+    private fun LlmToolUseInputBuilder.parseToolUseInput(input: JsonValue) {
+        when (input) {
+            is JsonBoolean -> boolean(input.value)
+            is JsonNumber -> number(input.value.toDouble())
+            is JsonString -> text(input.value)
+            is JsonArray -> array {
+                input.values.forEach { parseToolUseInput(it) }
             }
+            is JsonObject -> objectValue {
+                input.values.entries.forEach { (key, value) -> parseToolUseInput(key, value) }
+            }
+            is JsonMissing -> null
+            is JsonNull -> null
+        }
+    }
+
+    private fun LlmToolUseInputArrayBuilder.parseToolUseInput(input: JsonValue) {
+        when (input) {
+            is JsonBoolean -> boolean(input.value)
+            is JsonNumber -> number(input.value.toDouble())
+            is JsonString -> text(input.value)
+            is JsonArray -> array {
+                input.values.forEach { parseToolUseInput(it) }
+            }
+            is JsonObject -> objectValue {
+                input.values.entries.forEach { (key, value) -> parseToolUseInput(key, value) }
+            }
+            is JsonMissing -> null
+            is JsonNull -> null
+        }
+    }
+
+    private fun LlmToolUseInputObjectBuilder.parseToolUseInput(key: String, input: JsonValue) {
+        when (input) {
+            is JsonBoolean -> boolean(key, input.value)
+            is JsonNumber -> number(key, input.value.toDouble())
+            is JsonString -> text(key, input.value)
+            is JsonArray -> array(key) {
+                input.values.forEach { parseToolUseInput(it) }
+            }
+            is JsonObject -> objectValue(key) {
+                input.values.entries.forEach { (key, value) -> parseToolUseInput(key, value) }
+            }
+            is JsonMissing -> null
+            is JsonNull -> null
         }
     }
 
@@ -144,28 +183,15 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
                     )
                     is Message.ContentItem.ToolUse -> ContentBlockParam.ofToolUse(
                         ToolUseBlockParam.builder()
-                            .id(contentItem.id)
-                            .name(contentItem.name)
-                            .input(JsonValue.fromJsonNode(contentItem.input))
+                            .id(contentItem.toolUse.id)
+                            .name(contentItem.toolUse.name)
+                            .input(JsonValue.fromJsonNode(toolUseInputToJson(contentItem.toolUse.input)))
                             .build()
                     )
                     is Message.ContentItem.ToolResult -> ContentBlockParam.ofToolResult(
                         ToolResultBlockParam.builder()
-                            .toolUseId(contentItem.toolUseId)
-                            .contentOfBlocks(
-                                contentItem.content.map { toolResultContentItem ->
-                                    when (toolResultContentItem) {
-                                        is Message.ContentItem.Text ->
-                                            ToolResultBlockParam.Content.Block.ofTextBlockParam(
-                                                TextBlockParam.builder().text(toolResultContentItem.text).build()
-                                            )
-                                        is Message.ContentItem.Image ->
-                                            ToolResultBlockParam.Content.Block.ofImageBlockParam(
-                                                buildImageBlock(toolResultContentItem)
-                                            )
-                                    }
-                                }
-                            )
+                            .toolUseId(contentItem.toolResult.toolUseId)
+                            .contentOfBlocks(toolUseResultOutputToContentBlockList(contentItem.toolResult.output))
                             .build()
                     )
                 }
@@ -191,7 +217,7 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
     private fun buildInputSchema(parameters: ParameterValue.ObjectValue): Tool.InputSchema {
         val builder = Tool.InputSchema.builder()
             .type(JsonValue.from("object"))
-            .properties(JsonValue.from(parameters.properties.mapValues { mapParameterToJson(it.value) }))
+            .properties(JsonValue.from(parameters.properties.mapValues { parameterToJson(it.value) }))
 
         if (parameters.required.isNotEmpty()) {
             builder.additionalProperties(mapOf(
@@ -202,12 +228,51 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
         return builder.build()
     }
 
-    private fun mapParameterToJson(value: ParameterValue): JsonValue {
+    private fun toolUseResultOutputToContentBlockList(
+        toolUseResult: LlmToolUseResult.Output
+    ): List<ToolResultBlockParam.Content.Block> {
+        return listOf(
+            when(toolUseResult) {
+                is LlmToolUseResult.Output.Text -> ToolResultBlockParam.Content.Block.ofTextBlockParam(
+                    TextBlockParam.builder().text(toolUseResult.text).build()
+                )
+                is LlmToolUseResult.Output.Image -> ToolResultBlockParam.Content.Block.ofImageBlockParam(
+                    ImageBlockParam.builder()
+                        .source(
+                            Base64ImageSource.builder()
+                                .data(Base64.getEncoder().encodeToString(toolUseResult.data))
+                                .mediaType(mapImageMediaType(toolUseResult.mediaType))
+                                .build()
+                        )
+                        .build()
+                )
+            }
+        )
+    }
+
+    private fun toolUseInputToJson(toolUse: LlmToolUse.Input): JsonNode {
+        val factory = JsonNodeFactory.instance
+        return when (toolUse) {
+            is LlmToolUse.Input.Text -> factory.textNode(toolUse.text)
+            is LlmToolUse.Input.Number -> factory.numberNode(toolUse.number)
+            is LlmToolUse.Input.Boolean -> factory.booleanNode(toolUse.boolean)
+            is LlmToolUse.Input.Array -> factory.arrayNode().apply {
+                toolUse.items.forEach { add(toolUseInputToJson(it)) }
+            }
+            is LlmToolUse.Input.Object -> factory.objectNode().apply {
+                toolUse.items.forEach { (key, value) ->
+                    set<JsonNode>(key, toolUseInputToJson(value))
+                }
+            }
+        }
+    }
+
+    private fun parameterToJson(value: ParameterValue): JsonValue {
         return when (value) {
             is ParameterValue.ObjectValue -> {
                 val map = mutableMapOf(
                     "type" to JsonValue.from("object"),
-                    "properties" to JsonValue.from(value.properties.mapValues { mapParameterToJson(it.value) }),
+                    "properties" to JsonValue.from(value.properties.mapValues { parameterToJson(it.value) }),
                 )
                 if (value.required.isNotEmpty()) {
                     map["required"] = JsonValue.from(value.required)
@@ -250,19 +315,15 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
         source(
             Base64ImageSource.builder()
                 .data(Base64.getEncoder().encodeToString(imageContentItem.data))
-                .mediaType(
-                    when (imageContentItem.mediaType) {
-                        Message.ContentItem.MediaType.JPEG ->
-                            Base64ImageSource.MediaType.IMAGE_JPEG
-                        Message.ContentItem.MediaType.PNG ->
-                            Base64ImageSource.MediaType.IMAGE_PNG
-                        Message.ContentItem.MediaType.GIF ->
-                            Base64ImageSource.MediaType.IMAGE_GIF
-                        Message.ContentItem.MediaType.WEBP ->
-                            Base64ImageSource.MediaType.IMAGE_WEBP
-                    }
-                )
+                .mediaType(mapImageMediaType(imageContentItem.mediaType))
                 .build()
         )
     }.build()
+
+    private fun mapImageMediaType(mediaType: LlmImageType) = when (mediaType) {
+        LlmImageType.JPEG -> Base64ImageSource.MediaType.IMAGE_JPEG
+        LlmImageType.PNG -> Base64ImageSource.MediaType.IMAGE_PNG
+        LlmImageType.GIF -> Base64ImageSource.MediaType.IMAGE_GIF
+        LlmImageType.WEBP -> Base64ImageSource.MediaType.IMAGE_WEBP
+    }
 }

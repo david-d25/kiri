@@ -1,8 +1,8 @@
-package space.davids_digital.kiri.llm
+package space.davids_digital.kiri.llm.dsl
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
+import space.davids_digital.kiri.llm.LlmImageType
+import space.davids_digital.kiri.llm.LlmMessageRequest
+import space.davids_digital.kiri.llm.LlmMessageRequest.Message.ContentItem.ToolResult
 
 @DslMarker
 annotation class LlmMessageRequestDsl
@@ -50,16 +50,16 @@ open class LlmMessageRequestMessageBuilder {
         content.add(LlmMessageRequest.Message.ContentItem.Text(text))
     }
 
-    fun image(data: ByteArray, mediaType: LlmMessageRequest.Message.ContentItem.MediaType) {
-        content.add(LlmMessageRequest.Message.ContentItem.Image(data, mediaType))
+    fun image(data: ByteArray, type: LlmImageType) {
+        content.add(LlmMessageRequest.Message.ContentItem.Image(data, type))
     }
 
-    fun toolUse(block: LlmMessageRequestMessageToolUseBuilder.() -> Unit) {
-        content.add(LlmMessageRequestMessageToolUseBuilder().apply(block).build())
+    fun toolUse(block: LlmToolUseBuilder.() -> Unit) {
+        content.add(LlmMessageRequest.Message.ContentItem.ToolUse(LlmToolUseBuilder().apply(block).build()))
     }
 
-    fun toolResult(block: LlmMessageRequestMessageToolResultBuilder.() -> Unit) {
-        content.add(LlmMessageRequestMessageToolResultBuilder().apply(block).build())
+    fun toolResult(block: LlmToolUseResultBuilder.() -> Unit) {
+        content.add(ToolResult(LlmToolUseResultBuilder().apply(block).build()))
     }
 
     fun build(): LlmMessageRequest.Message {
@@ -95,35 +95,6 @@ class LlmMessageRequestToolsFunctionBuilder {
 
     fun build(): LlmMessageRequest.Tools.Function {
         return LlmMessageRequest.Tools.Function(name, description, parameters)
-    }
-}
-
-@LlmMessageRequestDsl
-class LlmMessageRequestMessageToolUseBuilder {
-    var id: String = ""
-    var name: String = ""
-    var input: JsonNode = ObjectNode(JsonNodeFactory.instance)
-
-    fun build(): LlmMessageRequest.Message.ContentItem.ToolUse {
-        return LlmMessageRequest.Message.ContentItem.ToolUse(id, name, input)
-    }
-}
-
-@LlmMessageRequestDsl
-class LlmMessageRequestMessageToolResultBuilder {
-    var toolUseId: String = ""
-    var content: MutableList<LlmMessageRequest.Message.ContentValueItem> = mutableListOf()
-
-    fun text(text: String) {
-        content.add(LlmMessageRequest.Message.ContentItem.Text(text))
-    }
-
-    fun image(data: ByteArray, mediaType: LlmMessageRequest.Message.ContentItem.MediaType) {
-        content.add(LlmMessageRequest.Message.ContentItem.Image(data, mediaType))
-    }
-
-    fun build(): LlmMessageRequest.Message.ContentItem.ToolResult {
-        return LlmMessageRequest.Message.ContentItem.ToolResult(toolUseId, content)
     }
 }
 

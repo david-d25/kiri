@@ -3,6 +3,8 @@ package space.davids_digital.kiri.llm
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import space.davids_digital.kiri.llm.LlmMessageResponse.ContentItem.ToolUse.Input
+import space.davids_digital.kiri.llm.dsl.llmMessageResponse
+import space.davids_digital.kiri.llm.dsl.toolUseInput
 
 class LlmMessageResponseDslTest {
 
@@ -38,9 +40,11 @@ class LlmMessageResponseDslTest {
                 toolUse {
                     id = "tool-123"
                     name = "calculator"
-                    input = Input.ObjectValue(mapOf(
-                        "expression" to Input.TextValue("1 + 1")
-                    ))
+                    input = Input.ObjectValue(
+                        mapOf(
+                            "expression" to Input.TextValue("1 + 1")
+                        )
+                    )
                 }
             }
             usage {
@@ -78,9 +82,11 @@ class LlmMessageResponseDslTest {
                 toolUse {
                     id = "tool-456"
                     name = "calculator"
-                    input = Input.ObjectValue(mapOf(
-                        "expression" to Input.TextValue("2 * 3")
-                    ))
+                    input = Input.ObjectValue(
+                        mapOf(
+                            "expression" to Input.TextValue("2 * 3")
+                        )
+                    )
                 }
             }
             usage {
@@ -166,15 +172,23 @@ class LlmMessageResponseDslTest {
         val complexInput = toolUseInput {
             `object` {
                 put("name", Input.TextValue("John"))
-                put("contact", Input.ObjectValue(mapOf(
-                    "email" to Input.TextValue("john@example.com"),
-                    "phone" to Input.TextValue("+1234567890")
-                )))
-                put("scores", Input.ArrayValue(listOf(
-                    Input.NumberValue(85.0),
-                    Input.NumberValue(92.0),
-                    Input.NumberValue(78.5)
-                )))
+                put(
+                    "contact", Input.ObjectValue(
+                        mapOf(
+                            "email" to Input.TextValue("john@example.com"),
+                            "phone" to Input.TextValue("+1234567890")
+                        )
+                    )
+                )
+                put(
+                    "scores", Input.ArrayValue(
+                        listOf(
+                            Input.NumberValue(85.0),
+                            Input.NumberValue(92.0),
+                            Input.NumberValue(78.5)
+                        )
+                    )
+                )
             }
         }
 
