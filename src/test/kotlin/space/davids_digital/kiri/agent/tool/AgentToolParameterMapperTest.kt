@@ -5,6 +5,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.Function.ParameterValue
 
+/**
+ * I wrote these tests with AI because I'm lazy.
+ * Feel free to rewrite them in a more human way.
+ */
 class AgentToolParameterMapperTest {
 
     private lateinit var mapper: AgentToolParameterMapper

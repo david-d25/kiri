@@ -1,6 +1,5 @@
 package space.davids_digital.kiri.agent.engine
 
-import com.aallam.openai.api.chat.toolMessage
 import com.anthropic.models.Model
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.CoroutineScope
@@ -18,16 +17,16 @@ import space.davids_digital.kiri.agent.frame.FrameRenderer
 import space.davids_digital.kiri.agent.frame.StaticDataFrame
 import space.davids_digital.kiri.agent.frame.ToolCallFrame
 import space.davids_digital.kiri.agent.memory.MemorySystem
-import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
+import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
 import space.davids_digital.kiri.agent.tool.AgentToolRegistry
 import space.davids_digital.kiri.agent.tool.AgentToolScanner
+import space.davids_digital.kiri.agent.tool.ToolCallExecutor
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
-import space.davids_digital.kiri.llm.LlmToolUse
 import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -38,6 +37,7 @@ class AgentEngine(
     private val toolRegistry: AgentToolRegistry,
     private val toolScanner: AgentToolScanner,
     private val toolParameterMapper: AgentToolParameterMapper,
+    private val toolCallExecutor: ToolCallExecutor,
     private val frameRenderer: FrameRenderer,
     private val anthropicMessagesService: AnthropicMessagesService,
 ) : AgentToolProvider {
@@ -110,6 +110,8 @@ class AgentEngine(
                     log.warn("Agent response contains text, ignoring")
                 }
                 is LlmMessageResponse.ContentItem.ToolUse -> {
+                    val function = toolRegistry.find(item.toolUse.name)
+//                    toolCallExecutor.execute(function, item.toolUse.input, )
                     TODO()
                 }
             }
@@ -134,7 +136,6 @@ class AgentEngine(
                     }
                 }
             }
-
 
             for (frame in frames) {
                 when (frame) {
