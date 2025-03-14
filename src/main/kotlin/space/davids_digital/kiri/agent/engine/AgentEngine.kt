@@ -27,6 +27,7 @@ import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
+import space.davids_digital.kiri.llm.LlmToolUse
 import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -104,7 +105,14 @@ class AgentEngine(
 
     private fun handleResponse(response: LlmMessageResponse) {
         for (item in response.content) {
-            TODO()
+            when (item) {
+                is LlmMessageResponse.ContentItem.Text -> {
+                    log.warn("Agent response contains text, ignoring")
+                }
+                is LlmMessageResponse.ContentItem.ToolUse -> {
+                    TODO()
+                }
+            }
         }
     }
 
