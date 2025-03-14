@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component
 @Component
 class FrameRenderer {
     /**
-     * Renders an agent frame to a string.
+     * Renders a static frame to a string.
      * Output has the following format:
      * ```
      * <type attribute1="value1" attribute2="value2" ...>
@@ -17,25 +17,31 @@ class FrameRenderer {
      * @param frame The frame to render, content is HTML-escaped.
      * @param output The output string builder.
      */
-    fun render(frame: Frame, output: StringBuilder) {
+    fun render(frame: StaticDataFrame, output: StringBuilder) {
         with(output) {
             val attrString = frame.attributes.entries
                 .map { entry -> entry.key to entry.value.escapeHTML() }
                 .joinToString(" ") { (key, value) -> "$key=\"$value\"" }
                 .let { if (it.isNotEmpty()) " $it" else "" }
-            appendLine("<${frame.type}$attrString>")
+            appendLine("<${frame.tag}$attrString>")
             appendLine(frame.content.escapeHTML())
-            appendLine("</${frame.type}>")
+            appendLine("</${frame.tag}>")
         }
     }
 
-    fun render(frames: List<Frame>, output: StringBuilder) {
+    fun render(frames: List<StaticDataFrame>, output: StringBuilder) {
         frames.forEach { render(it, output) }
     }
 
-    fun render(frames: List<Frame>): String {
+    fun render(frames: List<StaticDataFrame>): String {
         val output = StringBuilder()
         render(frames, output)
+        return output.toString()
+    }
+
+    fun render(frame: StaticDataFrame): String {
+        val output = StringBuilder()
+        render(frame, output)
         return output.toString()
     }
 }

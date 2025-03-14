@@ -2,7 +2,7 @@ package space.davids_digital.kiri.agent.frame
 
 import java.util.LinkedList
 
-class FrameBuffer {
+class FrameBuffer : Iterable<Frame> {
     private val frames = LinkedList<Frame>()
 
     fun clear() {
@@ -23,5 +23,9 @@ class FrameBuffer {
         val builder = ToolCallFrame.Builder()
         builder.block()
         add(builder.build())
+    }
+
+    override fun iterator(): Iterator<Frame> {
+        return frames.iterator()
     }
 }
