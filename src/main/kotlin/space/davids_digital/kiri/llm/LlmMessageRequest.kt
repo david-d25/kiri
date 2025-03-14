@@ -1,7 +1,5 @@
 package space.davids_digital.kiri.llm
 
-import com.fasterxml.jackson.databind.JsonNode
-
 data class LlmMessageRequest<MODEL> (
     val model: MODEL,
     val system: String,
@@ -12,13 +10,11 @@ data class LlmMessageRequest<MODEL> (
 ) {
     data class Message (val role: Role, val content: List<ContentItem>) {
         enum class Role { USER, ASSISTANT }
-        sealed interface ContentValueItem
         sealed class ContentItem {
-            data class Text (val text: String) : ContentItem(), ContentValueItem
-            data class Image (val data: ByteArray, val mediaType: MediaType) : ContentItem(), ContentValueItem
-            data class ToolUse (val id: String, val name: String, val input: JsonNode) : ContentItem()
-            data class ToolResult (val toolUseId: String, val content: List<ContentValueItem>) : ContentItem()
-            enum class MediaType { JPEG, PNG, GIF, WEBP }
+            data class Text (val text: String) : ContentItem()
+            data class Image (val data: ByteArray, val mediaType: LlmImageType) : ContentItem()
+            data class ToolUse (val toolUse: LlmToolUse) : ContentItem()
+            data class ToolResult (val toolResult: LlmToolUseResult) : ContentItem()
         }
     }
     data class Tools (val choice: ToolChoice, val allowParallelUse: Boolean, val functions: List<Function>) {

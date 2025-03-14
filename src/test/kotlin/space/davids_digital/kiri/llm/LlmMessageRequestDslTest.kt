@@ -8,6 +8,7 @@ import space.davids_digital.kiri.llm.LlmMessageRequest.Message
 import space.davids_digital.kiri.llm.LlmMessageRequest.Message.ContentItem
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.Function.ParameterValue
+import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 
 class LlmMessageRequestDslTest {
 

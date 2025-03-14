@@ -8,15 +8,7 @@ data class LlmMessageResponse (
 ) {
     sealed class ContentItem {
         data class Text(val text: String) : ContentItem()
-        data class ToolUse(val id: String, val name: String, val input: Input) : ContentItem() {
-            sealed class Input {
-                data class TextValue(val text: String) : Input()
-                data class NumberValue(val number: Double) : Input()
-                data class BooleanValue(val boolean: Boolean) : Input()
-                data class ArrayValue(val items: List<Input>) : Input()
-                data class ObjectValue(val items: Map<String, Input>) : Input()
-            }
-        }
+        data class ToolUse(val toolUse: LlmToolUse) : ContentItem()
     }
     enum class StopReason { END_TURN, MAX_TOKENS, STOP_SEQUENCE, TOOL_USE, UNKNOWN }
     data class Usage (val inputTokens: Long, val outputTokens: Long)
