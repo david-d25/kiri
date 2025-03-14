@@ -1,7 +1,5 @@
 package space.davids_digital.kiri.llm
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import space.davids_digital.kiri.llm.LlmMessageRequest.Message
@@ -126,7 +124,6 @@ class LlmMessageRequestDslTest {
     @Test
     fun `create request with complex message content`() {
         val imageData = ByteArray(10) { it.toByte() }
-        val jsonNode = ObjectNode(JsonNodeFactory.instance).put("value", 42)
 
         val request = llmMessageRequest<String> {
             model = "test-model"
@@ -134,14 +131,18 @@ class LlmMessageRequestDslTest {
 
             userMessage {
                 text("Analyze this image:")
-                image(imageData, ContentItem.MediaType.JPEG)
+                image(imageData, LlmImageType.JPEG)
             }
 
             assistantMessage {
                 toolUse {
                     id = "tool-123"
                     name = "image_analyzer"
-                    input = jsonNode
+                    input {
+                        objectValue {
+                            text("prompt", "Describe this image")
+                        }
+                    }
                 }
             }
 
@@ -159,21 +160,24 @@ class LlmMessageRequestDslTest {
         assertTrue(firstMessage.content[1] is ContentItem.Image)
         assertEquals("Analyze this image:", (firstMessage.content[0] as ContentItem.Text).text)
         assertEquals(imageData, (firstMessage.content[1] as ContentItem.Image).data)
-        assertEquals(ContentItem.MediaType.JPEG, (firstMessage.content[1] as ContentItem.Image).mediaType)
+        assertEquals(LlmImageType.JPEG, (firstMessage.content[1] as ContentItem.Image).mediaType)
 
         // Check assistant message
         val assistantMessage = request.messages[1]
         assertEquals(1, assistantMessage.content.size)
         assertTrue(assistantMessage.content[0] is ContentItem.ToolUse)
-        assertEquals("tool-123", (assistantMessage.content[0] as ContentItem.ToolUse).id)
-        assertEquals("image_analyzer", (assistantMessage.content[0] as ContentItem.ToolUse).name)
-        assertEquals(jsonNode, (assistantMessage.content[0] as ContentItem.ToolUse).input)
+
+        val toolUse = (assistantMessage.content[0] as ContentItem.ToolUse).toolUse
+        assertEquals("tool-123", toolUse.id)
+        assertEquals("image_analyzer", toolUse.name)
+
+        val input = toolUse.input as LlmToolUse.Input.Object
+        assertEquals(1, input.items.size)
+        assertEquals("Describe this image", (input.items["prompt"] as LlmToolUse.Input.Text).text)
     }
 
     @Test
     fun `create request with tool result`() {
-        val imageData = ByteArray(5) { it.toByte() }
-
         val request = llmMessageRequest<String> {
             model = "test-model"
 
@@ -181,13 +185,18 @@ class LlmMessageRequestDslTest {
                 toolUse {
                     id = "tool-456"
                     name = "image_generator"
-                    input = ObjectNode(JsonNodeFactory.instance).put("prompt", "landscape")
+                    input {
+                        objectValue {
+                            text("prompt", "landscape")
+                        }
+                    }
                 }
 
                 toolResult {
-                    toolUseId = "tool-456"
-                    text("Generated image result:")
-                    image(imageData, ContentItem.MediaType.PNG)
+                    id = "tool-456"
+                    output {
+                        text("Generated image result:")
+                    }
                 }
 
                 text("Here's the generated landscape image.")
@@ -202,15 +211,11 @@ class LlmMessageRequestDslTest {
         assertTrue(request.messages[0].content[1] is ContentItem.ToolResult)
         assertTrue(request.messages[0].content[2] is ContentItem.Text)
 
-        val toolResult = request.messages[0].content[1] as ContentItem.ToolResult
+        val toolResult = (request.messages[0].content[1] as ContentItem.ToolResult).toolResult
         assertEquals("tool-456", toolResult.toolUseId)
-        assertEquals(2, toolResult.content.size)
 
-        assertTrue(toolResult.content[0] is ContentItem.Text)
-        assertTrue(toolResult.content[1] is ContentItem.Image)
-        assertEquals("Generated image result:", (toolResult.content[0] as ContentItem.Text).text)
-        assertEquals(imageData, (toolResult.content[1] as ContentItem.Image).data)
-        assertEquals(ContentItem.MediaType.PNG, (toolResult.content[1] as ContentItem.Image).mediaType)
+        assertTrue(toolResult.output is LlmToolUseResult.Output.Text)
+        assertEquals("Generated image result:", (toolResult.output as LlmToolUseResult.Output.Text).text)
     }
 
     @Test
