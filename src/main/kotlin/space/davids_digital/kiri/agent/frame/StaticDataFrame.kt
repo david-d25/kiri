@@ -1,6 +1,16 @@
 package space.davids_digital.kiri.agent.frame
 
-data class StaticDataFrame(val tag: String, val attributes: Map<String, String>, val content: String) : Frame() {
+import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
+
+data class StaticDataFrame(
+    override val tag: String,
+    override val attributes: Map<String, String>,
+    private val content: String
+) : DataFrame() {
+    override fun renderContent() = dataFrameContent {
+        text(content)
+    }
+
     class Builder {
         var tag: String = ""
         var attributes: Map<String, String> = emptyMap()

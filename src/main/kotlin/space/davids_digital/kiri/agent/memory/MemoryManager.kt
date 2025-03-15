@@ -9,7 +9,7 @@ import space.davids_digital.kiri.agent.tool.AgentToolProvider
  */
 @Component
 @AgentToolNamespace("memory")
-class MemorySystem : AgentToolProvider {
+class MemoryManager : AgentToolProvider {
     // TODO
     override fun getAvailableAgentToolMethods(): Collection<Function<*>> = emptyList()
 }

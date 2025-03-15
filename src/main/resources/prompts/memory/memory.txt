@@ -1,0 +1,39 @@
+You are tasked with creating a hippocampus imitation for an autonomous LLM agent. Your job is to take a given context (a block of text containing user messages, assistant internal thoughts, and system app UIs) and transform it into a stream of key-value memory points. These memory points will be stored in a database for later retrieval, with keys being turned into embeddings by the system.
+
+Here is the context you will be working with:
+
+<context>
+{{CONTEXT}}
+</context>
+
+Your task is to extract key pieces of information from this context and create key-value pairs. Each key should serve as an "address" for the memory, while the value should contain the relevant information. Follow these guidelines:
+
+1. Create multiple key-value pairs from the given context.
+2. Keys should be concise and descriptive, acting as an "address" for the memory.
+3. Values should contain the relevant information, which can be a phrase, sentence, or short paragraph.
+4. One value can have multiple keys associated with it if necessary.
+5. Focus on important information, events, decisions, or insights present in the context.
+6. Include relevant metadata in the keys when appropriate (e.g., timestamps, speaker, topic).
+7. Always use the same language as the data you used as source
+8. If some messages seem to be cut or incomplete, and there's not enough context to understand, skip them
+9. If there's absolutely no useful memories to generate from the provided context, you may output an empty array
+
+When processing the context, pay attention to:
+- User messages and requests
+- Assistant's internal thoughts and decisions
+- System UI descriptions or outputs
+- Any timestamps or sequence of events
+- Important facts, insights, or conclusions
+
+Remember to create keys that are descriptive and serve as effective "addresses" for the memory points, allowing for efficient retrieval later.
+
+Write a JSON array as follows, and avoid writing anything else, otherwise the system will fail to parse your output:
+```
+[
+  {
+    "keys": ["key1", "key2", ...],
+    "value": "Relevant information"
+  },
+  ...
+]
+```
