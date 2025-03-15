@@ -87,16 +87,22 @@ class AgentToolRegistry {
         var path: List<String> = emptyList()
         var name: String = ""
         var description: String? = null
-        var callable: Function<*> = { throw NotImplementedError() }
+        lateinit var callable: Function<*>
+        lateinit var receiver: AgentToolProvider
 
-        fun build() = Entry(path, name, description, callable)
+        fun build(): Entry {
+            requireNotNull(callable) { "'callable' is required" }
+            requireNotNull(receiver) { "'receiver' is required "}
+            return Entry(path, name, description, callable, receiver)
+        }
     }
 
     data class Entry (
         val path: List<String>,
         val name: String,
         val description: String?,
-        val callable: Function<*>
+        val callable: Function<*>,
+        val receiver: AgentToolProvider,
     ) {
         val fullName = (path + name).joinToString("_")
     }

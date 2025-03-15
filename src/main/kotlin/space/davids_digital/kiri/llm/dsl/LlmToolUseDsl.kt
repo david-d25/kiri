@@ -26,11 +26,11 @@ class LlmToolUseBuilder {
 
 @LlmToolUseDsl
 class LlmToolUseInputBuilder {
-    var text: String = ""
-    var number: Double = 0.0
-    var boolean: Boolean = false
-    var items: MutableList<LlmToolUse.Input> = mutableListOf()
-    var map: MutableMap<String, LlmToolUse.Input> = mutableMapOf()
+    var text: String? = null
+    var number: Double? = null
+    var boolean: Boolean? = null
+    var items: MutableList<LlmToolUse.Input>? = null
+    var map: MutableMap<String, LlmToolUse.Input>? = null
 
     fun text(text: String) {
         this.text = text
@@ -45,20 +45,26 @@ class LlmToolUseInputBuilder {
     }
 
     fun array(block: LlmToolUseInputArrayBuilder.() -> Unit) {
-        items.add(LlmToolUseInputArrayBuilder().apply(block).build())
+        if (items == null) {
+            items = mutableListOf()
+        }
+        items!!.add(LlmToolUseInputArrayBuilder().apply(block).build())
     }
 
     fun objectValue(block: LlmToolUseInputObjectBuilder.() -> Unit) {
-        map.putAll(LlmToolUseInputObjectBuilder().apply(block).build())
+        if (map == null) {
+            map = mutableMapOf()
+        }
+        map!!.putAll(LlmToolUseInputObjectBuilder().apply(block).build())
     }
 
     fun build(): LlmToolUse.Input {
         return when {
-            text.isNotBlank() -> LlmToolUse.Input.Text(text)
-            number != 0.0 -> LlmToolUse.Input.Number(number)
-            boolean -> LlmToolUse.Input.Boolean(boolean)
-            items.isNotEmpty() -> LlmToolUse.Input.Array(items)
-            map.isNotEmpty() -> LlmToolUse.Input.Object(map)
+            text != null -> LlmToolUse.Input.Text(text!!)
+            number != null -> LlmToolUse.Input.Number(number!!)
+            boolean != null -> LlmToolUse.Input.Boolean(boolean!!)
+            items != null -> LlmToolUse.Input.Array(items!!)
+            map != null -> LlmToolUse.Input.Object(map!!)
             else -> throw IllegalStateException("No input value set")
         }
     }

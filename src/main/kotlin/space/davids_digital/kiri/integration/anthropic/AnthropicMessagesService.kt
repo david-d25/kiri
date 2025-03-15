@@ -129,8 +129,7 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
             is JsonObject -> objectValue {
                 input.values.entries.forEach { (key, value) -> parseToolUseInput(key, value) }
             }
-            is JsonMissing -> null
-            is JsonNull -> null
+            is JsonMissing, is JsonNull -> objectValue { }
         }
     }
 
@@ -145,8 +144,7 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
             is JsonObject -> objectValue {
                 input.values.entries.forEach { (key, value) -> parseToolUseInput(key, value) }
             }
-            is JsonMissing -> null
-            is JsonNull -> null
+            is JsonMissing, is JsonNull -> objectValue { }
         }
     }
 
@@ -161,8 +159,7 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
             is JsonObject -> objectValue(key) {
                 input.values.entries.forEach { (key, value) -> parseToolUseInput(key, value) }
             }
-            is JsonMissing -> null
-            is JsonNull -> null
+            is JsonMissing, is JsonNull -> null
         }
     }
 

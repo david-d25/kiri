@@ -67,6 +67,7 @@ class AgentToolScanner {
                 name = methodName
                 callable = method
                 description = methodDescription
+                receiver = toolProvider
             }
             count++
         }

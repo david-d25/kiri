@@ -3,6 +3,7 @@ package space.davids_digital.kiri.agent.tool
 /**
  * This annotation allows components to add additional information to their methods for the agent tool.
  * Use with components implementing [AgentToolProvider].
+ * All methods annotated with this annotation should be public.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
