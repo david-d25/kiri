@@ -63,8 +63,9 @@ class FrameRenderer {
         }
         userMessage {
             toolResult {
-                id = frame.result.toolUseId
-                output = frame.result.output
+                val result = frame.resultProvider()
+                id = result.toolUseId
+                output = result.output
             }
         }
     }

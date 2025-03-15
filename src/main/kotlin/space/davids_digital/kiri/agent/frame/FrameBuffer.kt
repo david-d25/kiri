@@ -1,7 +1,9 @@
 package space.davids_digital.kiri.agent.frame
 
+import org.springframework.stereotype.Component
 import java.util.LinkedList
 
+@Component
 class FrameBuffer : Iterable<Frame> {
     private val frames = LinkedList<Frame>()
 

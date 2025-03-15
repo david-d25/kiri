@@ -5,12 +5,12 @@ import space.davids_digital.kiri.llm.LlmToolUseResult
 
 class ToolCallFrame(
     val toolUse: LlmToolUse,
-    val result: LlmToolUseResult
+    val resultProvider: () -> LlmToolUseResult
 ) : Frame() {
     class Builder {
         lateinit var toolUse: LlmToolUse
-        lateinit var result: LlmToolUseResult
+        lateinit var resultProvider: () -> LlmToolUseResult
 
-        fun build() = ToolCallFrame(toolUse, result)
+        fun build() = ToolCallFrame(toolUse, resultProvider)
     }
 }
