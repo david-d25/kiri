@@ -24,6 +24,7 @@ import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
+import space.davids_digital.kiri.llm.LlmToolUseResult
 import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import space.davids_digital.kiri.llm.dsl.llmToolUseResult
 import space.davids_digital.kiri.service.exception.ServiceException
@@ -38,6 +39,7 @@ class AgentEngine(
     private val toolParameterMapper: AgentToolParameterMapper,
     private val toolCallExecutor: ToolCallExecutor,
     private val frameRenderer: FrameRenderer,
+    private val frames: FrameBuffer,
     private val anthropicMessagesService: AnthropicMessagesService,
 ) : AgentToolProvider {
     companion object {
@@ -46,7 +48,6 @@ class AgentEngine(
 
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    private val frames = FrameBuffer()
     private val running = AtomicBoolean(false)
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -134,17 +135,29 @@ class AgentEngine(
                 continue
             }
 
+            // Very tricky shit happening here, will probably need to refactor
+
             val toolUse = item.toolUse
 
+            val proxy = object {
+                lateinit var provider: () -> LlmToolUseResult
+            }
             val toolResult: (String) -> Unit = {
-                frames.addToolCall {
-                    this.toolUse = item.toolUse
-                    result = llmToolUseResult {
+                proxy.provider = {
+                    llmToolUseResult {
                         id = toolUse.id
                         output {
                             text(it)
                         }
                     }
+                }
+            }
+            toolResult("<Tool is still running, result is not ready...>")
+
+            frames.addToolCall {
+                this.toolUse = item.toolUse
+                resultProvider = {
+                    proxy.provider()
                 }
             }
 
