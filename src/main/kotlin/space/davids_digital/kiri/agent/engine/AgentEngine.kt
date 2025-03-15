@@ -10,13 +10,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import space.davids_digital.kiri.agent.app.AppSystem
-import space.davids_digital.kiri.agent.frame.DynamicDataFrame
+import space.davids_digital.kiri.agent.app.AppManager
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.FrameRenderer
-import space.davids_digital.kiri.agent.frame.StaticDataFrame
-import space.davids_digital.kiri.agent.frame.ToolCallFrame
-import space.davids_digital.kiri.agent.memory.MemorySystem
+import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
@@ -34,8 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 @Service
 class AgentEngine(
-    private val appSystem: AppSystem,
-    private val memorySystem: MemorySystem,
+    private val appManager: AppManager,
+    private val memoryManager: MemoryManager,
     private val toolRegistry: AgentToolRegistry,
     private val toolScanner: AgentToolScanner,
     private val toolParameterMapper: AgentToolParameterMapper,
@@ -125,31 +122,7 @@ class AgentEngine(
             }
 
             for (frame in frames) {
-                when (frame) {
-                    is StaticDataFrame -> {
-                        userMessage {
-                            text(frameRenderer.render(frame))
-                        }
-                    }
-                    is DynamicDataFrame -> {
-                        // TODO: Not yet supported
-                    }
-                    is ToolCallFrame -> {
-                        assistantMessage {
-                            toolUse {
-                                id = frame.toolUse.id
-                                name = frame.toolUse.name
-                                input = frame.toolUse.input
-                            }
-                        }
-                        userMessage {
-                            toolResult {
-                                id = frame.result.toolUseId
-                                output = frame.result.output
-                            }
-                        }
-                    }
-                }
+                frameRenderer.render(frame, this)
             }
         }
     }
@@ -174,6 +147,8 @@ class AgentEngine(
                     }
                 }
             }
+
+            log.info("Agent called tool '${toolUse.name}'")
 
             val entry = toolRegistry.find(toolUse.name)
             if (entry == null) {
@@ -230,7 +205,8 @@ class AgentEngine(
 
     private fun updateToolRegistry() {
         toolRegistry.clear()
-        toolScanner.scan(listOf(this, appSystem, memorySystem), toolRegistry)
+        val methodsRegistered = toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
+        log.info("Tool registry updated, registered $methodsRegistered tool methods")
     }
 
     override fun getAvailableAgentToolMethods() = listOf(::think)

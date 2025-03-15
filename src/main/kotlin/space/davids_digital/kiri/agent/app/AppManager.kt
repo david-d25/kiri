@@ -10,16 +10,24 @@ import space.davids_digital.kiri.agent.tool.AgentToolProvider
  */
 @Component
 @AgentToolNamespace("apps")
-class AppSystem : AgentToolProvider {
+class AppManager : AgentToolProvider {
     @AgentToolMethod(name = "list", description = "List all available apps")
-    fun listApps(): List<String> {
-        TODO("Not yet implemented")
+    fun listApps(): String {
+        return buildString {
+            appendLine("Available apps:")
+            appendLine("- notepad")
+        }
     }
 
-    @AgentToolMethod(name = "open", description = "Open an app by ID")
+    @AgentToolMethod(name = "open", description = "Open app by ID")
     fun open(id: String) {
         TODO("Not yet implemented")
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open)
+    @AgentToolMethod(name = "close", description = "Close app by ID")
+    fun close(id: String) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close)
 }

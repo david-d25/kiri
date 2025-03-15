@@ -1,3 +1,15 @@
 package space.davids_digital.kiri.agent.frame
 
-class DynamicDataFrame : Frame() // TODO: Dynamic data frame for apps UI and other dynamic data
+class DynamicDataFrame(
+    val tagProvider: () -> String,
+    val attributesProvider: () -> Map<String, String>,
+    val contentProvider: () -> List<ContentPart>
+) : DataFrame() {
+    override val tag: String
+        get() = tagProvider()
+
+    override val attributes: Map<String, String>
+        get() = attributesProvider()
+
+    override fun renderContent(): List<ContentPart> = contentProvider()
+}
