@@ -28,6 +28,8 @@ import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
 import space.davids_digital.kiri.llm.dsl.llmMessageRequest
+import space.davids_digital.kiri.llm.dsl.llmToolUseResult
+import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Service
@@ -103,21 +105,6 @@ class AgentEngine(
         handleResponse(response)
     }
 
-    private fun handleResponse(response: LlmMessageResponse) {
-        for (item in response.content) {
-            when (item) {
-                is LlmMessageResponse.ContentItem.Text -> {
-                    log.warn("Agent response contains text, ignoring")
-                }
-                is LlmMessageResponse.ContentItem.ToolUse -> {
-                    val function = toolRegistry.find(item.toolUse.name)
-//                    toolCallExecutor.execute(function, item.toolUse.input, )
-                    TODO()
-                }
-            }
-        }
-    }
-
     private fun buildRequest(): LlmMessageRequest<Model> {
         val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
         return llmMessageRequest {
@@ -154,6 +141,8 @@ class AgentEngine(
                                 name = frame.toolUse.name
                                 input = frame.toolUse.input
                             }
+                        }
+                        userMessage {
                             toolResult {
                                 id = frame.result.toolUseId
                                 output = frame.result.output
@@ -161,6 +150,60 @@ class AgentEngine(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private suspend fun handleResponse(response: LlmMessageResponse) {
+        for (item in response.content) {
+            if (item !is LlmMessageResponse.ContentItem.ToolUse) {
+                log.warn("Unexpected agent response part '${item::class}', skipping")
+                continue
+            }
+
+            val toolUse = item.toolUse
+
+            val toolResult: (String) -> Unit = {
+                frames.addToolCall {
+                    this.toolUse = item.toolUse
+                    result = llmToolUseResult {
+                        id = toolUse.id
+                        output {
+                            text(it)
+                        }
+                    }
+                }
+            }
+
+            val entry = toolRegistry.find(toolUse.name)
+            if (entry == null) {
+                log.warn("Tool '${toolUse.name}' not found in registry, which is weird")
+                toolResult("Unexpected error: tool '${toolUse.name}' was not found. This is certainly a system bug.")
+                continue
+            }
+            val toolResponse = try {
+                toolCallExecutor.execute(entry.callable, toolUse.input, entry.receiver)
+            } catch (e: ServiceException) {
+                log.error("Tool '${toolUse.name}' threw a service exception", e)
+                toolResult("Tool threw an exception with message '${e.message}'")
+                continue
+            } catch (e: Exception) {
+                log.error("Tool '${toolUse.name}' threw an exception", e)
+                toolResult(
+                    """
+                    Tool threw an unexpected exception ${e::class}: ${e.message}.
+                    Here are top 3 stack trace items:
+                    ```
+                    ${e.stackTrace.take(3).joinToString("\n")}
+                    ```
+                    """.trimIndent()
+                )
+                continue
+            }
+            if (toolResponse === Unit) {
+                toolResult("ok")
+            } else {
+                toolResult(toolResponse.toString())
             }
         }
     }
@@ -193,7 +236,7 @@ class AgentEngine(
     override fun getAvailableAgentToolMethods() = listOf(::think)
 
     @AgentToolMethod(name = "think", description = "Think to yourself")
-    private fun think(thoughts: String) {
+    fun think(thoughts: String) {
         frames.addStatic {
             tag = "thought"
             content = thoughts
