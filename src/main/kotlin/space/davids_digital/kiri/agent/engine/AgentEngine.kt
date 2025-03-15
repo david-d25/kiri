@@ -226,6 +226,7 @@ class AgentEngine(
 
     @AgentToolMethod(name = "think", description = "Think to yourself")
     fun think(thoughts: String) {
+        log.debug("Kiri thinks: $thoughts")
         frames.addStatic {
             tag = "thought"
             content = thoughts
