@@ -25,7 +25,7 @@ data class TelegramInlineKeyboardButton (
      * [answerWebAppQuery](https://core.telegram.org/bots/api#answerwebappquery). Available only in private chats
      * between a user and the bot. Not supported for messages sent on behalf of a Telegram Business account.
      */
-    val webbApp: TelegramWebAppInfo? = null,
+    val webApp: TelegramWebAppInfo? = null,
     /**
      * An HTTPS URL used to automatically authorize the user. Can be used as a replacement for the
      * [Telegram Login Widget](https://core.telegram.org/widgets/login).
@@ -69,5 +69,5 @@ data class TelegramInlineKeyboardButton (
      * NOTE: This type of button must always be the first button in the first row and can only be used in invoice
      * messages.
      */
-    val pay: Boolean? = null,
+    val pay: Boolean = false,
 )

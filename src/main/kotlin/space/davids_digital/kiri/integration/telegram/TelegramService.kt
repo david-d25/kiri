@@ -1,47 +1,53 @@
 package space.davids_digital.kiri.integration.telegram
 
-import com.github.kotlintelegrambot.Bot
-import com.github.kotlintelegrambot.bot
-import com.github.kotlintelegrambot.dispatch
-import com.github.kotlintelegrambot.dispatcher.message
-import com.github.kotlintelegrambot.entities.Chat
-import com.github.kotlintelegrambot.entities.ChatId
-import com.github.kotlintelegrambot.entities.Message
+import com.pengrad.telegrambot.TelegramBot
+import com.pengrad.telegrambot.TelegramException
+import com.pengrad.telegrambot.UpdatesListener.CONFIRMED_UPDATES_ALL
+import com.pengrad.telegrambot.model.Message
+import com.pengrad.telegrambot.model.Update
+import com.pengrad.telegrambot.response.BaseResponse
+import com.pengrad.telegrambot.utility.kotlin.extension.request.getChat
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.Settings
 import space.davids_digital.kiri.model.telegram.TelegramChat
-import space.davids_digital.kiri.model.telegram.TelegramMessage
+import space.davids_digital.kiri.orm.repository.TelegramChatRepository
 import space.davids_digital.kiri.service.exception.ServiceException
 
 @Service
 class TelegramService(
+    private val telegramChatRepository: TelegramChatRepository,
     private val settings: Settings
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    private lateinit var bot: Bot
+    private lateinit var bot: TelegramBot
 
     @PostConstruct
     fun start() {
-        bot = bot {
-            token = settings.integration.telegram.apiKey
-            dispatch {
-                message {
-                    onMessageReceived(message)
-                }
-            }
-        }
-        bot.startPolling()
+        bot = TelegramBot(settings.integration.telegram.apiKey)
+        bot.setUpdatesListener(::processUpdates, ::onBotException)
+    }
+
+    fun getChats(): List<TelegramChat> {
+        val ids = telegramChatRepository.findAll().map { it.id }
+
+        TODO()
     }
 
     fun getChat(username: String): TelegramChat {
-        return getChat(ChatId.ChannelUsername(username))
+        return bot.getChat(username)
+            .checkNoErrors("Failed to get Telegram chat with username '$username'")
+            .chat()
+            .toModel()
     }
 
     fun getChat(id: Long): TelegramChat {
-        return getChat(ChatId.Id(id))
+        return bot.getChat(id)
+            .checkNoErrors("Failed to get Telegram chat with id $id")
+            .chat()
+            .toModel()
     }
 
     fun getDialogMessages(/* TODO */) /* TODO */ {
@@ -50,49 +56,33 @@ class TelegramService(
 
     // TODO sending messages
 
-    private fun getChat(id: ChatId): TelegramChat {
-        return bot.getChat(id).fold(::entityToModel) { error ->
-            throw ServiceException("Failed to get Telegram chat with id $id: $error")
-        }
-    }
-
     private fun onMessageReceived(message: Message) {
         log.debug("Received Telegram message: {}", message)
-        message.chat.id
         // TODO: Implement
     }
 
-    private fun entityToModel(entity: Chat): TelegramChat {
-        return TODO()
-//        return TelegramChat(
-//            id = entity.id,
-//            type = when (entity.type) {
-//                "private" -> TelegramChat.Type.PRIVATE
-//                "group" -> TelegramChat.Type.GROUP
-//                "supergroup" -> TelegramChat.Type.SUPERGROUP
-//                "channel" -> TelegramChat.Type.CHANNEL
-//                else -> TelegramChat.Type.UNKNOWN
-//            },
-//            title = entity.title,
-//            username = entity.username,
-//            firstName = entity.firstName,
-//            lastName = entity.lastName,
-//            photo = entity.photo?.let {
-//                TelegramChatPhoto(
-//                    smallFileId = it.smallFileId,
-//                    smallFileUniqueId = it.smallFileUniqueId,
-//                    bigFileId = it.bigFileId,
-//                    bigFileUniqueId = it.bigFileUniqueId,
-//                )
-//            },
-//            bio = entity.bio,
-//            description = entity.description,
-//            inviteLink = entity.inviteLink,
-//            pinnedMessage = entity.pinnedMessage?.let { entityToModel(it) }
-//        )
+    private fun processUpdates(updates: List<Update>): Int {
+        // TODO
+        return CONFIRMED_UPDATES_ALL
     }
 
-    private fun entityToModel(entity: Message): TelegramMessage {
-        return TODO()
+    private fun onBotException(e: TelegramException) {
+        if (e.response() != null) {
+            log.error("Telegram API error ({}): {}", e.response().errorCode(), e.response().description(), e)
+        } else {
+            log.error("Telegram API error", e)
+        }
+    }
+
+    private fun <T : BaseResponse> T.checkNoErrors(customMessage: String? = null): T {
+        if (isOk) {
+            return this
+        }
+        log.error("Telegram API error ({}): {}", errorCode(), description())
+        if (customMessage != null) {
+            throw ServiceException(customMessage + ": " + description())
+        } else {
+            throw ServiceException("Telegram API error (${errorCode()}): ${description()}")
+        }
     }
 }

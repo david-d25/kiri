@@ -59,11 +59,11 @@ data class TelegramMessage (
     /**
      * True, if the message is sent to a forum topic.
      */
-    val isTopicMessage: Boolean? = null,
+    val isTopicMessage: Boolean = false,
     /**
      * True, if the message is a channel post that was automatically forwarded to the connected discussion group.
      */
-    val isAutomaticForward: Boolean? = null,
+    val isAutomaticForward: Boolean = false,
     /**
      * For replies in the same chat and message thread, the original message. Note that the Message object in this field
      * will not contain further reply_to_message fields even if it itself is a reply.
@@ -118,7 +118,7 @@ data class TelegramMessage (
      * Options used for link preview generation for the message, if it is a text message and link preview options were
      * changed.
      */
-    val linkPreviewOptions: List<TelegramLinkPreviewOptions>? = null,
+    val linkPreviewOptions: TelegramLinkPreviewOptions? = null,
     /**
      * Unique identifier of the message effect added to the message.
      */

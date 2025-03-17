@@ -13,7 +13,7 @@ data class StaticDataFrame(
 
     class Builder {
         var tag: String = ""
-        var attributes: Map<String, String> = emptyMap()
+        var attributes: MutableMap<String, String> = mutableMapOf()
         var content: String = ""
         fun build() = StaticDataFrame(tag, attributes, content)
     }

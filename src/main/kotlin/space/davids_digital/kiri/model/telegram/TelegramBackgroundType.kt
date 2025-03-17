@@ -27,11 +27,11 @@ sealed class TelegramBackgroundType {
         /**
          * True, if the wallpaper is downscaled to fit in a 450x450 square and then box-blurred with radius 12.
          */
-        val isBlurred: Boolean? = null,
+        val isBlurred: Boolean = false,
         /**
          * True, if the background moves slightly when the device is tilted.
          */
-        val isMoving: Boolean? = null,
+        val isMoving: Boolean = false,
     ) : TelegramBackgroundType()
 
     /**
@@ -55,11 +55,11 @@ sealed class TelegramBackgroundType {
          * True, if the background fill must be applied only to the pattern itself.
          * All other pixels are black in this case. For dark themes only.
          */
-        val isInverted: Boolean? = null,
+        val isInverted: Boolean = false,
         /**
          * True, if the background moves slightly when the device is tilted.
          */
-        val isMoving: Boolean? = null,
+        val isMoving: Boolean = false,
     ) : TelegramBackgroundType()
 
     /**
@@ -70,5 +70,7 @@ sealed class TelegramBackgroundType {
          * Name of the chat theme, which is usually an emoji.
          */
         val themeName: String,
-    )
+    ) : TelegramBackgroundType()
+
+    class Unknown : TelegramBackgroundType()
 }

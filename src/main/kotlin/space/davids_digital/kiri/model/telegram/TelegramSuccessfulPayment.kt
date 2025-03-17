@@ -31,11 +31,11 @@ data class TelegramSuccessfulPayment (
     /**
      * True, if the payment is a recurring payment for a subscription.
      */
-    val isRecurring: Boolean? = null,
+    val isRecurring: Boolean = false,
     /**
      * True, if the payment is the first payment for a subscription.
      */
-    val isFirstRecurring: Boolean? = null,
+    val isFirstRecurring: Boolean = false,
     /**
      * Identifier of the shipping option chosen by the user.
      */

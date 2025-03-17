@@ -17,10 +17,12 @@ sealed class TelegramBackgroundFill {
         val rotationAngle: Int,
     ) : TelegramBackgroundFill()
 
-    data class FreedomGradient(
+    data class FreeformGradient(
         /**
          * A list of the 3 or 4 base colors that are used to generate the freeform gradient in the RGB24 format.
          */
         val colors: List<Color>,
     ) : TelegramBackgroundFill()
+
+    class Unknown : TelegramBackgroundFill()
 }

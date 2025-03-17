@@ -26,7 +26,7 @@ data class TelegramVideo (
     /**
      * Available sizes of the cover of the video in the message.
      */
-    val cover: Array<TelegramPhotoSize>? = null,
+    val cover: List<TelegramPhotoSize>? = null,
     /**
      * Timestamp in seconds from which the video will play in the message.
      */

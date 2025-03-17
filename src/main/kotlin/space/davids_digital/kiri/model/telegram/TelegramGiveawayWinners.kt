@@ -46,11 +46,11 @@ data class TelegramGiveawayWinners(
     /**
      * True, if only users who had joined the chats after the giveaway started were eligible to win.
      */
-    val onlyNewMembers: Boolean? = null,
+    val onlyNewMembers: Boolean = false,
     /**
      * True, if the giveaway was canceled because the payment for it was refunded.
      */
-    val wasRefunded: Boolean? = null,
+    val wasRefunded: Boolean = false,
     /**
      * Description of additional giveaway prize.
      */

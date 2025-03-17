@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppManager
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.FrameRenderer
+import space.davids_digital.kiri.agent.frame.createdAtNow
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
@@ -87,6 +88,7 @@ class AgentEngine(
     private fun resetFrames() {
         frames.clear()
         frames.addStatic {
+            createdAtNow()
             tag = "system"
             content = "System started."
         }
@@ -222,14 +224,23 @@ class AgentEngine(
         log.info("Tool registry updated, registered $methodsRegistered tool methods")
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::think)
+    override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep)
 
-    @AgentToolMethod(name = "think", description = "Think to yourself")
+    @AgentToolMethod(description = "Think to yourself")
     fun think(thoughts: String) {
         log.debug("Kiri thinks: $thoughts")
         frames.addStatic {
+            createdAtNow()
             tag = "thought"
             content = thoughts
+        }
+    }
+
+    @AgentToolMethod(description = "Sleep for a specified amount of time")
+    fun sleep(seconds: Long) {
+        log.debug("Kiri is going to sleep for $seconds seconds")
+        engineScope.launch {
+            delay(seconds * 1000)
         }
     }
 }

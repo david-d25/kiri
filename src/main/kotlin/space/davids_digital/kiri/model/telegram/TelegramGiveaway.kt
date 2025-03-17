@@ -21,11 +21,11 @@ data class TelegramGiveaway(
     /**
      * True, if only users who join the chats after the giveaway started should be eligible to win.
      */
-    val onlyNewMembers: Boolean? = null,
+    val onlyNewMembers: Boolean = false,
     /**
      * True, if the list of giveaway winners will be visible to everyone.
      */
-    val hasPublicWinners: Boolean? = null,
+    val hasPublicWinners: Boolean = false,
     /**
      * Description of additional giveaway prize.
      */

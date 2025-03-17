@@ -11,5 +11,5 @@ data class TelegramPaidMediaInfo (
     /**
      * Information about the paid media.
      */
-    val paidMedia: Array<TelegramPaidMedia>,
+    val paidMedia: List<TelegramPaidMedia>,
 )
