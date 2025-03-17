@@ -19,5 +19,5 @@ data class TelegramPhotoSize (
     /**
      * File size in bytes.
      */
-    val fileSize: Int? = null,
+    val fileSize: Long? = null,
 )

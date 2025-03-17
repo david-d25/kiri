@@ -12,8 +12,8 @@ class TelegramPoll (
      * Special entities that appear in the question.
      * Currently, only custom emoji entities are allowed in poll questions.
      */
-    val questionEntities: Array<TelegramMessageEntity>? = null,
-    val options: Array<TelegramPollOption>,
+    val questionEntities: List<TelegramMessageEntity>? = null,
+    val options: List<TelegramPollOption>,
     val totalVoterCount: Int,
     val isClosed: Boolean,
     val isAnonymous: Boolean,
@@ -32,7 +32,7 @@ class TelegramPoll (
     /**
      * Special entities like usernames, URLs, bot commands, etc. that appear in the explanation.
      */
-    val explanationEntities: Array<TelegramMessageEntity>? = null,
+    val explanationEntities: List<TelegramMessageEntity>? = null,
     /**
      * Amount of time in seconds the poll will be active after creation.
      */

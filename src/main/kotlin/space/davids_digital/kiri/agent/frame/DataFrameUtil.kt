@@ -1,0 +1,11 @@
+package space.davids_digital.kiri.agent.frame
+
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+private val DATETIME_PATTERN = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm 'UTC'")
+
+fun StaticDataFrame.Builder.createdAtNow() {
+    attributes["created-at"] = ZonedDateTime.now(ZoneOffset.UTC).format(DATETIME_PATTERN)
+}

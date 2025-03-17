@@ -28,7 +28,7 @@ tasks.processResources {
 
 dependencies {
     // Telegram
-    implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.3.0")
+    implementation("com.github.pengrad:java-telegram-bot-api:8.3.0")
 
     // OpenAI
     implementation(platform("com.aallam.openai:openai-client-bom:4.0.1"))

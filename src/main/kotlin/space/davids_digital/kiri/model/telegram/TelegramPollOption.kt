@@ -13,5 +13,5 @@ data class TelegramPollOption (
      * Special entities that appear in the option text.
      * Currently, only custom emoji entities are allowed in poll option texts.
      */
-    val textEntities: Array<TelegramMessageEntity>? = null,
+    val textEntities: List<TelegramMessageEntity>? = null,
 )

@@ -14,5 +14,5 @@ data class TelegramGiveawayCompleted (
      * True, if the giveaway is a Telegram Star giveaway.
      * Otherwise, currently, the giveaway is a Telegram Premium giveaway.
      */
-    val isStarGiveaway: Boolean? = null,
+    val isStarGiveaway: Boolean = true,
 )

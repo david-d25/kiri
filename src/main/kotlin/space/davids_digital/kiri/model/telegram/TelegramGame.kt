@@ -15,7 +15,7 @@ data class TelegramGame (
     /**
      * Photo that will be displayed in the game message in chats.
      */
-    val photo: Array<TelegramPhotoSize>,
+    val photo: List<TelegramPhotoSize>,
     /**
      * Brief description of the game or high scores included in the game message.
      * Can be automatically edited to include current high scores for the game when the bot calls
@@ -26,7 +26,7 @@ data class TelegramGame (
     /**
      * Special entities that appear in [text], such as usernames, URLs, bot commands, etc.
      */
-    val textEntities: Array<TelegramMessageEntity>? = null,
+    val textEntities: List<TelegramMessageEntity>? = null,
     /**
      * Animation that will be displayed in the game message in chats. Upload via [BotFather](https://t.me/botfather).
      */

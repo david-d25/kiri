@@ -33,31 +33,31 @@ data class TelegramUser (
     /**
      * True, if this user is a Telegram Premium user.
      */
-    val isPremium: Boolean? = null,
+    val isPremium: Boolean = false,
     /**
      * True, if this user added the bot to the attachment menu.
      */
-    val addedToAttachmentMenu: Boolean? = null,
+    val addedToAttachmentMenu: Boolean = false,
     /**
      * True, if the bot can be invited to groups. Returned only in [getMe](https://core.telegram.org/bots/api#getme).
      */
-    val canJoinGroups: Boolean? = null,
+    val canJoinGroups: Boolean = false,
     /**
      * True, if [privacy mode](https://core.telegram.org/bots/features#privacy-mode) is disabled for the bot.
      * Returned only in [getMe](https://core.telegram.org/bots/api#getme).
      */
-    val canReadAllGroupMessages: Boolean? = null,
+    val canReadAllGroupMessages: Boolean = false,
     /**
      * True, if the bot supports inline queries. Returned only in [getMe](https://core.telegram.org/bots/api#getme).
      */
-    val supportsInlineQueries: Boolean? = null,
+    val supportsInlineQueries: Boolean = false,
     /**
      * True, if the bot can be connected to a Telegram Business account to receive its messages.
      * Returned only in [getMe](https://core.telegram.org/bots/api#getme).
      */
-    val canBeConnectedToBusiness: Boolean? = null,
+    val canConnectToBusiness: Boolean = false,
     /**
      * True, if the bot has a main Web App. Returned only in [getMe](https://core.telegram.org/bots/api#getme).
      */
-    val hasMainWebApp: Boolean? = null,
+    val hasMainWebApp: Boolean = false,
 )

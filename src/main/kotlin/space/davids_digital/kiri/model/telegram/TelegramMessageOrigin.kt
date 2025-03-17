@@ -73,4 +73,11 @@ sealed class TelegramMessageOrigin() {
          */
         val authorSignature: String? = null
     ) : TelegramMessageOrigin()
+
+    data class Unknown(
+        /**
+         * Date the message was sent.
+         */
+        val date: ZonedDateTime,
+    ) : TelegramMessageOrigin()
 }

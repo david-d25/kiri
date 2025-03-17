@@ -23,7 +23,7 @@ sealed class TelegramPaidMedia {
      * The paid media is a photo.
      */
     data class Photo(
-        val photo: Array<TelegramPhotoSize>,
+        val photo: List<TelegramPhotoSize>,
     ) : TelegramPaidMedia()
 
     /**
@@ -32,4 +32,6 @@ sealed class TelegramPaidMedia {
     data class Video(
         val video: TelegramVideo,
     ) : TelegramPaidMedia()
+
+    class Unknown : TelegramPaidMedia()
 }

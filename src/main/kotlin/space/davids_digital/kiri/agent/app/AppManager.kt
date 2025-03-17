@@ -3,16 +3,24 @@ package space.davids_digital.kiri.agent.app
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.agent.frame.DynamicDataFrame
+import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
+import space.davids_digital.kiri.integration.telegram.TelegramService
 
 /**
  * This component manages apps and their lifecycle.
  */
 @Component
 @AgentToolNamespace("apps")
-class AppManager : AgentToolProvider {
+class AppManager(
+    private val settings: Settings,
+    private val frames: FrameBuffer,
+    private val telegramService: TelegramService,
+) : AgentToolProvider {
     private val log = LoggerFactory.getLogger(this::class.java)
 
     private val availableApps = mutableMapOf<String, () -> AgentApp>()
@@ -20,8 +28,7 @@ class AppManager : AgentToolProvider {
 
     @PostConstruct
     private fun init() {
-        // TODO: Register all available apps
-        availableApps["telegram"] = { TelegramApp() }
+        availableApps["telegram"] = { TelegramApp(telegramService) }
     }
 
     @AgentToolMethod(name = "list", description = "List all available apps")
@@ -43,6 +50,11 @@ class AppManager : AgentToolProvider {
         val app = appFactory()
         openedApps.add(app)
         app.onOpened()
+        frames.add(DynamicDataFrame(
+            tagProvider = { "app" },
+            attributesProvider = { mapOf() },
+            contentProvider = app::render
+        ))
         log.info("Opened app '$id'")
         return "Opened '$id'"
     }
@@ -56,5 +68,10 @@ class AppManager : AgentToolProvider {
         return "Closed '$id'"
     }
 
+    fun sleep() {
+
+    }
+
     override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close)
+    override fun getSubProviders() = openedApps
 }
