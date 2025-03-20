@@ -68,10 +68,6 @@ class AppManager(
         return "Closed '$id'"
     }
 
-    fun sleep() {
-
-    }
-
     override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close)
     override fun getSubProviders() = openedApps
 }

@@ -7,6 +7,7 @@ import com.pengrad.telegrambot.model.Message
 import com.pengrad.telegrambot.model.Update
 import com.pengrad.telegrambot.response.BaseResponse
 import com.pengrad.telegrambot.utility.kotlin.extension.request.getChat
+import com.pengrad.telegrambot.utility.kotlin.extension.request.sendMessage
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -30,28 +31,30 @@ class TelegramService(
         bot.setUpdatesListener(::processUpdates, ::onBotException)
     }
 
-    fun getChats(): List<TelegramChat> {
-        val ids = telegramChatRepository.findAll().map { it.id }
-
-        TODO()
+    suspend fun getChats(): List<TelegramChat> {
+        return telegramChatRepository.findAll().map { it.id }.map { getChat(it) }
     }
 
-    fun getChat(username: String): TelegramChat {
+    suspend fun getChat(username: String): TelegramChat {
         return bot.getChat(username)
             .checkNoErrors("Failed to get Telegram chat with username '$username'")
             .chat()
             .toModel()
     }
 
-    fun getChat(id: Long): TelegramChat {
+    suspend fun getChat(id: Long): TelegramChat {
         return bot.getChat(id)
             .checkNoErrors("Failed to get Telegram chat with id $id")
             .chat()
             .toModel()
     }
 
-    fun getDialogMessages(/* TODO */) /* TODO */ {
-        // TODO: Implement
+    suspend fun sendText(chatId: Long, text: String) {
+        bot.sendMessage(chatId, text).checkNoErrors("Failed to send message to chat id $chatId")
+    }
+
+    suspend fun getDialogMessages(): List<Message> {
+        TODO()
     }
 
     // TODO sending messages
