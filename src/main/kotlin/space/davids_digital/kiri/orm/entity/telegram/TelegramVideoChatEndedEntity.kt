@@ -6,7 +6,7 @@ import jakarta.persistence.*
 @Table(name = "telegram_video_chat_ended")
 class TelegramVideoChatEndedEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 

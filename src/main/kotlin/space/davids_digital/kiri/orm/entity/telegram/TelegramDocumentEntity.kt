@@ -12,7 +12,7 @@ class TelegramDocumentEntity {
     @Column(name = "file_download_id")
     var fileDownloadId: String = ""
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "thumbnail_id", referencedColumnName = "file_unique_id")
     var thumbnail: TelegramPhotoSizeEntity? = null
 

@@ -27,8 +27,8 @@ class TelegramStickerEntity {
     @Column(name = "is_video")
     var isVideo: Boolean = false
 
-    @OneToOne
-    @JoinColumn(name = "thumbnail_id", referencedColumnName = "internal_id")
+    @ManyToOne
+    @JoinColumn(name = "thumbnail_id", referencedColumnName = "file_unique_id")
     var thumbnail: TelegramPhotoSizeEntity? = null
 
     @Column(name = "emoji")
@@ -37,11 +37,11 @@ class TelegramStickerEntity {
     @Column(name = "set_name")
     var setName: String? = null
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "premium_animation_file_id", referencedColumnName = "file_unique_id")
     var premiumAnimation: TelegramFileEntity? = null
 
-    @OneToOne
+    @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "mask_position_id", referencedColumnName = "internal_id")
     var maskPosition: TelegramMaskPositionEntity? = null
 

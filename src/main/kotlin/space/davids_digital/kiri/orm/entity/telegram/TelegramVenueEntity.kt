@@ -6,11 +6,11 @@ import jakarta.persistence.*
 @Table(name = "telegram_venues")
 class TelegramVenueEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 
-    @OneToOne
+    @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "location_id", referencedColumnName = "internal_id")
     var location: TelegramLocationEntity? = null
 

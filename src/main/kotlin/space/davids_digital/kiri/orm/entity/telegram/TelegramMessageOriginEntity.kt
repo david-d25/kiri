@@ -9,7 +9,7 @@ import java.time.OffsetDateTime
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
 abstract class TelegramMessageOriginEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 

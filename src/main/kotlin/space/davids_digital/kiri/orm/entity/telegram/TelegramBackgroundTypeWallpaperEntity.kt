@@ -4,12 +4,13 @@ import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToOne
 
 @Entity
 @DiscriminatorValue("wallpaper")
 class TelegramBackgroundTypeWallpaperEntity : TelegramBackgroundTypeEntity() {
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "document_id", referencedColumnName = "file_unique_id")
     var document: TelegramDocumentEntity? = null
 

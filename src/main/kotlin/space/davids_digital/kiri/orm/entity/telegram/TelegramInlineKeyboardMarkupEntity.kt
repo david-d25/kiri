@@ -6,7 +6,7 @@ import jakarta.persistence.*
 @Table(name = "telegram_inline_keyboard_markups")
 class TelegramInlineKeyboardMarkupEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 

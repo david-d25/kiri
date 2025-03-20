@@ -9,7 +9,7 @@ import jakarta.persistence.OneToOne
 @Entity
 @DiscriminatorValue("fill")
 class TelegramBackgroundTypeFillEntity : TelegramBackgroundTypeEntity() {
-    @OneToOne
+    @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "fill_id", referencedColumnName = "internal_id")
     var fill: TelegramBackgroundFillEntity? = null
 

@@ -8,7 +8,7 @@ import jakarta.persistence.*
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
 abstract class TelegramPaidMediaEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 

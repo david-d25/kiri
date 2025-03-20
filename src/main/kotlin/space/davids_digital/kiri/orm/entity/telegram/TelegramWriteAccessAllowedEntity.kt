@@ -6,7 +6,7 @@ import jakarta.persistence.*
 @Table(name = "telegram_write_access_allowed")
 class TelegramWriteAccessAllowedEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 

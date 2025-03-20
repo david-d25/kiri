@@ -1,8 +1,11 @@
 package space.davids_digital.kiri.orm.entity.telegram
 
 import jakarta.persistence.*
+import org.hibernate.annotations.JdbcType
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
+import org.hibernate.type.descriptor.jdbc.ArrayJdbcType
+import org.hibernate.type.descriptor.jdbc.BigIntJdbcType
 import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageId
 import java.time.OffsetDateTime
 
@@ -83,8 +86,13 @@ class TelegramMessageEntity {
     @Column(name = "text")
     var text: String? = null
 
-    @OneToMany(mappedBy = "parentMessageText", cascade = [CascadeType.ALL], orphanRemoval = true)
-    var entities: List<TelegramMessageEntityEntity>? = null
+    @OneToMany(
+        mappedBy = "parentMessageText",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true,
+        targetEntity = TelegramMessageEntityEntity::class
+    )
+    var entities: List<TelegramMessageEntityEntity> = mutableListOf()
 
     @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "link_preview_options_id", referencedColumnName = "internal_id")
@@ -148,8 +156,13 @@ class TelegramMessageEntity {
     @Column(name = "caption")
     var caption: String? = null
 
-    @OneToMany(mappedBy = "parentMessageCaption", cascade = [CascadeType.ALL], orphanRemoval = true)
-    var captionEntities: List<TelegramMessageEntityEntity>? = null
+    @OneToMany(
+        mappedBy = "parentMessageCaption",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true,
+        targetEntity = TelegramMessageEntityEntity::class
+    )
+    var captionEntities: List<TelegramMessageEntityEntity> = mutableListOf()
 
     @Column(name = "show_caption_above_media")
     var showCaptionAboveMedia: Boolean = false
@@ -181,12 +194,12 @@ class TelegramMessageEntity {
     @JoinColumn(name = "location_id", referencedColumnName = "internal_id")
     var location: TelegramLocationEntity? = null
 
-    @JdbcTypeCode(SqlTypes.BIGINT)
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "new_chat_members")
     var newChatMembers: Array<Long>? = null
 
-    @Column(name = "left_chat_member")
-    var leftChatMember: Long? = null
+    @Column(name = "left_chat_member_id")
+    var leftChatMemberId: Long? = null
 
     @Column(name = "new_chat_title")
     var newChatTitle: String? = null
@@ -307,7 +320,7 @@ class TelegramMessageEntity {
     @ManyToOne
     @JoinColumns(
         JoinColumn(name = "giveaway_winners_chat_id", referencedColumnName = "chat_id"),
-        JoinColumn(name = "giveaway_winners_message_id", referencedColumnName = "message_id")
+        JoinColumn(name = "giveaway_winners_message_id", referencedColumnName = "giveaway_message_id")
     )
     var giveawayWinners: TelegramGiveawayWinnersEntity? = null
 

@@ -7,7 +7,7 @@ import jakarta.persistence.*
 @Table(name = "telegram_encrypted_credentials")
 class TelegramEncryptedCredentialsEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 

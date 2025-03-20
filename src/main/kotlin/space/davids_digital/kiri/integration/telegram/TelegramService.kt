@@ -65,7 +65,13 @@ class TelegramService(
     }
 
     private fun processUpdates(updates: List<Update>): Int {
-        // TODO
+        updates.forEach { update ->
+            if (update.message() != null) {
+                onMessageReceived(update.message())
+            } else {
+                log.warn("Unsupported update: {}", update) // TODO other updates
+            }
+        }
         return CONFIRMED_UPDATES_ALL
     }
 

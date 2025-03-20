@@ -6,8 +6,20 @@ plugins {
     id("org.springframework.boot") version "3.4.2"
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.1.10"
+    kotlin("plugin.allopen") version "2.1.10"
     kotlin("plugin.spring") version "2.1.10"
     kotlin("plugin.jpa") version "2.1.10"
+}
+
+allOpen {
+    annotation("jakarta.persistence.Entity")
+    annotation("jakarta.persistence.MappedSuperclass")
+    annotation("jakarta.persistence.Embeddable")
+    annotation("org.springframework.stereotype.Component")
+    annotation("org.springframework.stereotype.Service")
+    annotation("org.springframework.stereotype.Repository")
+    annotation("org.springframework.web.bind.annotation.RestController")
+    annotation("org.springframework.context.annotation.Configuration")
 }
 
 tasks.withType<KotlinCompile> {

@@ -18,8 +18,8 @@ class TelegramVideoNoteEntity {
     @Column(name = "duration")
     var duration: Int = 0
 
-    @OneToOne
-    @JoinColumn(name = "thumbnail_id", referencedColumnName = "internal_id")
+    @ManyToOne
+    @JoinColumn(name = "thumbnail_id", referencedColumnName = "file_unique_id")
     var thumbnail: TelegramPhotoSizeEntity? = null
 
     @Column(name = "file_size")

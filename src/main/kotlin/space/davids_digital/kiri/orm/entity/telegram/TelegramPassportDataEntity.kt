@@ -6,7 +6,7 @@ import jakarta.persistence.*
 @Table(name = "telegram_passport_data")
 class TelegramPassportDataEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 
@@ -18,7 +18,7 @@ class TelegramPassportDataEntity {
     )
     var data: MutableList<TelegramEncryptedPassportElementEntity> = mutableListOf()
 
-    @OneToOne
+    @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "credentials_id", referencedColumnName = "internal_id", nullable = false)
     var credentials: TelegramEncryptedCredentialsEntity? = null
 }

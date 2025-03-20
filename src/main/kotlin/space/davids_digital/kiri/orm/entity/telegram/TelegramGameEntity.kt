@@ -6,7 +6,7 @@ import jakarta.persistence.*
 @Table(name = "telegram_games")
 class TelegramGameEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 
@@ -23,11 +23,11 @@ class TelegramGameEntity {
     @JoinColumn(name = "animation_id", referencedColumnName = "file_unique_id")
     var animation: TelegramAnimationEntity? = null
 
-    @OneToMany
+    @ManyToMany
     @JoinTable(
         name = "telegram_game_photos",
         joinColumns = [JoinColumn(name = "game_id", referencedColumnName = "internal_id")],
-        inverseJoinColumns = [JoinColumn(name = "photo_id", referencedColumnName = "internal_id")]
+        inverseJoinColumns = [JoinColumn(name = "photo_id", referencedColumnName = "file_unique_id")]
     )
     var photo: MutableList<TelegramPhotoSizeEntity> = mutableListOf()
 
