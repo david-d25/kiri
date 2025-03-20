@@ -39,7 +39,7 @@ class FrameRenderer {
         userMessage {
             for (contentPart in content) {
                 if (contentPart is DataFrame.Text) {
-                    builder.append(contentPart.text.escapeHTML())
+                    builder.append(contentPart.text)
                 } else if (contentPart is DataFrame.Image) {
                     if (builder.isNotEmpty()) {
                         text(builder.toString())

@@ -30,7 +30,7 @@ class TelegramAudioEntity {
     @Column(name = "file_size")
     var fileSize: Long? = null
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "thumbnail_id", referencedColumnName = "file_unique_id")
     var thumbnail: TelegramPhotoSizeEntity? = null
 }

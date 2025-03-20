@@ -4,7 +4,7 @@ import jakarta.persistence.Column
 import jakarta.persistence.Embeddable
 
 @Embeddable
-class TelegramGiveawayCompletedId(
+data class TelegramGiveawayCompletedId(
     @Column(name = "chat_id")
     var chatId: Long = 0,
 

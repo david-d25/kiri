@@ -13,7 +13,7 @@ import java.util.*
 )
 class UserSessionEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     var id: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
 

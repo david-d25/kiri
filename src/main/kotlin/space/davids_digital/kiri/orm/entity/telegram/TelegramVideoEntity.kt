@@ -21,8 +21,8 @@ class TelegramVideoEntity {
     @Column(name = "duration")
     var duration: Int = 0
 
-    @OneToOne
-    @JoinColumn(name = "thumbnail_id", referencedColumnName = "internal_id")
+    @ManyToOne
+    @JoinColumn(name = "thumbnail_id", referencedColumnName = "file_unique_id")
     var thumbnail: TelegramPhotoSizeEntity? = null
 
     @Column(name = "start_timestamp")
@@ -37,11 +37,11 @@ class TelegramVideoEntity {
     @Column(name = "file_size")
     var fileSize: Long? = null
 
-    @OneToMany
+    @ManyToMany
     @JoinTable(
-        name = "telegram_video_cover_sizes",
+        name = "telegram_video_cover_cross_links",
         joinColumns = [JoinColumn(name = "video_file_unique_id", referencedColumnName = "file_unique_id")],
-        inverseJoinColumns = [JoinColumn(name = "photo_size_id", referencedColumnName = "internal_id")]
+        inverseJoinColumns = [JoinColumn(name = "photo_size_id", referencedColumnName = "file_unique_id")]
     )
     var cover: MutableList<TelegramPhotoSizeEntity> = mutableListOf()
 }

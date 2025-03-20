@@ -55,7 +55,7 @@ class AgentEngine(
     @PostConstruct
     private fun init() {
         resetFrames()
-        start()
+//        start()
     }
 
     fun start() {

@@ -21,7 +21,34 @@ create table telegram_photo_sizes (
     file_download_id    text not null,
     width               integer not null,
     height              integer not null,
-    file_size           bigint not null,
+    file_size           bigint not null
+);
+
+create table telegram_polls (
+    id                       text primary key,
+    question                 text not null,
+    total_voter_count        integer not null,
+    is_closed                boolean not null,
+    is_anonymous             boolean not null,
+    type                     text not null,
+    allows_multiple_answers  boolean not null,
+    correct_option_id        integer,
+    explanation              text,
+    open_period              integer,
+    close_date               timestamp with time zone
+);
+
+create table telegram_poll_options (
+    internal_id   bigint generated always as identity primary key,
+    text          text not null,
+    voter_count   integer not null
+);
+
+create table telegram_text_quotes (
+    internal_id  bigint generated always as identity primary key,
+    text         text not null,
+    position     integer not null,
+    is_manual    boolean not null
 );
 
 create table telegram_animations (
@@ -53,24 +80,26 @@ create table telegram_background_fills (
     type             text not null,
 
     -- Solid
-    color            integer,
+    color_rgb        integer,
 
     -- Gradient
-    top_color        integer,
-    bottom_color     integer,
+    top_color_rgb    integer,
+    bottom_color_rgb integer,
     rotation_angle   integer,
 
     -- FreeformGradient
-    color1           integer,
-    color2           integer,
-    color3           integer,
-    color4           integer,
+    color1_rgb       integer,
+    color2_rgb       integer,
+    color3_rgb       integer,
+    color4_rgb       integer,
 
     -- Constraints
     check (
-        (type = 'solid' and color is not null) or
-        (type = 'gradient' and top_color is not null and bottom_color is not null and rotation_angle is not null) or
-        (type = 'freeform' and color1 is not null and color2 is not null and color3 is not null) or
+        (type = 'solid' and color_rgb is not null) or
+        (type = 'gradient'  and top_color_rgb is not null
+                            and bottom_color_rgb is not null
+                            and rotation_angle is not null) or
+        (type = 'freeform' and color1_rgb is not null and color2_rgb is not null and color3_rgb is not null) or
         (type = 'unknown')
     )
 );
@@ -78,7 +107,7 @@ create table telegram_background_fills (
 create table telegram_documents (
     file_unique_id   text primary key,
     file_download_id text not null,
-    thumbnail_id     text references telegram_photo_sizes(file_unique_id) on delete cascade on update cascade,
+    thumbnail_id     text references telegram_photo_sizes(file_unique_id) on update cascade,
     file_name        text,
     mime_type        text,
     file_size        bigint
@@ -146,6 +175,34 @@ create index idx_telegram_message_origins__sender_user_id on telegram_message_or
 create index idx_telegram_message_origins__sender_chat_id on telegram_message_origins (sender_chat_id);
 create index idx_telegram_message_origins__chat_id on telegram_message_origins (chat_id);
 
+create table telegram_videos (
+    file_unique_id     text primary key,
+    file_download_id   text not null,
+    width              integer not null,
+    height             integer not null,
+    duration           integer not null,
+    thumbnail_id       text references telegram_photo_sizes(file_unique_id) on update cascade,
+    start_timestamp    integer,
+    file_name          text,
+    mime_type          text,
+    file_size          bigint
+);
+
+create table telegram_video_cover_cross_links (
+    video_file_unique_id text references telegram_videos(file_unique_id) on update cascade,
+    photo_size_id        text references telegram_photo_sizes(file_unique_id) on update cascade,
+    primary key (video_file_unique_id, photo_size_id)
+);
+
+create table telegram_video_notes (
+    file_unique_id     text primary key,
+    file_download_id   text not null,
+    length             integer not null,
+    duration           integer not null,
+    thumbnail_id       text references telegram_photo_sizes(file_unique_id) on update cascade,
+    file_size          bigint
+);
+
 create table telegram_link_preview_options (
     internal_id         bigint generated always as identity primary key,
     is_disabled         boolean not null,
@@ -162,7 +219,7 @@ create table telegram_paid_media_info (
 
 create table telegram_paid_media (
     internal_id         bigint generated always as identity primary key,
-    paid_media_info_id  bigint references telegram_paid_media_info(internal_id) on delete cascade on update cascade,
+    paid_media_info_id  bigint references telegram_paid_media_info(internal_id) on update cascade,
     type                text not null,
 
     -- for preview
@@ -171,7 +228,7 @@ create table telegram_paid_media (
     duration            integer,
 
     -- for video
-    video_id            bigint references telegram_videos(file_unique_id) on update cascade
+    video_id            text references telegram_videos(file_unique_id) on update cascade
 
     check (
         (type = 'preview' and width is not null and height is not null and duration is not null) or
@@ -211,11 +268,11 @@ create table telegram_stickers (
     height                    integer not null,
     is_animated               boolean not null,
     is_video                  boolean not null,
-    thumbnail_id              text references telegram_photo_sizes(file_unique_id) on delete set null on update cascade,
+    thumbnail_id              text references telegram_photo_sizes(file_unique_id) on update cascade,
     emoji                     text,
     set_name                  text,
-    premium_animation_file_id text references telegram_files(file_unique_id) on delete set null on update cascade,
-    mask_position_id          bigint references telegram_mask_positions(internal_id) on delete set null on update cascade,
+    premium_animation_file_id text references telegram_files(file_unique_id) on update cascade,
+    mask_position_id          bigint references telegram_mask_positions(internal_id) on update cascade,
     custom_emoji_id           text,
     needs_repainting          boolean,
     file_size                 bigint
@@ -227,34 +284,6 @@ create table telegram_stories (
     primary key (chat_id, story_id)
 );
 create index idx_telegram_stories__chat_id on telegram_stories (chat_id);
-
-create table telegram_videos (
-    file_unique_id     text primary key,
-    file_download_id   text not null,
-    width              integer not null,
-    height             integer not null,
-    duration           integer not null,
-    thumbnail_id       text references telegram_photo_sizes(file_unique_id) on delete set null on update cascade,
-    start_timestamp    integer,
-    file_name          text,
-    mime_type          text,
-    file_size          bigint
-);
-
-create table telegram_video_cover_sizes (
-    video_file_unique_id text references telegram_videos(file_unique_id) on update cascade,
-    photo_size_id        text references telegram_photo_sizes(file_unique_id) on update cascade,
-    primary key (video_file_unique_id, photo_size_id)
-);
-
-create table telegram_video_notes (
-    file_unique_id     text primary key,
-    file_download_id   text not null,
-    length             integer not null,
-    duration           integer not null,
-    thumbnail_id       text references telegram_photo_sizes(file_unique_id) on delete set null on update cascade,
-    file_size          bigint
-);
 
 create table telegram_contacts (
     internal_id   bigint generated always as identity primary key,
@@ -272,47 +301,12 @@ create table telegram_dice (
     value       integer not null
 );
 
-create table telegram_message_entities (
-    internal_id                         bigint generated always as identity primary key,
-    parent_game_text_id                 bigint references telegram_games(internal_id) on update cascade,
-    parent_message_text_chat_id         bigint,
-    parent_message_text_message_id      bigint,
-    parent_message_caption_chat_id      bigint,
-    parent_message_caption_message_id   bigint,
-    parent_poll_question_id             text references telegram_polls(id) on update cascade,
-    parent_poll_explanation_id          text references telegram_polls(id) on update cascade,
-    parent_poll_option_text_id          bigint references telegram_poll_options(internal_id) on update cascade,
-    parent_text_quote_id                bigint references telegram_text_quotes(internal_id) on update cascade,
-    type                                text not null,
-    offset                              integer not null,
-    length                              integer not null,
-    url                                 text,
-    user_id                             bigint,
-    language                            text,
-    custom_emoji_id                     text,
-
-    foreign key (parent_message_text_chat_id, parent_message_text_message_id)
-        references telegram_messages(chat_id, message_id) on update cascade,
-    foreign key (parent_message_caption_chat_id, parent_message_caption_message_id)
-        references telegram_messages(chat_id, message_id) on update cascade,
-
-    -- Only one of the parent columns can be set
-    check (
-        (parent_game_text_id is not null)::int +
-        (parent_message_text_id is not null)::int +
-        (parent_poll_question_id is not null)::int +
-        (parent_poll_explanation_id is not null)::int +
-        (parent_poll_option_text_id is not null)::int +
-        (parent_text_quote_id is not null)::int
-    ) = 1
-);
-
 create table telegram_games (
     internal_id   bigint generated always as identity primary key,
     title         text not null,
     description   text not null,
     text          text,
-    animation_id  text references telegram_animations(file_unique_id) on update cascade,
+    animation_id  text references telegram_animations(file_unique_id) on update cascade
 );
 
 create table telegram_game_photos (
@@ -387,41 +381,15 @@ create table telegram_locations (
     proximity_alert_radius  integer
 );
 
-create table telegram_poll_options (
-    internal_id   bigint generated always as identity primary key,
-    text          text not null,
-    voter_count   integer not null
-);
-
-create table telegram_poll_option_message_entities (
-    poll_option_id      bigint references telegram_poll_options(internal_id) on delete cascade on update cascade,
-    message_entity_id   bigint references telegram_message_entities(internal_id) on delete cascade on update cascade,
-    primary key (poll_option_id, message_entity_id)
-);
-
-create table telegram_polls (
-    id                       text primary key,
-    question                 text not null,
-    total_voter_count        integer not null,
-    is_closed                boolean not null,
-    is_anonymous             boolean not null,
-    type                     text not null,
-    allows_multiple_answers  boolean not null,
-    correct_option_id        integer,
-    explanation              text,
-    open_period              integer,
-    close_date               timestamp with time zone
-);
-
 create table telegram_poll_options_map (
     poll_id         text references telegram_polls(id) on delete cascade on update cascade,
-    poll_option_id  bigint references telegram_poll_options(internal_id) on delete cascade on update cascade,
+    poll_option_id  bigint references telegram_poll_options(internal_id) on update cascade,
     primary key (poll_id, poll_option_id)
 );
 
 create table telegram_venues (
     internal_id         bigint generated always as identity primary key,
-    location_id         bigint references telegram_locations(internal_id) on delete set null on update cascade,
+    location_id         bigint references telegram_locations(internal_id) on update cascade,
     title               text not null,
     address             text not null,
     foursquare_id       text,
@@ -456,7 +424,7 @@ create table telegram_external_reply_info (
     poll_id                      text references telegram_polls(id) on update cascade,
     venue_id                     bigint references telegram_venues(internal_id) on update cascade,
 
-    foreign key giveaway_winners_chat_id, giveaway_winners_message_id
+    foreign key (giveaway_winners_chat_id, giveaway_winners_message_id)
         references telegram_giveaway_winners(chat_id, giveaway_message_id) on update cascade
 );
 
@@ -464,13 +432,6 @@ create table telegram_external_reply_info_photo_cross_links (
     reply_info_id bigint references telegram_external_reply_info(internal_id) on delete cascade on update cascade,
     photo_id      text references telegram_photo_sizes(file_unique_id) on update cascade,
     primary key (reply_info_id, photo_id)
-);
-
-create table telegram_text_quotes (
-    internal_id  bigint generated always as identity primary key,
-    text         text not null,
-    position     integer not null,
-    is_manual    boolean not null
 );
 
 create table telegram_users (
@@ -673,19 +634,6 @@ create table telegram_giveaways_created (
     prize_star_count   integer
 );
 
-create table telegram_giveaways_completed (
-    chat_id                      bigint not null,
-    message_id                   bigint not null,
-    winner_count                 integer not null,
-    unclaimed_prize_count        integer,
-    original_message_chat_id     bigint,
-    original_message_message_id  bigint,
-    is_star_giveaway             boolean not null,
-    primary key (chat_id, message_id),
-    foreign key (original_message_chat_id, original_message_message_id)
-        references telegram_messages(chat_id, message_id) on delete set null on update cascade
-);
-
 create table telegram_video_chat_scheduled (
     internal_id  bigint generated always as identity primary key,
     start_date   timestamp with time zone not null
@@ -726,7 +674,7 @@ create table telegram_login_urls (
     request_write_access  boolean
 );
 
-create table telegram_switch_inline_query_chosen_chat (
+create table telegram_switch_inline_query_chosen_chats (
     internal_id           bigint generated always as identity primary key,
     query                 text,
     allow_user_chats      boolean,
@@ -745,13 +693,13 @@ create table telegram_inline_keyboard_buttons (
     text                                text not null,
     url                                 text,
     callback_data                       text,
-    web_app_id                          bigint references telegram_web_app_info(internal_id) on delete cascade,
-    login_url_id                        bigint references telegram_login_urls(internal_id) on delete cascade,
+    web_app_id                          bigint references telegram_web_app_info(internal_id) on update cascade,
+    login_url_id                        bigint references telegram_login_urls(internal_id) on update cascade,
     switch_inline_query                 text,
     switch_inline_query_current_chat    text,
     switch_inline_query_chosen_chat_id  bigint references telegram_switch_inline_query_chosen_chats(internal_id)
-                                            on delete cascade,
-    copy_text_button_id                 bigint references telegram_copy_text_buttons(internal_id) on delete cascade,
+                                            on update cascade,
+    copy_text_button_id                 bigint references telegram_copy_text_buttons(internal_id) on update cascade,
     pay                                 boolean not null
 );
 
@@ -761,13 +709,25 @@ create table telegram_inline_keyboard_markups (
 
 create table telegram_inline_keyboard_buttons_cross_links (
     internal_id    bigint generated always as identity primary key,
-    markup_id      bigint not null references telegram_inline_keyboard_markups(internal_id) on delete cascade,
-    button_id      bigint not null references telegram_inline_keyboard_buttons(internal_id) on delete cascade,
+    markup_id      bigint not null references telegram_inline_keyboard_markups(internal_id) on update cascade,
+    button_id      bigint not null references telegram_inline_keyboard_buttons(internal_id) on update cascade,
     row_index      integer not null,
     column_index   integer not null
 );
 create index idx_telegram_inline_keyboard_buttons_cross_links__markup_id
     on telegram_inline_keyboard_buttons_cross_links (markup_id);
+
+create table telegram_giveaways_completed (
+    chat_id                      bigint not null,
+    message_id                   bigint not null,
+    winner_count                 integer not null,
+    unclaimed_prize_count        integer,
+    original_message_chat_id     bigint,
+    original_message_message_id  bigint,
+    is_star_giveaway             boolean not null,
+    primary key (chat_id, message_id)
+    -- foreign key for [original_message_chat_id, original_message_message_id] added after [telegram_messages]
+);
 
 create table telegram_messages (
     chat_id                         bigint not null,
@@ -871,7 +831,7 @@ create table telegram_messages (
     foreign key (giveaway_winners_chat_id, giveaway_winners_message_id)
         references telegram_giveaway_winners(chat_id, giveaway_message_id) on update cascade,
     foreign key (giveaway_completed_chat_id, giveaway_completed_message_id)
-        references telegram_giveaways_completed(chat_id, message_id) on update cascade,
+        references telegram_giveaways_completed(chat_id, message_id) on update cascade
 );
 create table telegram_messages_photo_cross_links (
     chat_id     bigint not null,
@@ -880,8 +840,8 @@ create table telegram_messages_photo_cross_links (
     primary key (chat_id, message_id, photo_id),
     foreign key (chat_id, message_id) references telegram_messages(chat_id, message_id)
         on delete cascade on update cascade,
-    foreign key (photo_id) references telegram_photo_sizes(file_unique_id) on update cascade,
-)
+    foreign key (photo_id) references telegram_photo_sizes(file_unique_id) on update cascade
+);
 create table telegram_messages_new_chat_photo_cross_links (
     chat_id     bigint not null,
     message_id  bigint not null,
@@ -889,8 +849,57 @@ create table telegram_messages_new_chat_photo_cross_links (
     primary key (chat_id, message_id, photo_id),
     foreign key (chat_id, message_id) references telegram_messages(chat_id, message_id)
         on delete cascade on update cascade,
-    foreign key (photo_id) references telegram_photo_sizes(file_unique_id) on update cascade,
-)
+    foreign key (photo_id) references telegram_photo_sizes(file_unique_id) on update cascade
+);
+
+alter table telegram_giveaways_completed
+    add constraint fk_telegram_giveaways_completed__original_message
+        foreign key (original_message_chat_id, original_message_message_id)
+            references telegram_messages(chat_id, message_id) on delete set null on update cascade;
+            -- "on delete set null" here to avoid circular dependency
+
+create table telegram_message_entities (
+    internal_id                         bigint generated always as identity primary key,
+    parent_game_text_id                 bigint references telegram_games(internal_id) on update cascade,
+    parent_message_text_chat_id         bigint,
+    parent_message_text_message_id      bigint,
+    parent_message_caption_chat_id      bigint,
+    parent_message_caption_message_id   bigint,
+    parent_poll_question_id             text references telegram_polls(id) on update cascade,
+    parent_poll_explanation_id          text references telegram_polls(id) on update cascade,
+    parent_poll_option_text_id          bigint references telegram_poll_options(internal_id) on update cascade,
+    parent_text_quote_id                bigint references telegram_text_quotes(internal_id) on update cascade,
+    type                                text not null,
+    "offset"                            integer not null,
+    length                              integer not null,
+    url                                 text,
+    user_id                             bigint,
+    language                            text,
+    custom_emoji_id                     text,
+
+    foreign key (parent_message_text_chat_id, parent_message_text_message_id)
+        references telegram_messages(chat_id, message_id) on update cascade,
+    foreign key (parent_message_caption_chat_id, parent_message_caption_message_id)
+        references telegram_messages(chat_id, message_id) on update cascade,
+
+    -- Only one of the parent columns can be set
+    check (
+        (parent_game_text_id is not null)::int +
+        (parent_message_text_chat_id is not null and parent_message_text_message_id is not null)::int +
+        (parent_message_caption_chat_id is not null and parent_message_caption_message_id is not null)::int +
+        (parent_poll_question_id is not null)::int +
+        (parent_poll_explanation_id is not null)::int +
+        (parent_poll_option_text_id is not null)::int +
+        (parent_text_quote_id is not null)::int
+        = 1
+    )
+);
+
+create table telegram_poll_option_message_entities (
+    poll_option_id      bigint references telegram_poll_options(internal_id) on delete cascade on update cascade,
+    message_entity_id   bigint references telegram_message_entities(internal_id) on update cascade,
+    primary key (poll_option_id, message_entity_id)
+);
 
 create table telegram_chat_permissions (
     internal_id                  bigint generated always as identity primary key,
@@ -912,7 +921,7 @@ create table telegram_chat_permissions (
 
 create table telegram_chat_locations (
     internal_id    bigint generated always as identity primary key,
-    location_id    bigint references telegram_locations(internal_id) on delete cascade on update cascade,
+    location_id    bigint references telegram_locations(internal_id) on update cascade,
     address        text not null
 );
 

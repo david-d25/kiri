@@ -3,6 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 
@@ -11,7 +12,7 @@ import jakarta.persistence.Table
 class TelegramChatPhotoEntity {
     @Id
     @Column(name = "internal_id")
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     var internalId: Long = 0
 
     @Column(name = "small_file_id")

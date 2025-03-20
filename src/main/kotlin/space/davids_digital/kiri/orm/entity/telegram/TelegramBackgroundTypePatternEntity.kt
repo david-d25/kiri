@@ -4,16 +4,17 @@ import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToOne
 
 @Entity
 @DiscriminatorValue("pattern")
 class TelegramBackgroundTypePatternEntity : TelegramBackgroundTypeEntity() {
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "document_id", referencedColumnName = "file_unique_id")
     var document: TelegramDocumentEntity? = null
 
-    @OneToOne
+    @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "fill_id", referencedColumnName = "internal_id")
     var fill: TelegramBackgroundFillEntity? = null
 

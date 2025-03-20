@@ -6,7 +6,7 @@ import jakarta.persistence.*
 @Table(name = "telegram_locations")
 class TelegramLocationEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 

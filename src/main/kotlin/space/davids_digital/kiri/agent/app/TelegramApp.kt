@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.agent.app
 
+import io.ktor.util.escapeHTML
 import kotlinx.coroutines.runBlocking
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
@@ -25,17 +26,31 @@ class TelegramApp(
         text(
             runBlocking {
                 buildString {
-                    appendLine("Chats:")
+                    appendLine("<chats>")
                     service.getChats().forEach { chat ->
-                        appendLine("${chat.id}: ${chat.title}")
+                        val id = chat.id
+                        val title = chat.title?.escapeHTML() ?: "<no_title/>"
+                        appendLine("""<chat id="$id">$title</chat>""")
                     }
+                    appendLine("</chats>")
                 }
             }
         )
     }
 
     private fun renderChat(id: Long) = dataFrameContent {
-
+        text(
+            runBlocking {
+                buildString {
+                    val chat = service.getChat(id)
+                    val title = chat.title?.escapeHTML()
+                    val titleAttr = if (title != null) " title=\"$title\"" else ""
+                    appendLine("""<chat id="$id"$titleAttr>""")
+                    // TODO messages
+                    appendLine("</chat>")
+                }
+            }
+        )
     }
 
     @AgentToolMethod

@@ -7,7 +7,7 @@ import java.time.OffsetDateTime
 @Table(name = "telegram_video_chat_scheduled")
 class TelegramVideoChatScheduledEntity {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "internal_id")
     var internalId: Long = 0
 
