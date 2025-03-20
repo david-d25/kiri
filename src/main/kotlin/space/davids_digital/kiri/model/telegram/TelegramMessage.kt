@@ -92,12 +92,12 @@ data class TelegramMessage (
     /**
      * True, if the message can't be forwarded.
      */
-    val hasProtectedContent: Boolean? = null,
+    val hasProtectedContent: Boolean = false,
     /**
      * True, if the message was sent by an implicit action, for example, as an away or a greeting business message, or
      * as a scheduled message.
      */
-    val isFromOffline: Boolean? = null,
+    val isFromOffline: Boolean = false,
     /**
      *  The unique identifier of a media message group this message belongs to.
      */
@@ -177,11 +177,11 @@ data class TelegramMessage (
     /**
      * True, if the caption must be shown above the message media.
      */
-    val showCaptionAboveMedia: Boolean? = null,
+    val showCaptionAboveMedia: Boolean = false,
     /**
      * True, if the message media is covered by a spoiler animation.
      */
-    val hasMediaSpoiler: Boolean? = null,
+    val hasMediaSpoiler: Boolean = false,
     /**
      * Message is a shared contact, information about the contact.
      */
@@ -227,23 +227,23 @@ data class TelegramMessage (
     /**
      * Service message: the chat photo was deleted.
      */
-    val deleteChatPhoto: Boolean? = null,
+    val deleteChatPhoto: Boolean = false,
     /**
      * Service message: the group has been created.
      */
-    val groupChatCreated: Boolean? = null,
+    val groupChatCreated: Boolean = false,
     /**
      * Service message: the supergroup has been created. This field can't be received in a message coming through
      * updates, because bot can't be a member of a supergroup when it is created. It can only be found in
      * reply_to_message if someone replies to a very first message in a directly created supergroup.
      */
-    val supergroupChatCreated: Boolean? = null,
+    val supergroupChatCreated: Boolean = false,
     /**
      * Service message: the channel has been created. This field can't be received in a message coming through updates,
      * because bot can't be a member of a channel when it is created. It can only be found in reply_to_message if
      * someone replies to a very first message in a channel.
      */
-    val channelChatCreated: Boolean? = null,
+    val channelChatCreated: Boolean = false,
     /**
      * Service message: auto-delete timer settings changed in the chat.
      */
