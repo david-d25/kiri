@@ -2,7 +2,6 @@ package space.davids_digital.kiri.orm.mapping
 
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
-import org.mapstruct.Mappings
 import space.davids_digital.kiri.model.telegram.TelegramInlineKeyboardButton
 import space.davids_digital.kiri.orm.entity.telegram.*
 
@@ -16,13 +15,11 @@ import space.davids_digital.kiri.orm.entity.telegram.*
     ]
 )
 interface TelegramInlineKeyboardButtonEntityMapper {
-    @Mappings(
-        Mapping(source = "copyText", target = "copyTextButton")
-    )
+    @Mapping(source = "copyText", target = "copyTextButton")
+    @Mapping(target = "internalId", ignore = true)
     fun toEntity(model: TelegramInlineKeyboardButton): TelegramInlineKeyboardButtonEntity
 
-    @Mappings(
-        Mapping(source = "copyTextButton", target = "copyText")
-    )
+    @Mapping(source = "copyTextButton", target = "copyText")
+    @Mapping(target = "callbackGame", ignore = true)
     fun toModel(entity: TelegramInlineKeyboardButtonEntity): TelegramInlineKeyboardButton
 }

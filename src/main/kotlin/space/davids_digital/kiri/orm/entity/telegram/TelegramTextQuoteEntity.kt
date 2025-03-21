@@ -17,7 +17,7 @@ class TelegramTextQuoteEntity {
     var position: Int = 0
 
     @Column(name = "is_manual")
-    var isManual: Boolean = false
+    var manual: Boolean = false
 
     @OneToMany(mappedBy = "parentTextQuote", cascade = [CascadeType.ALL], orphanRemoval = true)
     var entities: MutableList<TelegramMessageEntityEntity> = mutableListOf()

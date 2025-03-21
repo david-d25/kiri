@@ -1,6 +1,7 @@
 package space.davids_digital.kiri.orm.mapping
 
 import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 import space.davids_digital.kiri.model.telegram.TelegramPaidMedia
 import space.davids_digital.kiri.model.telegram.TelegramPaidMedia.*
 import space.davids_digital.kiri.orm.entity.telegram.TelegramPaidMediaEntity
@@ -9,12 +10,32 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramPaidMediaPreviewEnt
 import space.davids_digital.kiri.orm.entity.telegram.TelegramPaidMediaUnknownEntity
 import space.davids_digital.kiri.orm.entity.telegram.TelegramPaidMediaVideoEntity
 
-@Mapper(componentModel = "spring", uses = [TelegramPhotoSizeEntityMapper::class, TelegramVideoEntityMapper::class])
-interface TelegramPaidMediaEntityMapper {
-    fun toEntity(model: Preview): TelegramPaidMediaPreviewEntity
-    fun toEntity(model: Photo): TelegramPaidMediaPhotoEntity
-    fun toEntity(model: Video): TelegramPaidMediaVideoEntity
-    fun toEntity(model: Unknown): TelegramPaidMediaUnknownEntity
+@Mapper(
+    componentModel = "spring",
+    uses = [
+        TelegramPhotoSizeEntityMapper::class,
+        TelegramVideoEntityMapper::class,
+        TelegramPaidMediaInfoEntityMapper::class
+    ]
+)
+abstract class TelegramPaidMediaEntityMapper {
+    @Mapping(target = "internalId", ignore = true)
+    @Mapping(target = "paidMediaInfo", ignore = true)
+    abstract fun toEntity(model: Preview): TelegramPaidMediaPreviewEntity
+
+    @Mapping(target = "internalId", ignore = true)
+    @Mapping(target = "paidMediaInfo", ignore = true)
+    @Mapping(source = "photo", target = "photoSizes")
+    abstract fun toEntity(model: Photo): TelegramPaidMediaPhotoEntity
+
+    @Mapping(target = "internalId", ignore = true)
+    @Mapping(target = "paidMediaInfo", ignore = true)
+    abstract fun toEntity(model: Video): TelegramPaidMediaVideoEntity
+
+    @Mapping(target = "internalId", ignore = true)
+    @Mapping(target = "paidMediaInfo", ignore = true)
+    abstract fun toEntity(model: Unknown): TelegramPaidMediaUnknownEntity
+
     fun toEntity(model: TelegramPaidMedia): TelegramPaidMediaEntity {
         return when (model) {
             is Preview -> toEntity(model)
@@ -24,10 +45,17 @@ interface TelegramPaidMediaEntityMapper {
         }
     }
 
-    fun toModel(entity: TelegramPaidMediaPreviewEntity): Preview
-    fun toModel(entity: TelegramPaidMediaPhotoEntity): Photo
-    fun toModel(entity: TelegramPaidMediaVideoEntity): Video
-    fun toModel(entity: TelegramPaidMediaUnknownEntity): Unknown
+    abstract fun toModel(entity: TelegramPaidMediaPreviewEntity): Preview
+
+    @Mapping(target = "copy", ignore = true)
+    @Mapping(source = "photoSizes", target = "photo")
+    abstract fun toModel(entity: TelegramPaidMediaPhotoEntity): Photo
+
+    @Mapping(target = "copy", ignore = true)
+    abstract fun toModel(entity: TelegramPaidMediaVideoEntity): Video
+
+    abstract fun toModel(entity: TelegramPaidMediaUnknownEntity): Unknown
+
     fun toModel(entity: TelegramPaidMediaEntity): TelegramPaidMedia {
         return when (entity) {
             is TelegramPaidMediaPreviewEntity -> toModel(entity)

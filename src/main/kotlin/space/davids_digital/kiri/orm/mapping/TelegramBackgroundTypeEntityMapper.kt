@@ -1,6 +1,7 @@
 package space.davids_digital.kiri.orm.mapping
 
 import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 import org.mapstruct.Named
 import space.davids_digital.kiri.model.telegram.TelegramBackgroundType
 import space.davids_digital.kiri.model.telegram.TelegramBackgroundType.*
@@ -10,21 +11,21 @@ import space.davids_digital.kiri.orm.entity.telegram.*
     componentModel = "spring",
     uses = [TelegramBackgroundFillEntityMapper::class, TelegramDocumentEntityMapper::class]
 )
-interface TelegramBackgroundTypeEntityMapper {
-    @Named("toEntityFill")
-    fun toEntity(model: Fill): TelegramBackgroundTypeFillEntity
+abstract class TelegramBackgroundTypeEntityMapper {
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: Fill): TelegramBackgroundTypeFillEntity
 
-    @Named("toEntityWallpaper")
-    fun toEntity(model: Wallpaper): TelegramBackgroundTypeWallpaperEntity
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: Wallpaper): TelegramBackgroundTypeWallpaperEntity
 
-    @Named("toEntityPattern")
-    fun toEntity(model: Pattern): TelegramBackgroundTypePatternEntity
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: Pattern): TelegramBackgroundTypePatternEntity
 
-    @Named("toEntityChatTheme")
-    fun toEntity(model: ChatTheme): TelegramBackgroundTypeChatThemeEntity
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: ChatTheme): TelegramBackgroundTypeChatThemeEntity
 
-    @Named("toEntityUnknown")
-    fun toEntity(model: Unknown): TelegramBackgroundTypeUnknownEntity
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: Unknown): TelegramBackgroundTypeUnknownEntity
 
     fun toEntity(model: TelegramBackgroundType): TelegramBackgroundTypeEntity {
         return when (model) {
@@ -36,20 +37,20 @@ interface TelegramBackgroundTypeEntityMapper {
         }
     }
 
-    @Named("toModelFill")
-    fun toModel(entity: TelegramBackgroundTypeFillEntity): Fill
+    abstract fun toModel(entity: TelegramBackgroundTypeFillEntity): Fill
 
-    @Named("toModelWallpaper")
-    fun toModel(entity: TelegramBackgroundTypeWallpaperEntity): Wallpaper
+    @Mapping(source = "blurred", target = "isBlurred")
+    @Mapping(source = "moving", target = "isMoving")
+    abstract fun toModel(entity: TelegramBackgroundTypeWallpaperEntity): Wallpaper
 
-    @Named("toModelPattern")
-    fun toModel(entity: TelegramBackgroundTypePatternEntity): Pattern
+    @Mapping(source = "inverted", target = "isInverted")
+    @Mapping(source = "moving", target = "isMoving")
+    abstract fun toModel(entity: TelegramBackgroundTypePatternEntity): Pattern
 
-    @Named("toModelChatTheme")
-    fun toModel(entity: TelegramBackgroundTypeChatThemeEntity): ChatTheme
+    @Mapping(target = "copy", ignore = true)
+    abstract fun toModel(entity: TelegramBackgroundTypeChatThemeEntity): ChatTheme
 
-    @Named("toModelUnknown")
-    fun toModel(entity: TelegramBackgroundTypeUnknownEntity): Unknown
+    abstract fun toModel(entity: TelegramBackgroundTypeUnknownEntity): Unknown
 
     fun toModel(entity: TelegramBackgroundTypeEntity): TelegramBackgroundType {
         return when (entity) {

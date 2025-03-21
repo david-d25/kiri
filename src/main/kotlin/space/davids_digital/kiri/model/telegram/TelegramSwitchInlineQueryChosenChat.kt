@@ -13,17 +13,17 @@ data class TelegramSwitchInlineQueryChosenChat (
     /**
      * True, if private chats with users can be chosen.
      */
-    val allowUserChats: Boolean? = null,
+    val allowUserChats: Boolean = false,
     /**
      * True, if private chats with bots can be chosen.
      */
-    val allowBotChats: Boolean? = null,
+    val allowBotChats: Boolean = false,
     /**
      * True, if group and supergroup chats can be chosen.
      */
-    val allowGroupChats: Boolean? = null,
+    val allowGroupChats: Boolean = false,
     /**
      * True, if channel chats can be chosen.
      */
-    val allowChannelChats: Boolean? = null,
+    val allowChannelChats: Boolean = false,
 )

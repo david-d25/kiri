@@ -23,5 +23,5 @@ data class TelegramContact(
     /**
      * Additional data about the contact in the form of a [vCard](https://en.wikipedia.org/wiki/VCard).
      */
-    val vCard: String? = null
+    val vcard: String? = null
 )

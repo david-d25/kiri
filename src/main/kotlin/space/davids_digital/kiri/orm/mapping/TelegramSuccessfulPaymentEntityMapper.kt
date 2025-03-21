@@ -14,6 +14,7 @@ interface TelegramSuccessfulPaymentEntityMapper {
         source = "subscriptionExpirationDate",
         qualifiedByName = ["zonedToOffset"]
     )
+    @Mapping(target = "internalId", ignore = true)
     fun toEntity(model: TelegramSuccessfulPayment): TelegramSuccessfulPaymentEntity
 
     @Mapping(
@@ -21,6 +22,8 @@ interface TelegramSuccessfulPaymentEntityMapper {
         source = "subscriptionExpirationDate",
         qualifiedByName = ["offsetToZoned"]
     )
+    @Mapping(source = "recurring", target = "isRecurring")
+    @Mapping(source = "firstRecurring", target = "isFirstRecurring")
     fun toModel(entity: TelegramSuccessfulPaymentEntity): TelegramSuccessfulPayment
 
     companion object {

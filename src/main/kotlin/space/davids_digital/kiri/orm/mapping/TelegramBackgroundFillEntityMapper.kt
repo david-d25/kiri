@@ -8,15 +8,8 @@ import space.davids_digital.kiri.orm.entity.telegram.*
 import java.awt.Color
 
 @Mapper(componentModel = "spring")
-interface TelegramBackgroundFillEntityMapper {
-    @Named("toEntity")
-    fun toEntity(model: TelegramBackgroundFill): TelegramBackgroundFillEntity
-
-    @Named("toModel")
-    fun toModel(entity: TelegramBackgroundFillEntity): TelegramBackgroundFill
-
-    @Named("toEntity")
-    fun map(model: TelegramBackgroundFill): TelegramBackgroundFillEntity {
+abstract class TelegramBackgroundFillEntityMapper {
+    fun toEntity(model: TelegramBackgroundFill): TelegramBackgroundFillEntity {
         return when (model) {
             is Solid -> TelegramBackgroundFillSolidEntity().apply {
                 colorRgb = model.color.rgb
@@ -36,8 +29,7 @@ interface TelegramBackgroundFillEntityMapper {
         }
     }
 
-    @Named("toModel")
-    fun map(entity: TelegramBackgroundFillEntity): TelegramBackgroundFill {
+    fun toModel(entity: TelegramBackgroundFillEntity): TelegramBackgroundFill {
         return when (entity) {
             is TelegramBackgroundFillSolidEntity -> Solid(Color(entity.colorRgb))
             is TelegramBackgroundFillGradientEntity -> Gradient(

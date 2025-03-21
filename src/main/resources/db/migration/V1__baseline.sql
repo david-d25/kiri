@@ -724,14 +724,12 @@ create index idx_telegram_inline_keyboard_buttons_cross_links__markup_id
     on telegram_inline_keyboard_buttons_cross_links (markup_id);
 
 create table telegram_giveaways_completed (
-    chat_id                      bigint not null,
-    message_id                   bigint not null,
+    internal_id                  bigint generated always as identity primary key,
     winner_count                 integer not null,
     unclaimed_prize_count        integer,
     original_message_chat_id     bigint,
     original_message_message_id  bigint,
-    is_star_giveaway             boolean not null,
-    primary key (chat_id, message_id)
+    is_star_giveaway             boolean not null
     -- foreign key for [original_message_chat_id, original_message_message_id] added after [telegram_messages]
 );
 
@@ -816,8 +814,7 @@ create table telegram_messages (
     giveaway_id                     bigint references telegram_giveaways(internal_id) on update cascade,
     giveaway_winners_chat_id        bigint,
     giveaway_winners_message_id     bigint,
-    giveaway_completed_chat_id      bigint,
-    giveaway_completed_message_id   bigint,
+    giveaway_completed_id           bigint references telegram_giveaways_completed(internal_id) on update cascade,
     video_chat_scheduled_id         bigint references telegram_video_chat_scheduled(internal_id) on update cascade,
     video_chat_ended_id             bigint references telegram_video_chat_ended(internal_id) on update cascade,
     video_chat_participants_invited_id  bigint references telegram_video_chat_participants_invited(internal_id)
@@ -838,8 +835,6 @@ create table telegram_messages (
     foreign key (story_chat_id, story_id) references telegram_stories(chat_id, story_id) on update cascade,
     foreign key (giveaway_winners_chat_id, giveaway_winners_message_id)
         references telegram_giveaway_winners(chat_id, giveaway_message_id) on update cascade,
-    foreign key (giveaway_completed_chat_id, giveaway_completed_message_id)
-        references telegram_giveaways_completed(chat_id, message_id) on update cascade
 );
 create table telegram_messages_photo_cross_links (
     chat_id     bigint not null,

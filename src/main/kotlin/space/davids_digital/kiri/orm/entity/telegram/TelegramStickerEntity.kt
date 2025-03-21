@@ -22,10 +22,10 @@ class TelegramStickerEntity {
     var height: Int = 0
 
     @Column(name = "is_animated")
-    var isAnimated: Boolean = false
+    var animated: Boolean = false
 
     @Column(name = "is_video")
-    var isVideo: Boolean = false
+    var video: Boolean = false
 
     @ManyToOne
     @JoinColumn(name = "thumbnail_id", referencedColumnName = "file_unique_id")

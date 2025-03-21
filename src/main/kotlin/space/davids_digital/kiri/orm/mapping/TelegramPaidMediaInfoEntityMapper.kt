@@ -9,8 +9,9 @@ import space.davids_digital.kiri.orm.entity.telegram.*
     uses = [TelegramPaidMediaEntityMapper::class]
 )
 abstract class TelegramPaidMediaInfoEntityMapper {
-    abstract fun toModel(entity: TelegramPaidMediaInfoEntity): TelegramPaidMediaInfo
+    @Mapping(target = "internalId", ignore = true)
     abstract fun toEntity(model: TelegramPaidMediaInfo): TelegramPaidMediaInfoEntity
+    abstract fun toModel(entity: TelegramPaidMediaInfoEntity): TelegramPaidMediaInfo
 
     @AfterMapping
     protected fun setBackReference(

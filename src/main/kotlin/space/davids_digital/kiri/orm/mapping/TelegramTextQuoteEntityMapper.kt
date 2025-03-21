@@ -10,8 +10,10 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramTextQuoteEntity
 )
 abstract class TelegramTextQuoteEntityMapper {
     @Mapping(target = "entities", source = "entities")
+    @Mapping(target = "internalId", ignore = true)
     abstract fun toEntity(model: TelegramTextQuote): TelegramTextQuoteEntity
 
+    @Mapping(source = "manual", target = "isManual")
     abstract fun toModel(entity: TelegramTextQuoteEntity): TelegramTextQuote
 
     @AfterMapping

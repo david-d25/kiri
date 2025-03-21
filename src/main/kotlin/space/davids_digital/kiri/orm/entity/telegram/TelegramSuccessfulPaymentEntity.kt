@@ -24,10 +24,10 @@ class TelegramSuccessfulPaymentEntity {
     var subscriptionExpirationDate: OffsetDateTime? = null
 
     @Column(name = "is_recurring", nullable = false)
-    var isRecurring: Boolean = false
+    var recurring: Boolean = false
 
     @Column(name = "is_first_recurring", nullable = false)
-    var isFirstRecurring: Boolean = false
+    var firstRecurring: Boolean = false
 
     @Column(name = "shipping_option_id")
     var shippingOptionId: String? = null
