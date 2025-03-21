@@ -9,11 +9,11 @@ data class TelegramGiveawayWinners(
     /**
      * The chat that created the giveaway.
      */
-    val chatId: TelegramChatId,
+    val chatId: Long,
     /**
      * Identifier of the message with the giveaway in the chat.
      */
-    val giveawayMessageId: TelegramMessageId,
+    val giveawayMessageId: Long,
     /**
      * Point in time when winners of the giveaway were selected.
      */
@@ -25,7 +25,7 @@ data class TelegramGiveawayWinners(
     /**
      * List of up to 100 winners of the giveaway.
      */
-    val winners: List<TelegramUserId>,
+    val winners: List<Long>,
     /**
      * The number of other chats the user had to join in order to be eligible for the giveaway.
      */

@@ -8,11 +8,11 @@ data class TelegramProximityAlertTriggered(
     /**
      * User that triggered the alert.
      */
-    val traveler: TelegramUserId,
+    val traveler: Long,
     /**
      * User that set the alert.
      */
-    val watcher: TelegramUserId,
+    val watcher: Long,
     /**
      * The distance between the users.
      */

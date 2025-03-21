@@ -1,9 +1,7 @@
 package space.davids_digital.kiri.model.telegram
 
-typealias TelegramChatId = Long
-
 data class TelegramChat (
-    val id: TelegramChatId,
+    val id: Long,
     val type: Type,
     /**
      * Title, for supergroups, channels and group chats

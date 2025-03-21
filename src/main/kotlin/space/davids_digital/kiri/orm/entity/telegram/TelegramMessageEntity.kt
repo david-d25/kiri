@@ -1,11 +1,8 @@
 package space.davids_digital.kiri.orm.entity.telegram
 
 import jakarta.persistence.*
-import org.hibernate.annotations.JdbcType
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
-import org.hibernate.type.descriptor.jdbc.ArrayJdbcType
-import org.hibernate.type.descriptor.jdbc.BigIntJdbcType
 import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageId
 import java.time.OffsetDateTime
 
@@ -38,6 +35,10 @@ class TelegramMessageEntity {
 
     @Column(name = "business_connection_id")
     var businessConnectionId: String? = null
+
+    @OneToOne(orphanRemoval = true)
+    @JoinColumn(name = "forward_origin_id", referencedColumnName = "internal_id")
+    var forwardOrigin: TelegramMessageOriginEntity? = null
 
     @Column(name = "is_topic_message")
     var isTopicMessage: Boolean = false
@@ -72,10 +73,10 @@ class TelegramMessageEntity {
     var viaBot: TelegramUserEntity? = null
 
     @Column(name = "has_protected_content")
-    var hasProtectedContent: Boolean? = null
+    var hasProtectedContent: Boolean = false
 
     @Column(name = "is_from_offline")
-    var isFromOffline: Boolean? = null
+    var isFromOffline: Boolean = false
 
     @Column(name = "media_group_id")
     var mediaGroupId: String? = null
@@ -224,7 +225,7 @@ class TelegramMessageEntity {
     var supergroupChatCreated: Boolean = false
 
     @Column(name = "channel_chat_created")
-    val channelChatCreated: Boolean = false
+    var channelChatCreated: Boolean = false
 
     @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "message_auto_delete_timer_changed_id", referencedColumnName = "internal_id")
@@ -297,6 +298,10 @@ class TelegramMessageEntity {
     @JoinColumn(name = "forum_topic_created_id", referencedColumnName = "internal_id")
     var forumTopicCreated: TelegramForumTopicCreatedEntity? = null
 
+    @OneToOne(orphanRemoval = true)
+    @JoinColumn(name = "forum_topic_edited_id", referencedColumnName = "internal_id")
+    var forumTopicEdited: TelegramForumTopicEditedEntity? = null
+
     @Column(name = "forum_topic_closed")
     var forumTopicClosed: Boolean = false
 
@@ -345,9 +350,9 @@ class TelegramMessageEntity {
 
     @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "web_app_data_id", referencedColumnName = "internal_id")
-    val webAppData: TelegramWebAppDataEntity? = null
+    var webAppData: TelegramWebAppDataEntity? = null
 
     @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "reply_markup_id", referencedColumnName = "internal_id")
-    val replyMarkup: TelegramInlineKeyboardMarkupEntity? = null
+    var replyMarkup: TelegramInlineKeyboardMarkupEntity? = null
 }

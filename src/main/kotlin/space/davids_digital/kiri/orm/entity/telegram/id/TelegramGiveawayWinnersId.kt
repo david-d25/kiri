@@ -2,6 +2,7 @@ package space.davids_digital.kiri.orm.entity.telegram.id
 
 import jakarta.persistence.Column
 import jakarta.persistence.Embeddable
+import java.io.Serializable
 
 @Embeddable
 data class TelegramGiveawayWinnersId(
@@ -10,4 +11,4 @@ data class TelegramGiveawayWinnersId(
 
     @Column(name = "giveaway_message_id")
     var giveawayMessageId: Long = 0
-)
+) : Serializable

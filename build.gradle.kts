@@ -39,6 +39,10 @@ tasks.processResources {
 }
 
 dependencies {
+    // MapStruct
+    implementation("org.mapstruct:mapstruct:1.6.3")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
+
     // Telegram
     implementation("com.github.pengrad:java-telegram-bot-api:8.3.0")
 
@@ -87,6 +91,7 @@ dependencies {
 
     // Tests
     testImplementation(kotlin("test"))
+    testAnnotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
 }
 
 repositories {

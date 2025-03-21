@@ -21,7 +21,7 @@ create table telegram_photo_sizes (
     file_download_id    text not null,
     width               integer not null,
     height              integer not null,
-    file_size           bigint not null
+    file_size           bigint
 );
 
 create table telegram_polls (
@@ -629,6 +629,12 @@ create table telegram_forum_topics_created (
     icon_custom_emoji_id  text
 );
 
+create table telegram_forum_topics_edited (
+    internal_id           bigint generated always as identity primary key,
+    name                  text,
+    icon_custom_emoji_id  text
+);
+
 create table telegram_giveaways_created (
     internal_id        bigint generated always as identity primary key,
     prize_star_count   integer
@@ -740,6 +746,7 @@ create table telegram_messages (
     sender_boost_count              bigint,
     sender_business_bot_id          bigint,
     business_connection_id          text,
+    forward_origin_id               bigint references telegram_message_origins(internal_id) on update cascade,
     is_topic_message                boolean not null,
     is_automatic_forward            boolean not null,
     reply_to_message__chat_id       bigint,
@@ -800,6 +807,7 @@ create table telegram_messages (
     chat_boost_added_id             bigint references telegram_chat_boosts_added(internal_id) on update cascade,
     chat_background_set_id          bigint references telegram_chat_backgrounds(internal_id) on update cascade,
     forum_topic_created_id          bigint references telegram_forum_topics_created(internal_id) on update cascade,
+    forum_topic_edited_id           bigint references telegram_forum_topics_edited(internal_id) on update cascade,
     forum_topic_closed              boolean not null,
     forum_topic_reopened            boolean not null,
     general_forum_topic_hidden      boolean not null,

@@ -4,5 +4,5 @@ data class TelegramVideoChatParticipantsInvited (
     /**
      * New members that were invited to the video chat.
      */
-    val users: List<TelegramUserId>,
+    val users: List<Long>,
 )

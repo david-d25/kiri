@@ -198,10 +198,10 @@ fun ChatPhoto.toModel() = TelegramChatPhoto(
 fun Message.toModel(): TelegramMessage {
     return TelegramMessage(
         messageId = messageId().toLong(),
-        messageThreadId = messageThreadId().toLong(),
+        messageThreadId = messageThreadId()?.toLong(),
         fromId = from().id(),
-        senderBoostCount = senderBoostCount().toLong(),
-        senderBusinessBotId = senderBusinessBot().id(),
+        senderBoostCount = senderBoostCount()?.toLong(),
+        senderBusinessBotId = senderBusinessBot()?.id(),
         date = date().toZonedDateTime(),
         businessConnectionId = businessConnectionId(),
         chatId = chat().id(),

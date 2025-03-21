@@ -19,7 +19,7 @@ data class TelegramContact(
     /**
      * Contact's user identifier in Telegram.
      */
-    val userId: TelegramUserId? = null,
+    val userId: Long? = null,
     /**
      * Additional data about the contact in the form of a [vCard](https://en.wikipedia.org/wiki/VCard).
      */

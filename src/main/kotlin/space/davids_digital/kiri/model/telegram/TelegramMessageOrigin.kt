@@ -17,7 +17,7 @@ sealed class TelegramMessageOrigin() {
         /**
          * User that sent the message originally.
          */
-        val senderUserId: TelegramUserId,
+        val senderUserId: Long,
     ) : TelegramMessageOrigin()
 
     /**
@@ -45,7 +45,7 @@ sealed class TelegramMessageOrigin() {
         /**
          * Chat that sent the message originally.
          */
-        val senderChatId: TelegramChatId,
+        val senderChatId: Long,
         /**
          * For messages originally sent by an anonymous chat administrator, original message author signature.
          */
@@ -63,11 +63,11 @@ sealed class TelegramMessageOrigin() {
         /**
          * Channel chat to which the message was originally sent.
          */
-        val chatId: TelegramChatId,
+        val chatId: Long,
         /**
          * Unique message identifier inside the chat.
          */
-        val messageId: TelegramMessageId,
+        val messageId: Long,
         /**
          * Signature of the original post author.
          */
