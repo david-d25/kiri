@@ -329,11 +329,8 @@ class TelegramMessageEntity {
     )
     var giveawayWinners: TelegramGiveawayWinnersEntity? = null
 
-    @ManyToOne
-    @JoinColumns(
-        JoinColumn(name = "giveaway_completed_chat_id", referencedColumnName = "chat_id"),
-        JoinColumn(name = "giveaway_completed_message_id", referencedColumnName = "message_id")
-    )
+    @OneToOne(orphanRemoval = true)
+    @JoinColumn(name = "giveaway_completed_id", referencedColumnName = "internal_id")
     var giveawayCompleted: TelegramGiveawayCompletedEntity? = null
 
     @OneToOne(orphanRemoval = true)

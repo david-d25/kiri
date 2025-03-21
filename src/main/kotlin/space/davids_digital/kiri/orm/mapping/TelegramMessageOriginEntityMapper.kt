@@ -1,18 +1,29 @@
 package space.davids_digital.kiri.orm.mapping
 
 import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 import space.davids_digital.kiri.model.telegram.TelegramMessageOrigin
 import space.davids_digital.kiri.model.telegram.TelegramMessageOrigin.*
 import space.davids_digital.kiri.orm.entity.telegram.*
 import java.time.OffsetDateTime
 
-@Mapper(componentModel = "spring")
-interface TelegramMessageOriginEntityMapper {
-    fun toEntity(model: User): TelegramMessageOriginUserEntity
-    fun toEntity(model: HiddenUser): TelegramMessageOriginHiddenUserEntity
-    fun toEntity(model: Chat): TelegramMessageOriginChatEntity
-    fun toEntity(model: Channel): TelegramMessageOriginChannelEntity
-    fun toEntity(model: Unknown): TelegramMessageOriginUnknownEntity
+@Mapper(componentModel = "spring", uses = [DateTimeMapper::class])
+abstract class TelegramMessageOriginEntityMapper {
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: User): TelegramMessageOriginUserEntity
+
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: HiddenUser): TelegramMessageOriginHiddenUserEntity
+
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: Chat): TelegramMessageOriginChatEntity
+
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: Channel): TelegramMessageOriginChannelEntity
+
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: Unknown): TelegramMessageOriginUnknownEntity
+
     fun toEntity(model: TelegramMessageOrigin): TelegramMessageOriginEntity {
         return when (model) {
             is User -> toEntity(model).apply { date = OffsetDateTime.from(model.date) }
@@ -23,11 +34,13 @@ interface TelegramMessageOriginEntityMapper {
         }
     }
 
-    fun toModel(entity: TelegramMessageOriginUserEntity): User
-    fun toModel(entity: TelegramMessageOriginHiddenUserEntity): HiddenUser
-    fun toModel(entity: TelegramMessageOriginChatEntity): Chat
-    fun toModel(entity: TelegramMessageOriginChannelEntity): Channel
-    fun toModel(entity: TelegramMessageOriginUnknownEntity): Unknown
+    abstract fun toModel(entity: TelegramMessageOriginUserEntity): User
+    abstract fun toModel(entity: TelegramMessageOriginHiddenUserEntity): HiddenUser
+    abstract fun toModel(entity: TelegramMessageOriginChatEntity): Chat
+    abstract fun toModel(entity: TelegramMessageOriginChannelEntity): Channel
+
+    @Mapping(target = "copy", ignore = true)
+    abstract fun toModel(entity: TelegramMessageOriginUnknownEntity): Unknown
     fun toModel(entity: TelegramMessageOriginEntity): TelegramMessageOrigin {
         val date = entity.date.toZonedDateTime()
         return when (entity) {

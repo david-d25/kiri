@@ -7,12 +7,22 @@ import space.davids_digital.kiri.orm.entity.telegram.*
 
 @Mapper(
     componentModel = "spring",
-    uses = [TelegramInlineKeyboardButtonEntityMapper::class]
+    uses = [
+        TelegramInlineKeyboardButtonEntityMapper::class,
+        TelegramWebAppInfoEntityMapper::class,
+        TelegramLoginUrlEntityMapper::class,
+        TelegramSwitchInlineQueryChosenChatEntityMapper::class,
+        TelegramCopyTextButtonEntityMapper::class,
+    ]
 )
 abstract class TelegramInlineKeyboardMarkupEntityMapper {
-
-    abstract fun toModel(entity: TelegramInlineKeyboardButtonEntity): TelegramInlineKeyboardButton
+    @Mapping(target = "internalId", ignore = true)
+    @Mapping(source = "copyText", target = "copyTextButton")
     abstract fun toEntity(model: TelegramInlineKeyboardButton): TelegramInlineKeyboardButtonEntity
+
+    @Mapping(target = "callbackGame", ignore = true)
+    @Mapping(source = "copyTextButton", target = "copyText")
+    abstract fun toModel(entity: TelegramInlineKeyboardButtonEntity): TelegramInlineKeyboardButton
 
     fun toEntity(model: TelegramInlineKeyboardMarkup): TelegramInlineKeyboardMarkupEntity {
         val entity = TelegramInlineKeyboardMarkupEntity()

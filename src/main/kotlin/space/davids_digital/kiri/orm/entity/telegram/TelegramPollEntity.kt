@@ -17,10 +17,10 @@ class TelegramPollEntity {
     var totalVoterCount: Int = 0
 
     @Column(name = "is_closed")
-    var isClosed: Boolean = false
+    var closed: Boolean = false
 
     @Column(name = "is_anonymous")
-    var isAnonymous: Boolean = false
+    var anonymous: Boolean = false
 
     @Column(name = "type")
     var type: String = "REGULAR" // or QUIZ

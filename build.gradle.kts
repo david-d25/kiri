@@ -6,6 +6,7 @@ plugins {
     id("org.springframework.boot") version "3.4.2"
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.1.10"
+    kotlin("kapt") version "2.1.10"
     kotlin("plugin.allopen") version "2.1.10"
     kotlin("plugin.spring") version "2.1.10"
     kotlin("plugin.jpa") version "2.1.10"
@@ -41,7 +42,7 @@ tasks.processResources {
 dependencies {
     // MapStruct
     implementation("org.mapstruct:mapstruct:1.6.3")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
+    kapt("org.mapstruct:mapstruct-processor:1.6.3")
 
     // Telegram
     implementation("com.github.pengrad:java-telegram-bot-api:8.3.0")
@@ -91,10 +92,8 @@ dependencies {
 
     // Tests
     testImplementation(kotlin("test"))
-    testAnnotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
 }
 
 repositories {
     mavenCentral()
-    maven { url = uri("https://jitpack.io") } // For kotlin-telegram-bot
 }

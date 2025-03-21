@@ -10,7 +10,7 @@ class TelegramUserEntity {
     var id: Long = 0
 
     @Column(name = "is_bot")
-    var isBot: Boolean = false
+    var bot: Boolean = false
 
     @Column(name = "first_name")
     var firstName: String = ""
@@ -25,7 +25,7 @@ class TelegramUserEntity {
     var languageCode: String? = null
 
     @Column(name = "is_premium")
-    var isPremium: Boolean = false
+    var premium: Boolean = false
 
     @Column(name = "added_to_attachment_menu")
     var addedToAttachmentMenu: Boolean = false

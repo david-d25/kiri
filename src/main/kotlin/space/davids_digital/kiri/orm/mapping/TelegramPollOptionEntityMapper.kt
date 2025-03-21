@@ -9,8 +9,9 @@ import space.davids_digital.kiri.orm.entity.telegram.*
     uses = [TelegramMessageEntityEntityMapper::class]
 )
 abstract class TelegramPollOptionEntityMapper {
-    abstract fun toModel(entity: TelegramPollOptionEntity): TelegramPollOption
+    @Mapping(target = "internalId", ignore = true)
     abstract fun toEntity(model: TelegramPollOption): TelegramPollOptionEntity
+    abstract fun toModel(entity: TelegramPollOptionEntity): TelegramPollOption
 
     @AfterMapping
     protected fun setBackReferences(

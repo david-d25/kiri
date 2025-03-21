@@ -3,8 +3,8 @@ package space.davids_digital.kiri.orm.service
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.model.telegram.TelegramMessage
-import space.davids_digital.kiri.orm.mapping.toEntity
-import space.davids_digital.kiri.orm.mapping.toModel
+import space.davids_digital.kiri.orm.mapping.TelegramChatEntityMapper
+import space.davids_digital.kiri.orm.mapping.TelegramMessageEntityMapper
 import space.davids_digital.kiri.orm.repository.TelegramChatRepository
 import space.davids_digital.kiri.orm.repository.TelegramMessageRepository
 
@@ -12,17 +12,19 @@ import space.davids_digital.kiri.orm.repository.TelegramMessageRepository
 class TelegramOrmService(
     private val chatRepository: TelegramChatRepository,
     private val messageRepository: TelegramMessageRepository,
+    private val chatMapper: TelegramChatEntityMapper,
+    private val messageMapper: TelegramMessageEntityMapper
 ) {
     fun getAllChats(): List<TelegramChat> {
-        return chatRepository.findAll().map { it.toModel() }
+        return chatRepository.findAll().map(chatMapper::toModel)
     }
 
     fun getChat(id: Long): TelegramChat? {
-        return chatRepository.findById(id).map { it.toModel() }.orElse(null)
+        return chatRepository.findById(id).map(chatMapper::toModel).orElse(null)
     }
 
     fun saveChat(chat: TelegramChat): TelegramChat {
-        return chatRepository.save(chat.toEntity()).toModel()
+        return chatMapper.toModel(chatRepository.save(chatMapper.toEntity(chat)))
     }
 
     fun deleteChat(id: Long) {
@@ -30,10 +32,10 @@ class TelegramOrmService(
     }
 
     fun saveMessage(message: TelegramMessage): TelegramMessage {
-        return messageRepository.save(message.toEntity()).toModel()
+        return messageMapper.toModel(messageRepository.save(messageMapper.toEntity(message)))
     }
 
     fun getChatMessages(chatId: Long): List<TelegramMessage> {
-        return messageRepository.getAllByIdChatId(chatId).map { it.toModel() }
+        return messageRepository.getAllByIdChatId(chatId).map(messageMapper::toModel)
     }
 }

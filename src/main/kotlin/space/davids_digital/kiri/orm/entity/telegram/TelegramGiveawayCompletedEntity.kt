@@ -1,14 +1,14 @@
 package space.davids_digital.kiri.orm.entity.telegram
 
 import jakarta.persistence.*
-import space.davids_digital.kiri.orm.entity.telegram.id.TelegramGiveawayCompletedId
 
 @Entity
 @Table(name = "telegram_giveaways_completed")
 class TelegramGiveawayCompletedEntity {
-
-    @EmbeddedId
-    var id: TelegramGiveawayCompletedId = TelegramGiveawayCompletedId()
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "internal_id")
+    var internalId: Long = 0
 
     @Column(name = "winner_count", nullable = false)
     var winnerCount: Int = 0

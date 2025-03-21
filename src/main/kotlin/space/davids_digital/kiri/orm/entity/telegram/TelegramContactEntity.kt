@@ -23,5 +23,5 @@ class TelegramContactEntity {
     var userId: Long? = null
 
     @Column(name = "vcard")
-    var vCard: String? = null
+    var vcard: String? = null
 }

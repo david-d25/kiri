@@ -483,7 +483,7 @@ fun Video.toModel() = TelegramVideo(
     height,
     duration,
     thumbnail?.toModel(),
-    cover?.map { it.toModel() },
+    cover?.map { it.toModel() } ?: emptyList(),
     startTimestamp,
     fileName,
     mimeType,
