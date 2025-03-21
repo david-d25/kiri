@@ -9,7 +9,7 @@ data class TelegramSharedUser(
      * Identifier of the shared user. The bot may not have access to the user and could be unable to use this
      * identifier, unless the user is already known to the bot by some other means.
      */
-    val userId: TelegramUserId,
+    val userId: Long,
     /**
      * First name of the user, if the name was requested by the bot.
      */

@@ -22,5 +22,5 @@ class TelegramPhotoSizeEntity {
     var height: Int = 0
 
     @Column(name = "file_size")
-    var fileSize: Long = 0
+    var fileSize: Long? = null
 }

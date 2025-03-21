@@ -9,7 +9,7 @@ data class TelegramGiveaway(
     /**
      * The list of chats which the user must join to participate in the giveaway.
      */
-    val chats: List<TelegramChatId>,
+    val chats: List<Long>,
     /**
      * Point in time (Unix timestamp) when winners of the giveaway will be selected.
      */

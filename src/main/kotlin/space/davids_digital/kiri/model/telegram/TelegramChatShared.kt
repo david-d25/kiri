@@ -10,7 +10,7 @@ data class TelegramChatShared(
      * Identifier of the shared chat. The bot may not have access to the chat and could be unable to use this
      * identifier, unless the chat is already known to the bot by some other means.
      */
-    val chatId: TelegramChatId,
+    val chatId: Long,
     /**
      * Title of the chat, if the title was requested by the bot.
      */

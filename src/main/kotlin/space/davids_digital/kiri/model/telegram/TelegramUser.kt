@@ -1,7 +1,5 @@
 package space.davids_digital.kiri.model.telegram
 
-typealias TelegramUserId = Long
-
 /**
  * Represents a Telegram user or bot.
  */
@@ -9,7 +7,7 @@ data class TelegramUser (
     /**
      * Unique identifier for this user or bot.
      */
-    val id: TelegramUserId,
+    val id: Long,
     /**
      * True, if this user is a bot.
      */

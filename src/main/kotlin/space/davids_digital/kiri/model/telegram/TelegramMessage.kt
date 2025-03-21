@@ -2,8 +2,6 @@ package space.davids_digital.kiri.model.telegram
 
 import java.time.ZonedDateTime
 
-typealias TelegramMessageId = Long
-
 data class TelegramMessage (
     /**
      * Unique message identifier inside this chat.
@@ -11,7 +9,7 @@ data class TelegramMessage (
      * schedule a message instead of sending it immediately. In such cases, this field will be 0 and the relevant
      * message will be unusable until it is actually sent.
      */
-    val messageId: TelegramMessageId,
+    val messageId: Long,
     /**
      * Unique identifier of a message thread to which the message belongs; for supergroups only.
      */
@@ -21,14 +19,14 @@ data class TelegramMessage (
      * For backward compatibility, if the message was sent on behalf of a chat,
      * the field contains a fake sender user in non-channel chats.
      */
-    val fromId: TelegramUserId? = null,
+    val fromId: Long? = null,
     /**
      * Sender of the message when sent on behalf of a chat.
      * For example, the supergroup itself for messages sent by its anonymous administrators or a linked channel for
      * messages automatically forwarded to the channel's discussion group. For backward compatibility, if the message
      * was sent on behalf of a chat, the field [fromId] contains a fake sender user in non-channel chats.
      */
-    val senderChatId: TelegramChatId? = null,
+    val senderChatId: Long? = null,
     /**
      * If the sender of the message boosted the chat, the number of boosts added by the user.
      */
@@ -37,7 +35,7 @@ data class TelegramMessage (
      * The bot that actually sent the message on behalf of the business account.
      * Available only for outgoing messages sent on behalf of the connected business account.
      */
-    val senderBusinessBotId: TelegramUserId? = null,
+    val senderBusinessBotId: Long? = null,
     /**
      * Date the message was sent.
      */
@@ -51,7 +49,7 @@ data class TelegramMessage (
     /**
      * Chat the message belongs to.
      */
-    val chatId: TelegramChatId,
+    val chatId: Long,
     /**
      * Information about the original message for forwarded messages.
      */
@@ -211,11 +209,11 @@ data class TelegramMessage (
      * New members that were added to the group or supergroup and information about them (the bot itself may be one of
      * these members).
      */
-    val newChatMembers: List<TelegramUserId>? = null,
+    val newChatMembers: List<Long>? = null,
     /**
      * A member was removed from the group, information about them (this member may be the bot itself).
      */
-    val leftChatMember: TelegramUserId? = null,
+    val leftChatMember: Long? = null,
     /**
      * A chat title was changed to this value.
      */

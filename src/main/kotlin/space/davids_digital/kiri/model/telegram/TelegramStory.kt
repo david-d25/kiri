@@ -4,7 +4,7 @@ data class TelegramStory (
     /**
      * Chat that posted the story.
      */
-    val chatId: TelegramChatId,
+    val chatId: Long,
     /**
      * Unique identifier for the story in the chat.
      */

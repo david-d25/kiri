@@ -11,12 +11,12 @@ data class TelegramExternalReplyInfo (
     /**
      * Chat the original message belongs to. Available only if the chat is a supergroup or a channel.
      */
-    val chatId: TelegramChatId? = null,
+    val chatId: Long? = null,
     /**
      * Unique message identifier inside the original chat.
      * Available only if the original chat is a supergroup or a channel.
      */
-    val messageId: TelegramMessageId? = null,
+    val messageId: Long? = null,
     /**
      * Options used for link preview generation for the original message, if it is a text message.
      */
@@ -40,7 +40,7 @@ data class TelegramExternalReplyInfo (
     /**
      * Message is a photo, available sizes of the photo.
      */
-    val photo: Array<TelegramPhotoSize>? = null,
+    val photo: List<TelegramPhotoSize>? = null,
     /**
      * Message is a sticker, information about the sticker.
      */
