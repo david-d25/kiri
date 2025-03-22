@@ -8,8 +8,8 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramVideoNoteEntity
 @Mapper(componentModel = "spring", uses = [TelegramPhotoSizeEntityMapper::class])
 interface TelegramVideoNoteEntityMapper {
     @Mapping(source = "fileId", target = "fileDownloadId")
-    fun toEntity(model: TelegramVideoNote): TelegramVideoNoteEntity
+    fun toEntity(model: TelegramVideoNote?): TelegramVideoNoteEntity?
 
     @Mapping(source = "fileDownloadId", target = "fileId")
-    fun toModel(entity: TelegramVideoNoteEntity): TelegramVideoNote
+    fun toModel(entity: TelegramVideoNoteEntity?): TelegramVideoNote?
 }

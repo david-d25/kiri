@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramChatPermissionsEnti
 @Mapper(componentModel = "spring")
 interface TelegramChatPermissionsEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramChatPermissions): TelegramChatPermissionsEntity
-    fun toModel(entity: TelegramChatPermissionsEntity): TelegramChatPermissions
+    fun toEntity(model: TelegramChatPermissions?): TelegramChatPermissionsEntity?
+    fun toModel(entity: TelegramChatPermissionsEntity?): TelegramChatPermissions?
 }

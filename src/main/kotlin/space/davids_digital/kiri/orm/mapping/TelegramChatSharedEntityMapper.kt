@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramChatSharedEntity
 @Mapper(componentModel = "spring", uses = [TelegramPhotoSizeEntityMapper::class])
 interface TelegramChatSharedEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramChatShared): TelegramChatSharedEntity
-    fun toModel(entity: TelegramChatSharedEntity): TelegramChatShared
+    fun toEntity(model: TelegramChatShared?): TelegramChatSharedEntity?
+    fun toModel(entity: TelegramChatSharedEntity?): TelegramChatShared?
 }

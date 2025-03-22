@@ -8,8 +8,8 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramGiveawayCreatedEnti
 @Mapper(componentModel = "spring")
 interface TelegramGiveawayCreatedEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramGiveawayCreated): TelegramGiveawayCreatedEntity
+    fun toEntity(model: TelegramGiveawayCreated?): TelegramGiveawayCreatedEntity?
 
     @Mapping(target = "copy", ignore = true)
-    fun toModel(entity: TelegramGiveawayCreatedEntity): TelegramGiveawayCreated
+    fun toModel(entity: TelegramGiveawayCreatedEntity?): TelegramGiveawayCreated?
 }

@@ -38,6 +38,31 @@ create table telegram_polls (
     close_date               timestamp with time zone
 );
 
+create table telegram_inaccessible_messages (
+    chat_id     bigint not null,
+    message_id  bigint not null,
+    primary key (chat_id, message_id)
+);
+create index idx_telegram_inaccessible_messages__chat_id on telegram_inaccessible_messages (chat_id);
+
+create table telegram_voices (
+    file_unique_id     text primary key,
+    file_download_id   text not null,
+    duration           integer not null,
+    mime_type          text,
+    file_size          bigint
+);
+
+create table telegram_shipping_addresses (
+    internal_id     bigint generated always as identity primary key,
+    country_code    text not null,
+    state           text not null,
+    city            text not null,
+    street_line1    text not null,
+    street_line2    text not null,
+    postcode        text not null
+);
+
 create table telegram_poll_options (
     internal_id   bigint generated always as identity primary key,
     text          text not null,
@@ -412,6 +437,7 @@ create table telegram_external_reply_info (
     story_chat_id                bigint,
     video_id                     text references telegram_videos(file_unique_id) on update cascade,
     video_note_id                text references telegram_video_notes(file_unique_id) on update cascade,
+    voice_id                     text references telegram_voices(file_unique_id) on update cascade,
     has_media_spoiler            boolean not null,
     contact_id                   bigint references telegram_contacts(internal_id) on update cascade,
     dice_id                      bigint references telegram_dice(internal_id) on update cascade,
@@ -453,31 +479,6 @@ create table telegram_users (
 create table telegram_message_auto_delete_timer_changes (
     internal_id              bigint generated always as identity primary key,
     message_auto_delete_time integer not null
-);
-
-create table telegram_inaccessible_messages (
-    chat_id     bigint not null,
-    message_id  bigint not null,
-    primary key (chat_id, message_id)
-);
-create index idx_telegram_inaccessible_messages__chat_id on telegram_inaccessible_messages (chat_id);
-
-create table telegram_voices (
-    file_unique_id     text primary key,
-    file_download_id   text not null,
-    duration           integer not null,
-    mime_type          text,
-    file_size          bigint
-);
-
-create table telegram_shipping_addresses (
-    internal_id     bigint generated always as identity primary key,
-    country_code    text not null,
-    state           text not null,
-    city            text not null,
-    street_line1    text not null,
-    street_line2    text not null,
-    postcode        text not null
 );
 
 create table telegram_order_info (
@@ -783,6 +784,7 @@ create table telegram_messages (
     new_chat_members                bigint[],
     left_chat_member_id             bigint,
     new_chat_title                  text,
+    delete_chat_photo               boolean not null,
     group_chat_created              boolean not null,
     supergroup_chat_created         boolean not null,
     channel_chat_created            boolean not null,
@@ -834,7 +836,7 @@ create table telegram_messages (
         references telegram_inaccessible_messages(chat_id, message_id) on update cascade,
     foreign key (story_chat_id, story_id) references telegram_stories(chat_id, story_id) on update cascade,
     foreign key (giveaway_winners_chat_id, giveaway_winners_message_id)
-        references telegram_giveaway_winners(chat_id, giveaway_message_id) on update cascade,
+        references telegram_giveaway_winners(chat_id, giveaway_message_id) on update cascade
 );
 create table telegram_messages_photo_cross_links (
     chat_id     bigint not null,

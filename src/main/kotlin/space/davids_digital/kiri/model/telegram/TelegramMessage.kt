@@ -70,7 +70,7 @@ data class TelegramMessage (
     /**
      * Information about the message that is being replied to, which may come from another chat or forum topic.
      */
-    val externalReply: TelegramExternalReplyInfo? = null,
+    val externalReplyInfo: TelegramExternalReplyInfo? = null,
     /**
      * For replies that quote part of the original message, the quoted part of the message.
      */
@@ -111,7 +111,7 @@ data class TelegramMessage (
     /**
      * For text messages, special entities like usernames, URLs, bot commands, etc. that appear in the text.
      */
-    val entities: List<TelegramMessageEntity>? = null,
+    val entities: List<TelegramMessageEntity> = emptyList(),
     /**
      * Options used for link preview generation for the message, if it is a text message and link preview options were
      * changed.
@@ -137,11 +137,11 @@ data class TelegramMessage (
     /**
      * Message contains paid media; information about the paid media.
      */
-    val paidMedia: TelegramPaidMediaInfo? = null,
+    val paidMediaInfo: TelegramPaidMediaInfo? = null,
     /**
      * Message is a photo, available sizes of the photo.
      */
-    val photo: List<TelegramPhotoSize>? = null,
+    val photo: List<TelegramPhotoSize> = emptyList(),
     /**
      * Message is a sticker, information about the sticker.
      */
@@ -171,7 +171,7 @@ data class TelegramMessage (
      * For messages with a caption, special entities like usernames, URLs, bot commands, etc. that appear in the
      * caption.
      */
-    val captionEntities: List<TelegramMessageEntity>? = null,
+    val captionEntities: List<TelegramMessageEntity> = emptyList(),
     /**
      * True, if the caption must be shown above the message media.
      */
@@ -209,11 +209,11 @@ data class TelegramMessage (
      * New members that were added to the group or supergroup and information about them (the bot itself may be one of
      * these members).
      */
-    val newChatMembers: List<Long>? = null,
+    val newChatMembers: List<Long> = emptyList(),
     /**
      * A member was removed from the group, information about them (this member may be the bot itself).
      */
-    val leftChatMember: Long? = null,
+    val leftChatMemberId: Long? = null,
     /**
      * A chat title was changed to this value.
      */
@@ -221,7 +221,7 @@ data class TelegramMessage (
     /**
      * A chat photo was change to this value.
      */
-    val newChatPhoto: List<TelegramPhotoSize>? = null,
+    val newChatPhoto: List<TelegramPhotoSize> = emptyList(),
     /**
      * Service message: the chat photo was deleted.
      */
@@ -300,7 +300,7 @@ data class TelegramMessage (
     /**
      * Service message: user boosted the chat.
      */
-    val boostAdded: TelegramChatBoostAdded? = null,
+    val chatBoostAdded: TelegramChatBoostAdded? = null,
     /**
      * Service message: chat background set.
      */

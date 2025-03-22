@@ -11,6 +11,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramChatLocationEntity
 )
 interface TelegramChatLocationEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramChatLocation): TelegramChatLocationEntity
-    fun toModel(entity: TelegramChatLocationEntity): TelegramChatLocation
+    fun toEntity(model: TelegramChatLocation?): TelegramChatLocationEntity?
+    fun toModel(entity: TelegramChatLocationEntity?): TelegramChatLocation?
 }

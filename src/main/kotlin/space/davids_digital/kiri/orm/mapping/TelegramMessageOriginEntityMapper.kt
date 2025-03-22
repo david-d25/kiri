@@ -24,13 +24,14 @@ abstract class TelegramMessageOriginEntityMapper {
     @Mapping(target = "internalId", ignore = true)
     abstract fun toEntity(model: Unknown): TelegramMessageOriginUnknownEntity
 
-    fun toEntity(model: TelegramMessageOrigin): TelegramMessageOriginEntity {
+    fun toEntity(model: TelegramMessageOrigin?): TelegramMessageOriginEntity? {
         return when (model) {
             is User -> toEntity(model).apply { date = OffsetDateTime.from(model.date) }
             is HiddenUser -> toEntity(model).apply { date = OffsetDateTime.from(model.date) }
             is Chat -> toEntity(model).apply { date = OffsetDateTime.from(model.date) }
             is Channel -> toEntity(model).apply { date = OffsetDateTime.from(model.date) }
             is Unknown -> toEntity(model).apply { date = OffsetDateTime.from(model.date) }
+            null -> null
         }
     }
 
@@ -41,7 +42,9 @@ abstract class TelegramMessageOriginEntityMapper {
 
     @Mapping(target = "copy", ignore = true)
     abstract fun toModel(entity: TelegramMessageOriginUnknownEntity): Unknown
-    fun toModel(entity: TelegramMessageOriginEntity): TelegramMessageOrigin {
+
+    fun toModel(entity: TelegramMessageOriginEntity?): TelegramMessageOrigin? {
+        if (entity == null) return null
         val date = entity.date.toZonedDateTime()
         return when (entity) {
             is TelegramMessageOriginUserEntity -> toModel(entity).copy(date = date)

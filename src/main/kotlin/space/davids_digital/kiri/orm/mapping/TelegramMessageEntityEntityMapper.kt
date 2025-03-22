@@ -15,10 +15,10 @@ interface TelegramMessageEntityEntityMapper {
     @Mapping(target = "parentPollExplanation", ignore = true)
     @Mapping(target = "parentPollOption", ignore = true)
     @Mapping(target = "parentTextQuote", ignore = true)
-    fun toEntity(model: TelegramMessageEntity): TelegramMessageEntityEntity
+    fun toEntity(model: TelegramMessageEntity?): TelegramMessageEntityEntity?
 
     @Mapping(target = "type", source = "type", qualifiedByName = ["stringToEnum"])
-    fun toModel(entity: TelegramMessageEntityEntity): TelegramMessageEntity
+    fun toModel(entity: TelegramMessageEntityEntity?): TelegramMessageEntity?
 
     companion object {
         @Named("enumToString")

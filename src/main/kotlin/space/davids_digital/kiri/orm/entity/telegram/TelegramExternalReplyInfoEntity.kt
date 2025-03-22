@@ -64,6 +64,10 @@ class TelegramExternalReplyInfoEntity {
     @JoinColumn(name = "video_note_id", referencedColumnName = "file_unique_id")
     var videoNote: TelegramVideoNoteEntity? = null
 
+    @ManyToOne
+    @JoinColumn(name = "voice_id", referencedColumnName = "file_unique_id")
+    var voice: TelegramVoiceEntity? = null
+
     @Column(name = "has_media_spoiler")
     var hasMediaSpoiler: Boolean = false
 

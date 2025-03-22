@@ -8,8 +8,8 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramCopyTextButtonEntit
 @Mapper(componentModel = "spring")
 interface TelegramCopyTextButtonEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramCopyTextButton): TelegramCopyTextButtonEntity
+    fun toEntity(model: TelegramCopyTextButton?): TelegramCopyTextButtonEntity?
 
     @Mapping(target = "copy", ignore = true)
-    fun toModel(entity: TelegramCopyTextButtonEntity): TelegramCopyTextButton
+    fun toModel(entity: TelegramCopyTextButtonEntity?): TelegramCopyTextButton?
 }

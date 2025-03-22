@@ -7,7 +7,7 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramForumTopicCreatedEn
 @Mapper(componentModel = "spring", uses = [ColorRgbMapper::class])
 interface TelegramForumTopicCreatedEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramForumTopicCreated): TelegramForumTopicCreatedEntity
+    fun toEntity(model: TelegramForumTopicCreated?): TelegramForumTopicCreatedEntity?
 
-    fun toModel(entity: TelegramForumTopicCreatedEntity): TelegramForumTopicCreated
+    fun toModel(entity: TelegramForumTopicCreatedEntity?): TelegramForumTopicCreated?
 }

@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramWebAppDataEntity
 @Mapper(componentModel = "spring")
 interface TelegramWebAppDataEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramWebAppData): TelegramWebAppDataEntity
-    fun toModel(entity: TelegramWebAppDataEntity): TelegramWebAppData
+    fun toEntity(model: TelegramWebAppData?): TelegramWebAppDataEntity?
+    fun toModel(entity: TelegramWebAppDataEntity?): TelegramWebAppData?
 }

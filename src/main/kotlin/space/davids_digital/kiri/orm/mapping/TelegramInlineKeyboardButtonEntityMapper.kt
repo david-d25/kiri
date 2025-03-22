@@ -17,9 +17,9 @@ import space.davids_digital.kiri.orm.entity.telegram.*
 interface TelegramInlineKeyboardButtonEntityMapper {
     @Mapping(source = "copyText", target = "copyTextButton")
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramInlineKeyboardButton): TelegramInlineKeyboardButtonEntity
+    fun toEntity(model: TelegramInlineKeyboardButton?): TelegramInlineKeyboardButtonEntity?
 
     @Mapping(source = "copyTextButton", target = "copyText")
     @Mapping(target = "callbackGame", ignore = true)
-    fun toModel(entity: TelegramInlineKeyboardButtonEntity): TelegramInlineKeyboardButton
+    fun toModel(entity: TelegramInlineKeyboardButtonEntity?): TelegramInlineKeyboardButton?
 }

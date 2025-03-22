@@ -11,6 +11,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramOrderInfoEntity
 )
 interface TelegramOrderInfoEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramOrderInfo): TelegramOrderInfoEntity
-    fun toModel(entity: TelegramOrderInfoEntity): TelegramOrderInfo
+    fun toEntity(model: TelegramOrderInfo?): TelegramOrderInfoEntity?
+    fun toModel(entity: TelegramOrderInfoEntity?): TelegramOrderInfo?
 }

@@ -4,6 +4,7 @@ import org.mapstruct.*
 import space.davids_digital.kiri.model.telegram.TelegramSuccessfulPayment
 import space.davids_digital.kiri.orm.entity.telegram.TelegramSuccessfulPaymentEntity
 
+// TODO use LocalDateMapper
 @Mapper(
     componentModel = "spring",
     uses = [TelegramOrderInfoEntityMapper::class]
@@ -15,7 +16,7 @@ interface TelegramSuccessfulPaymentEntityMapper {
         qualifiedByName = ["zonedToOffset"]
     )
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramSuccessfulPayment): TelegramSuccessfulPaymentEntity
+    fun toEntity(model: TelegramSuccessfulPayment?): TelegramSuccessfulPaymentEntity?
 
     @Mapping(
         target = "subscriptionExpirationDate",
@@ -24,7 +25,7 @@ interface TelegramSuccessfulPaymentEntityMapper {
     )
     @Mapping(source = "recurring", target = "isRecurring")
     @Mapping(source = "firstRecurring", target = "isFirstRecurring")
-    fun toModel(entity: TelegramSuccessfulPaymentEntity): TelegramSuccessfulPayment
+    fun toModel(entity: TelegramSuccessfulPaymentEntity?): TelegramSuccessfulPayment?
 
     companion object {
         @JvmStatic

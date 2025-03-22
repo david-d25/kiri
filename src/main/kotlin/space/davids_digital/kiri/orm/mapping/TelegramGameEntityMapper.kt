@@ -14,14 +14,14 @@ import space.davids_digital.kiri.orm.entity.telegram.*
 )
 abstract class TelegramGameEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    abstract fun toEntity(model: TelegramGame): TelegramGameEntity
+    abstract fun toEntity(model: TelegramGame?): TelegramGameEntity?
 
-    abstract fun toModel(entity: TelegramGameEntity): TelegramGame
+    abstract fun toModel(entity: TelegramGameEntity?): TelegramGame?
 
     @AfterMapping
     protected fun setParentInTextEntities(
-        @MappingTarget entity: TelegramGameEntity
+        @MappingTarget entity: TelegramGameEntity?
     ) {
-        entity.textEntities.forEach { it.parentGame = entity }
+        entity?.textEntities?.forEach { it.parentGame = entity }
     }
 }

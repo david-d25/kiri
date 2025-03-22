@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramChatBoostAddedEntit
 @Mapper(componentModel = "spring")
 interface TelegramChatBoostAddedEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramChatBoostAdded): TelegramChatBoostAddedEntity
-    fun toModel(entity: TelegramChatBoostAddedEntity): TelegramChatBoostAdded
+    fun toEntity(model: TelegramChatBoostAdded?): TelegramChatBoostAddedEntity?
+    fun toModel(entity: TelegramChatBoostAddedEntity?): TelegramChatBoostAdded?
 }

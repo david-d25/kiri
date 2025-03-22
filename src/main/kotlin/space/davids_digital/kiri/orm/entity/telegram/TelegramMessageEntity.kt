@@ -36,7 +36,7 @@ class TelegramMessageEntity {
     @Column(name = "business_connection_id")
     var businessConnectionId: String? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "forward_origin_id", referencedColumnName = "internal_id")
     var forwardOrigin: TelegramMessageOriginEntity? = null
 
@@ -46,29 +46,29 @@ class TelegramMessageEntity {
     @Column(name = "is_automatic_forward")
     var isAutomaticForward: Boolean = false
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns(
         JoinColumn(name = "reply_to_message__chat_id", referencedColumnName = "chat_id"),
         JoinColumn(name = "reply_to_message__message_id", referencedColumnName = "message_id")
     )
     var replyToMessage: TelegramMessageEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "external_reply_info_id", referencedColumnName = "internal_id")
     var externalReplyInfo: TelegramExternalReplyInfoEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "quote_id", referencedColumnName = "internal_id")
     var quote: TelegramTextQuoteEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns(
         JoinColumn(name = "reply_to_story__chat_id", referencedColumnName = "chat_id"),
         JoinColumn(name = "reply_to_story__story_id", referencedColumnName = "story_id")
     )
     var replyToStory: TelegramStoryEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "via_bot_id", referencedColumnName = "id")
     var viaBot: TelegramUserEntity? = null
 
@@ -95,26 +95,26 @@ class TelegramMessageEntity {
     )
     var entities: List<TelegramMessageEntityEntity> = mutableListOf()
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "link_preview_options_id", referencedColumnName = "internal_id")
     var linkPreviewOptions: TelegramLinkPreviewOptionsEntity? = null
 
     @Column(name = "effect_id")
     var effectId: String? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "animation_id", referencedColumnName = "file_unique_id")
     var animation: TelegramAnimationEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "audio_id", referencedColumnName = "file_unique_id")
     var audio: TelegramAudioEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "document_id", referencedColumnName = "file_unique_id")
     var document: TelegramDocumentEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "paid_media_info_id", referencedColumnName = "internal_id")
     var paidMediaInfo: TelegramPaidMediaInfoEntity? = null
 
@@ -131,26 +131,26 @@ class TelegramMessageEntity {
     )
     var photo: MutableList<TelegramPhotoSizeEntity> = mutableListOf()
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sticker_id", referencedColumnName = "file_unique_id")
     var sticker: TelegramStickerEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns(
         JoinColumn(name = "story_chat_id", referencedColumnName = "chat_id"),
         JoinColumn(name = "story_id", referencedColumnName = "story_id")
     )
     var story: TelegramStoryEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "video_id", referencedColumnName = "file_unique_id")
     var video: TelegramVideoEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "video_note_id", referencedColumnName = "file_unique_id")
     var videoNote: TelegramVideoNoteEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voice_id", referencedColumnName = "file_unique_id")
     var voice: TelegramVoiceEntity? = null
 
@@ -171,27 +171,27 @@ class TelegramMessageEntity {
     @Column(name = "has_media_spoiler")
     var hasMediaSpoiler: Boolean = false
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "contact_id", referencedColumnName = "internal_id")
     var contact: TelegramContactEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "dice_id", referencedColumnName = "internal_id")
     var dice: TelegramDiceEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id", referencedColumnName = "internal_id")
     var game: TelegramGameEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "poll_id", referencedColumnName = "id")
     var poll: TelegramPollEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_id", referencedColumnName = "internal_id")
     var venue: TelegramVenueEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "location_id", referencedColumnName = "internal_id")
     var location: TelegramLocationEntity? = null
 
@@ -218,6 +218,9 @@ class TelegramMessageEntity {
     )
     var newChatPhoto: MutableList<TelegramPhotoSizeEntity> = mutableListOf()
 
+    @Column(name = "delete_chat_photo")
+    var deleteChatPhoto: Boolean = false
+
     @Column(name = "group_chat_created")
     var groupChatCreated: Boolean = false
 
@@ -227,7 +230,7 @@ class TelegramMessageEntity {
     @Column(name = "channel_chat_created")
     var channelChatCreated: Boolean = false
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "message_auto_delete_timer_changed_id", referencedColumnName = "internal_id")
     var messageAutoDeleteTimerChanged: TelegramMessageAutoDeleteTimerChangedEntity? = null
 
@@ -237,68 +240,68 @@ class TelegramMessageEntity {
     @Column(name = "migrate_from_chat_id")
     var migrateFromChatId: Long? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns(
         JoinColumn(name = "pinned_message_chat_id", referencedColumnName = "chat_id"),
         JoinColumn(name = "pinned_message_message_id", referencedColumnName = "message_id")
     )
     var pinnedMessage: TelegramMessageEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns(
         JoinColumn(name = "pinned_message_chat_id", referencedColumnName = "chat_id", insertable = false, updatable = false),
         JoinColumn(name = "pinned_message_message_id", referencedColumnName = "message_id", insertable = false, updatable = false)
     )
     var pinnedInaccessibleMessage: TelegramInaccessibleMessageEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "invoice_id", referencedColumnName = "internal_id")
     var invoice: TelegramInvoiceEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "successful_payment_id", referencedColumnName = "internal_id")
     var successfulPayment: TelegramSuccessfulPaymentEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "refunded_payment_id", referencedColumnName = "internal_id")
     var refundedPayment: TelegramRefundedPaymentEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "users_shared_id", referencedColumnName = "internal_id")
     var usersShared: TelegramUsersSharedEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_shared_id", referencedColumnName = "internal_id")
     var chatShared: TelegramChatSharedEntity? = null
 
     @Column(name = "connected_website")
     var connectedWebsite: String? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "write_access_allowed_id", referencedColumnName = "internal_id")
     var writeAccessAllowed: TelegramWriteAccessAllowedEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "passport_data_id", referencedColumnName = "internal_id")
     var passportData: TelegramPassportDataEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "proximity_alert_triggered_id", referencedColumnName = "internal_id")
     var proximityAlertTriggered: TelegramProximityAlertTriggeredEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_boost_added_id", referencedColumnName = "internal_id")
     var chatBoostAdded: TelegramChatBoostAddedEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_background_set_id", referencedColumnName = "internal_id")
     var chatBackgroundSet: TelegramChatBackgroundEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "forum_topic_created_id", referencedColumnName = "internal_id")
     var forumTopicCreated: TelegramForumTopicCreatedEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "forum_topic_edited_id", referencedColumnName = "internal_id")
     var forumTopicEdited: TelegramForumTopicEditedEntity? = null
 
@@ -314,42 +317,42 @@ class TelegramMessageEntity {
     @Column(name = "general_forum_topic_unhidden")
     var generalForumTopicUnhidden: Boolean = false
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "giveaway_created_id", referencedColumnName = "internal_id")
     var giveawayCreated: TelegramGiveawayCreatedEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "giveaway_id", referencedColumnName = "internal_id")
     var giveaway: TelegramGiveawayEntity? = null
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns(
         JoinColumn(name = "giveaway_winners_chat_id", referencedColumnName = "chat_id"),
         JoinColumn(name = "giveaway_winners_message_id", referencedColumnName = "giveaway_message_id")
     )
     var giveawayWinners: TelegramGiveawayWinnersEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "giveaway_completed_id", referencedColumnName = "internal_id")
     var giveawayCompleted: TelegramGiveawayCompletedEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "video_chat_scheduled_id", referencedColumnName = "internal_id")
     var videoChatScheduled: TelegramVideoChatScheduledEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "video_chat_ended_id", referencedColumnName = "internal_id")
     var videoChatEnded: TelegramVideoChatEndedEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "video_chat_participants_invited_id", referencedColumnName = "internal_id")
     var videoChatParticipantsInvited: TelegramVideoChatParticipantsInvitedEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "web_app_data_id", referencedColumnName = "internal_id")
     var webAppData: TelegramWebAppDataEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "reply_markup_id", referencedColumnName = "internal_id")
     var replyMarkup: TelegramInlineKeyboardMarkupEntity? = null
 }

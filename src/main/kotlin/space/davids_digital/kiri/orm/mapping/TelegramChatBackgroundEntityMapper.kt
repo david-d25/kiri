@@ -11,8 +11,8 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramChatBackgroundEntit
 )
 interface TelegramChatBackgroundEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramChatBackground): TelegramChatBackgroundEntity
+    fun toEntity(model: TelegramChatBackground?): TelegramChatBackgroundEntity?
 
     @Mapping(target = "copy", ignore = true)
-    fun toModel(entity: TelegramChatBackgroundEntity): TelegramChatBackground
+    fun toModel(entity: TelegramChatBackgroundEntity?): TelegramChatBackground?
 }

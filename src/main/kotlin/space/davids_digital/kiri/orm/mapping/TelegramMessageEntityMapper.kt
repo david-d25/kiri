@@ -6,6 +6,7 @@ import space.davids_digital.kiri.model.telegram.TelegramInaccessibleMessage
 import space.davids_digital.kiri.model.telegram.TelegramMaybeInaccessibleMessage
 import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.orm.entity.telegram.*
+import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageId
 
 @Mapper(
     componentModel = "spring",
@@ -57,18 +58,42 @@ import space.davids_digital.kiri.orm.entity.telegram.*
         TelegramChatSharedEntityMapper::class,
         TelegramProximityAlertTriggeredEntityMapper::class,
         TelegramWebAppDataEntityMapper::class,
+        TelegramPaidMediaInfoEntityMapper::class,
+        TelegramExternalReplyInfoEntityMapper::class,
     ]
 )
 abstract class TelegramMessageEntityMapper {
     @Mapping(target = "pinnedMessage", source = ".", qualifiedByName = ["mapPinnedMessage"])
-    abstract fun toModel(entity: TelegramMessageEntity): TelegramMessage
+    @Mapping(source = "id.messageId", target = "messageId")
+    @Mapping(source = "id.chatId", target = "chatId")
+    @Mapping(source = "topicMessage", target = "isTopicMessage")
+    @Mapping(source = "automaticForward", target = "isAutomaticForward")
+    @Mapping(source = "fromOffline", target = "isFromOffline")
+    abstract fun toModel(entity: TelegramMessageEntity?): TelegramMessage?
 
     @Mapping(target = "pinnedMessage", ignore = true)
     @Mapping(target = "pinnedInaccessibleMessage", ignore = true)
-    abstract fun toEntity(model: TelegramMessage): TelegramMessageEntity
+    @Mapping(source = ".", target = "id", qualifiedByName = ["toMessageId"])
+    abstract fun toEntity(model: TelegramMessage?): TelegramMessageEntity?
+
+    @Mapping(source = "id.messageId", target = "messageId")
+    @Mapping(source = "id.chatId", target = "chatId")
+    abstract fun toModel(entity: TelegramInaccessibleMessageEntity?): TelegramInaccessibleMessage?
+
+    @Mapping(source = ".", target = "id", qualifiedByName = ["toMessageId"])
+    abstract fun toEntity(model: TelegramInaccessibleMessage?): TelegramInaccessibleMessageEntity?
+
+    @Named("toMessageId")
+    fun toMessageId(model: TelegramMessage?): TelegramMessageId? =
+        if (model == null) null else TelegramMessageId(model.chatId, model.messageId)
+
+    @Named("toMessageId")
+    fun toMessageId(model: TelegramInaccessibleMessage?): TelegramMessageId? =
+        if (model == null) null else TelegramMessageId(model.chatId, model.messageId)
 
     @AfterMapping
-    protected fun setBackReferences(@MappingTarget entity: TelegramMessageEntity, model: TelegramMessage) {
+    protected fun setBackReferences(@MappingTarget entity: TelegramMessageEntity?, model: TelegramMessage?) {
+        if (entity == null || model == null) return
         entity.entities.forEach { it.parentMessageText = entity }
         entity.captionEntities.forEach { it.parentMessageCaption = entity }
 
@@ -84,14 +109,12 @@ abstract class TelegramMessageEntityMapper {
     }
 
     @Named("mapPinnedMessage")
-    fun mapPinnedMessage(entity: TelegramMessageEntity): TelegramMaybeInaccessibleMessage? {
+    fun mapPinnedMessage(entity: TelegramMessageEntity?): TelegramMaybeInaccessibleMessage? {
         return when {
+            null == entity -> null
             entity.pinnedMessage != null -> toModel(entity.pinnedMessage!!)
             entity.pinnedInaccessibleMessage != null -> toModel(entity.pinnedInaccessibleMessage!!)
             else -> null
         }
     }
-
-    abstract fun toModel(entity: TelegramInaccessibleMessageEntity): TelegramInaccessibleMessage
-    abstract fun toEntity(model: TelegramInaccessibleMessage): TelegramInaccessibleMessageEntity
 }

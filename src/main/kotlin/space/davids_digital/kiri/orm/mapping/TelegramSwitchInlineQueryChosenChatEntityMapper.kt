@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramSwitchInlineQueryCh
 @Mapper(componentModel = "spring")
 interface TelegramSwitchInlineQueryChosenChatEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramSwitchInlineQueryChosenChat): TelegramSwitchInlineQueryChosenChatEntity
-    fun toModel(entity: TelegramSwitchInlineQueryChosenChatEntity): TelegramSwitchInlineQueryChosenChat
+    fun toEntity(model: TelegramSwitchInlineQueryChosenChat?): TelegramSwitchInlineQueryChosenChatEntity?
+    fun toModel(entity: TelegramSwitchInlineQueryChosenChatEntity?): TelegramSwitchInlineQueryChosenChat?
 }
