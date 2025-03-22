@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramShippingAddressEnti
 @Mapper(componentModel = "spring")
 interface TelegramShippingAddressEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramShippingAddress): TelegramShippingAddressEntity
-    fun toModel(entity: TelegramShippingAddressEntity): TelegramShippingAddress
+    fun toEntity(model: TelegramShippingAddress?): TelegramShippingAddressEntity?
+    fun toModel(entity: TelegramShippingAddressEntity?): TelegramShippingAddress?
 }

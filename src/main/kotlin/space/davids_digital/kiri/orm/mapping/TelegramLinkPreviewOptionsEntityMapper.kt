@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramLinkPreviewOptionsE
 @Mapper(componentModel = "spring")
 interface TelegramLinkPreviewOptionsEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramLinkPreviewOptions): TelegramLinkPreviewOptionsEntity
-    fun toModel(entity: TelegramLinkPreviewOptionsEntity): TelegramLinkPreviewOptions
+    fun toEntity(model: TelegramLinkPreviewOptions?): TelegramLinkPreviewOptionsEntity?
+    fun toModel(entity: TelegramLinkPreviewOptionsEntity?): TelegramLinkPreviewOptions?
 }

@@ -8,8 +8,8 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramVideoChatParticipan
 @Mapper(componentModel = "spring")
 interface TelegramVideoChatParticipantsInvitedEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramVideoChatParticipantsInvited): TelegramVideoChatParticipantsInvitedEntity
+    fun toEntity(model: TelegramVideoChatParticipantsInvited?): TelegramVideoChatParticipantsInvitedEntity?
 
     @Mapping(target = "copy", ignore = true)
-    fun toModel(entity: TelegramVideoChatParticipantsInvitedEntity): TelegramVideoChatParticipantsInvited
+    fun toModel(entity: TelegramVideoChatParticipantsInvitedEntity?): TelegramVideoChatParticipantsInvited?
 }

@@ -6,6 +6,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramSharedUserEntity
 
 @Mapper(componentModel = "spring", uses = [TelegramPhotoSizeEntityMapper::class])
 interface TelegramSharedUserEntityMapper {
-    fun toEntity(model: TelegramSharedUser): TelegramSharedUserEntity
-    fun toModel(entity: TelegramSharedUserEntity): TelegramSharedUser
+    fun toEntity(model: TelegramSharedUser?): TelegramSharedUserEntity?
+    fun toModel(entity: TelegramSharedUserEntity?): TelegramSharedUser?
 }

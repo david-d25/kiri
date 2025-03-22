@@ -8,9 +8,9 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramMaskPositionEntity
 @Mapper(componentModel = "spring")
 interface TelegramMaskPositionEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramMaskPosition): TelegramMaskPositionEntity
+    fun toEntity(model: TelegramMaskPosition?): TelegramMaskPositionEntity?
 
     @Mapping(source = "XShift", target = "xShift")
     @Mapping(source = "YShift", target = "yShift")
-    fun toModel(entity: TelegramMaskPositionEntity): TelegramMaskPosition
+    fun toModel(entity: TelegramMaskPositionEntity?): TelegramMaskPosition?
 }

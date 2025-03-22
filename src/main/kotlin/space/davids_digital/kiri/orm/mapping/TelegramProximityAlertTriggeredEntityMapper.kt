@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramProximityAlertTrigg
 @Mapper(componentModel = "spring")
 interface TelegramProximityAlertTriggeredEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramProximityAlertTriggered): TelegramProximityAlertTriggeredEntity
-    fun toModel(entity: TelegramProximityAlertTriggeredEntity): TelegramProximityAlertTriggered
+    fun toEntity(model: TelegramProximityAlertTriggered?): TelegramProximityAlertTriggeredEntity?
+    fun toModel(entity: TelegramProximityAlertTriggeredEntity?): TelegramProximityAlertTriggered?
 }

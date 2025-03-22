@@ -21,23 +21,24 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramPaidMediaVideoEntit
 abstract class TelegramPaidMediaEntityMapper {
     @Mapping(target = "internalId", ignore = true)
     @Mapping(target = "paidMediaInfo", ignore = true)
-    abstract fun toEntity(model: Preview): TelegramPaidMediaPreviewEntity
+    abstract fun toEntity(model: Preview?): TelegramPaidMediaPreviewEntity?
 
     @Mapping(target = "internalId", ignore = true)
     @Mapping(target = "paidMediaInfo", ignore = true)
     @Mapping(source = "photo", target = "photoSizes")
-    abstract fun toEntity(model: Photo): TelegramPaidMediaPhotoEntity
+    abstract fun toEntity(model: Photo?): TelegramPaidMediaPhotoEntity?
 
     @Mapping(target = "internalId", ignore = true)
     @Mapping(target = "paidMediaInfo", ignore = true)
-    abstract fun toEntity(model: Video): TelegramPaidMediaVideoEntity
+    abstract fun toEntity(model: Video?): TelegramPaidMediaVideoEntity?
 
     @Mapping(target = "internalId", ignore = true)
     @Mapping(target = "paidMediaInfo", ignore = true)
-    abstract fun toEntity(model: Unknown): TelegramPaidMediaUnknownEntity
+    abstract fun toEntity(model: Unknown?): TelegramPaidMediaUnknownEntity?
 
-    fun toEntity(model: TelegramPaidMedia): TelegramPaidMediaEntity {
+    fun toEntity(model: TelegramPaidMedia?): TelegramPaidMediaEntity? {
         return when (model) {
+            null -> null
             is Preview -> toEntity(model)
             is Photo -> toEntity(model)
             is Video -> toEntity(model)
@@ -45,19 +46,20 @@ abstract class TelegramPaidMediaEntityMapper {
         }
     }
 
-    abstract fun toModel(entity: TelegramPaidMediaPreviewEntity): Preview
+    abstract fun toModel(entity: TelegramPaidMediaPreviewEntity?): Preview?
 
     @Mapping(target = "copy", ignore = true)
     @Mapping(source = "photoSizes", target = "photo")
-    abstract fun toModel(entity: TelegramPaidMediaPhotoEntity): Photo
+    abstract fun toModel(entity: TelegramPaidMediaPhotoEntity?): Photo?
 
     @Mapping(target = "copy", ignore = true)
-    abstract fun toModel(entity: TelegramPaidMediaVideoEntity): Video
+    abstract fun toModel(entity: TelegramPaidMediaVideoEntity?): Video?
 
-    abstract fun toModel(entity: TelegramPaidMediaUnknownEntity): Unknown
+    abstract fun toModel(entity: TelegramPaidMediaUnknownEntity?): Unknown?
 
-    fun toModel(entity: TelegramPaidMediaEntity): TelegramPaidMedia {
+    fun toModel(entity: TelegramPaidMediaEntity?): TelegramPaidMedia? {
         return when (entity) {
+            null -> null
             is TelegramPaidMediaPreviewEntity -> toModel(entity)
             is TelegramPaidMediaPhotoEntity -> toModel(entity)
             is TelegramPaidMediaVideoEntity -> toModel(entity)

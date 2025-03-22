@@ -11,6 +11,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramVenueEntity
 )
 interface TelegramVenueEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramVenue): TelegramVenueEntity
-    fun toModel(entity: TelegramVenueEntity): TelegramVenue
+    fun toEntity(model: TelegramVenue?): TelegramVenueEntity?
+    fun toModel(entity: TelegramVenueEntity?): TelegramVenue?
 }

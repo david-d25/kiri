@@ -8,7 +8,7 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramDiceEntity
 @Mapper(componentModel = "spring")
 interface TelegramDiceEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramDice): TelegramDiceEntity
+    fun toEntity(model: TelegramDice?): TelegramDiceEntity?
 
-    fun toModel(entity: TelegramDiceEntity): TelegramDice
+    fun toModel(entity: TelegramDiceEntity?): TelegramDice?
 }

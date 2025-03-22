@@ -8,8 +8,8 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramMessageAutoDeleteTi
 @Mapper(componentModel = "spring")
 interface TelegramMessageAutoDeleteTimerChangedEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramMessageAutoDeleteTimerChanged): TelegramMessageAutoDeleteTimerChangedEntity
+    fun toEntity(model: TelegramMessageAutoDeleteTimerChanged?): TelegramMessageAutoDeleteTimerChangedEntity?
 
     @Mapping(target = "copy", ignore = true)
-    fun toModel(entity: TelegramMessageAutoDeleteTimerChangedEntity): TelegramMessageAutoDeleteTimerChanged
+    fun toModel(entity: TelegramMessageAutoDeleteTimerChangedEntity?): TelegramMessageAutoDeleteTimerChanged?
 }

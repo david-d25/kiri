@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramRefundedPaymentEnti
 @Mapper(componentModel = "spring")
 interface TelegramRefundedPaymentEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramRefundedPayment): TelegramRefundedPaymentEntity
-    fun toModel(entity: TelegramRefundedPaymentEntity): TelegramRefundedPayment
+    fun toEntity(model: TelegramRefundedPayment?): TelegramRefundedPaymentEntity?
+    fun toModel(entity: TelegramRefundedPaymentEntity?): TelegramRefundedPayment?
 }

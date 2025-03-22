@@ -18,13 +18,16 @@ import space.davids_digital.kiri.orm.entity.telegram.*
 abstract class TelegramInlineKeyboardMarkupEntityMapper {
     @Mapping(target = "internalId", ignore = true)
     @Mapping(source = "copyText", target = "copyTextButton")
-    abstract fun toEntity(model: TelegramInlineKeyboardButton): TelegramInlineKeyboardButtonEntity
+    abstract fun toEntity(model: TelegramInlineKeyboardButton?): TelegramInlineKeyboardButtonEntity?
 
     @Mapping(target = "callbackGame", ignore = true)
     @Mapping(source = "copyTextButton", target = "copyText")
-    abstract fun toModel(entity: TelegramInlineKeyboardButtonEntity): TelegramInlineKeyboardButton
+    abstract fun toModel(entity: TelegramInlineKeyboardButtonEntity?): TelegramInlineKeyboardButton?
 
-    fun toEntity(model: TelegramInlineKeyboardMarkup): TelegramInlineKeyboardMarkupEntity {
+    fun toEntity(model: TelegramInlineKeyboardMarkup?): TelegramInlineKeyboardMarkupEntity? {
+        if (model == null) {
+            return null
+        }
         val entity = TelegramInlineKeyboardMarkupEntity()
         model.inlineKeyboard.forEachIndexed { rowIndex, row ->
             row.forEachIndexed { colIndex, button ->
@@ -41,13 +44,16 @@ abstract class TelegramInlineKeyboardMarkupEntityMapper {
         return entity
     }
 
-    fun toModel(entity: TelegramInlineKeyboardMarkupEntity): TelegramInlineKeyboardMarkup {
+    fun toModel(entity: TelegramInlineKeyboardMarkupEntity?): TelegramInlineKeyboardMarkup? {
+        if (entity == null) {
+            return null
+        }
         val maxRow = entity.buttons.maxOfOrNull { it.rowIndex } ?: -1
         val rows = MutableList(maxRow + 1) { mutableListOf<TelegramInlineKeyboardButton>() }
 
         entity.buttons.sortedWith(compareBy({ it.rowIndex }, { it.columnIndex })).forEach {
             val row = rows[it.rowIndex]
-            row += toModel(it.button!!)
+            row += toModel(it.button!!) ?: return@forEach
         }
 
         return TelegramInlineKeyboardMarkup(rows)

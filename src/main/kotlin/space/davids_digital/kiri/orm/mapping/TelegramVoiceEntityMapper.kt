@@ -8,8 +8,8 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramVoiceEntity
 @Mapper(componentModel = "spring")
 interface TelegramVoiceEntityMapper {
     @Mapping(source = "fileId", target = "fileDownloadId")
-    fun toEntity(model: TelegramVoice): TelegramVoiceEntity
+    fun toEntity(model: TelegramVoice?): TelegramVoiceEntity?
 
     @Mapping(source = "fileDownloadId", target = "fileId")
-    fun toModel(entity: TelegramVoiceEntity): TelegramVoice
+    fun toModel(entity: TelegramVoiceEntity?): TelegramVoice?
 }

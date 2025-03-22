@@ -9,8 +9,9 @@ import java.awt.Color
 
 @Mapper(componentModel = "spring")
 abstract class TelegramBackgroundFillEntityMapper {
-    fun toEntity(model: TelegramBackgroundFill): TelegramBackgroundFillEntity {
+    fun toEntity(model: TelegramBackgroundFill?): TelegramBackgroundFillEntity? {
         return when (model) {
+            null -> null
             is Solid -> TelegramBackgroundFillSolidEntity().apply {
                 colorRgb = model.color.rgb
             }
@@ -29,8 +30,9 @@ abstract class TelegramBackgroundFillEntityMapper {
         }
     }
 
-    fun toModel(entity: TelegramBackgroundFillEntity): TelegramBackgroundFill {
+    fun toModel(entity: TelegramBackgroundFillEntity?): TelegramBackgroundFill? {
         return when (entity) {
+            null -> null
             is TelegramBackgroundFillSolidEntity -> Solid(Color(entity.colorRgb))
             is TelegramBackgroundFillGradientEntity -> Gradient(
                 topColor = Color(entity.topColorRgb),

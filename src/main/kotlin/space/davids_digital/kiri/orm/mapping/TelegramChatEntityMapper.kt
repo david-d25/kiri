@@ -14,6 +14,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramChatEntity
     ]
 )
 interface TelegramChatEntityMapper {
-    fun toEntity(model: TelegramChat): TelegramChatEntity
-    fun toModel(entity: TelegramChatEntity): TelegramChat
+    fun toEntity(model: TelegramChat?): TelegramChatEntity?
+    fun toModel(entity: TelegramChatEntity?): TelegramChat?
 }

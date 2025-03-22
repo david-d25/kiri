@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramEncryptedCredential
 @Mapper(componentModel = "spring")
 interface TelegramEncryptedCredentialsEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramEncryptedCredentials): TelegramEncryptedCredentialsEntity
-    fun toModel(entity: TelegramEncryptedCredentialsEntity): TelegramEncryptedCredentials
+    fun toEntity(model: TelegramEncryptedCredentials?): TelegramEncryptedCredentialsEntity?
+    fun toModel(entity: TelegramEncryptedCredentialsEntity?): TelegramEncryptedCredentials?
 }

@@ -13,15 +13,15 @@ import space.davids_digital.kiri.orm.entity.telegram.*
     ]
 )
 abstract class TelegramPollEntityMapper {
-    abstract fun toEntity(model: TelegramPoll): TelegramPollEntity
+    abstract fun toEntity(model: TelegramPoll?): TelegramPollEntity?
 
     @Mapping(source = "anonymous", target = "isAnonymous")
     @Mapping(source = "closed", target = "isClosed")
-    abstract fun toModel(entity: TelegramPollEntity): TelegramPoll
+    abstract fun toModel(entity: TelegramPollEntity?): TelegramPoll?
 
     @AfterMapping
-    protected fun setBackReferences(@MappingTarget entity: TelegramPollEntity) {
-        entity.questionEntities.forEach { it.parentPollQuestion = entity }
-        entity.explanationEntities.forEach { it.parentPollExplanation = entity }
+    protected fun setBackReferences(@MappingTarget entity: TelegramPollEntity?) {
+        entity?.questionEntities?.forEach { it.parentPollQuestion = entity }
+        entity?.explanationEntities?.forEach { it.parentPollExplanation = entity }
     }
 }

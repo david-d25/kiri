@@ -10,13 +10,11 @@ import space.davids_digital.kiri.orm.entity.telegram.*
 )
 abstract class TelegramPaidMediaInfoEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    abstract fun toEntity(model: TelegramPaidMediaInfo): TelegramPaidMediaInfoEntity
-    abstract fun toModel(entity: TelegramPaidMediaInfoEntity): TelegramPaidMediaInfo
+    abstract fun toEntity(model: TelegramPaidMediaInfo?): TelegramPaidMediaInfoEntity?
+    abstract fun toModel(entity: TelegramPaidMediaInfoEntity?): TelegramPaidMediaInfo?
 
     @AfterMapping
-    protected fun setBackReference(
-        @MappingTarget entity: TelegramPaidMediaInfoEntity
-    ) {
-        entity.paidMedia.forEach { it.paidMediaInfo = entity }
+    protected fun setBackReference(@MappingTarget entity: TelegramPaidMediaInfoEntity?) {
+        entity?.paidMedia?.forEach { it.paidMediaInfo = entity }
     }
 }

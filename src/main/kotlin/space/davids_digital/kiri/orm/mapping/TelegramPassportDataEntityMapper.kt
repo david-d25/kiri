@@ -14,6 +14,6 @@ import space.davids_digital.kiri.orm.entity.telegram.*
 )
 abstract class TelegramPassportDataEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    abstract fun toEntity(model: TelegramPassportData): TelegramPassportDataEntity
-    abstract fun toModel(entity: TelegramPassportDataEntity): TelegramPassportData
+    abstract fun toEntity(model: TelegramPassportData?): TelegramPassportDataEntity?
+    abstract fun toModel(entity: TelegramPassportDataEntity?): TelegramPassportData?
 }

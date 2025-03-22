@@ -16,7 +16,7 @@ class TelegramOrmService(
     private val messageMapper: TelegramMessageEntityMapper
 ) {
     fun getAllChats(): List<TelegramChat> {
-        return chatRepository.findAll().map(chatMapper::toModel)
+        return chatRepository.findAll().mapNotNull(chatMapper::toModel)
     }
 
     fun getChat(id: Long): TelegramChat? {
@@ -24,7 +24,7 @@ class TelegramOrmService(
     }
 
     fun saveChat(chat: TelegramChat): TelegramChat {
-        return chatMapper.toModel(chatRepository.save(chatMapper.toEntity(chat)))
+        return chatMapper.toModel(chatRepository.save(chatMapper.toEntity(chat)!!))!!
     }
 
     fun deleteChat(id: Long) {
@@ -32,10 +32,10 @@ class TelegramOrmService(
     }
 
     fun saveMessage(message: TelegramMessage): TelegramMessage {
-        return messageMapper.toModel(messageRepository.save(messageMapper.toEntity(message)))
+        return messageMapper.toModel(messageRepository.save(messageMapper.toEntity(message)!!))!!
     }
 
     fun getChatMessages(chatId: Long): List<TelegramMessage> {
-        return messageRepository.getAllByIdChatId(chatId).map(messageMapper::toModel)
+        return messageRepository.getAllByIdChatId(chatId).mapNotNull(messageMapper::toModel)
     }
 }

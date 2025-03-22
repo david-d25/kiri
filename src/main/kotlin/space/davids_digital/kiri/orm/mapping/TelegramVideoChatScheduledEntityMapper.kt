@@ -11,8 +11,8 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramVideoChatScheduledE
 )
 interface TelegramVideoChatScheduledEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramVideoChatScheduled): TelegramVideoChatScheduledEntity
+    fun toEntity(model: TelegramVideoChatScheduled?): TelegramVideoChatScheduledEntity?
 
     @Mapping(target = "copy", ignore = true)
-    fun toModel(entity: TelegramVideoChatScheduledEntity): TelegramVideoChatScheduled
+    fun toModel(entity: TelegramVideoChatScheduledEntity?): TelegramVideoChatScheduled?
 }

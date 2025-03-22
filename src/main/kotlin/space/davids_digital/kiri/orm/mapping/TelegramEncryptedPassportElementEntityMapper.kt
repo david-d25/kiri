@@ -11,6 +11,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramEncryptedPassportEl
 )
 interface TelegramEncryptedPassportElementEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramEncryptedPassportElement): TelegramEncryptedPassportElementEntity
-    fun toModel(entity: TelegramEncryptedPassportElementEntity): TelegramEncryptedPassportElement
+    fun toEntity(model: TelegramEncryptedPassportElement?): TelegramEncryptedPassportElementEntity?
+    fun toModel(entity: TelegramEncryptedPassportElementEntity?): TelegramEncryptedPassportElement?
 }

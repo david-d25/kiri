@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramForumTopicEditedEnt
 @Mapper(componentModel = "spring")
 interface TelegramForumTopicEditedEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramForumTopicEdited): TelegramForumTopicEditedEntity
-    fun toModel(entity: TelegramForumTopicEditedEntity): TelegramForumTopicEdited
+    fun toEntity(model: TelegramForumTopicEdited?): TelegramForumTopicEditedEntity?
+    fun toModel(entity: TelegramForumTopicEditedEntity?): TelegramForumTopicEdited?
 }

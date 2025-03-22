@@ -8,6 +8,6 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramWriteAccessAllowedE
 @Mapper(componentModel = "spring")
 interface TelegramWriteAccessAllowedEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramWriteAccessAllowed): TelegramWriteAccessAllowedEntity
-    fun toModel(entity: TelegramWriteAccessAllowedEntity): TelegramWriteAccessAllowed
+    fun toEntity(model: TelegramWriteAccessAllowed?): TelegramWriteAccessAllowedEntity?
+    fun toModel(entity: TelegramWriteAccessAllowedEntity?): TelegramWriteAccessAllowed?
 }

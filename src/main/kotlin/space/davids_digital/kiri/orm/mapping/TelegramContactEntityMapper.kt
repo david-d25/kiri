@@ -8,7 +8,7 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramContactEntity
 @Mapper(componentModel = "spring")
 interface TelegramContactEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    fun toEntity(model: TelegramContact): TelegramContactEntity
+    fun toEntity(model: TelegramContact?): TelegramContactEntity?
 
-    fun toModel(entity: TelegramContactEntity): TelegramContact
+    fun toModel(entity: TelegramContactEntity?): TelegramContact?
 }

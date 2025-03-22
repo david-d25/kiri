@@ -59,6 +59,10 @@ data class TelegramExternalReplyInfo (
      */
     val videoNote: TelegramVideoNote? = null,
     /**
+     * Message is a voice message, information about the file.
+     */
+    val voice: TelegramVoice? = null,
+    /**
      * True, if the message media is covered by a spoiler animation.
      */
     val hasMediaSpoiler: Boolean = false,
