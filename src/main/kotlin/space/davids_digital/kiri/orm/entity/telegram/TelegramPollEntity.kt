@@ -40,13 +40,13 @@ class TelegramPollEntity {
     @Column(name = "close_date")
     var closeDate: OffsetDateTime? = null
 
-    @OneToMany(mappedBy = "parentPollQuestion", orphanRemoval = true)
+    @OneToMany(mappedBy = "parentPollQuestion", cascade = [CascadeType.ALL], orphanRemoval = true)
     var questionEntities: MutableList<TelegramMessageEntityEntity> = mutableListOf()
 
-    @OneToMany(mappedBy = "parentPollExplanation", orphanRemoval = true)
+    @OneToMany(mappedBy = "parentPollExplanation", cascade = [CascadeType.ALL], orphanRemoval = true)
     var explanationEntities: MutableList<TelegramMessageEntityEntity> = mutableListOf()
 
-    @OneToMany(orphanRemoval = true)
+    @OneToMany(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinTable(
         name = "telegram_poll_options_map",
         joinColumns = [JoinColumn(name = "poll_id", referencedColumnName = "id")],

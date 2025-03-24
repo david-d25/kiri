@@ -512,8 +512,8 @@ fun Game.toModel() = TelegramGame(
 fun Poll.toModel() = TelegramPoll (
     id(),
     question(),
-    questionEntities().map { it.toModel() },
-    options().map { it.toModel() },
+    questionEntities()?.map { it.toModel() } ?: emptyList(),
+    options()?.map { it.toModel() } ?: emptyList(),
     totalVoterCount(),
     isClosed,
     isAnonymous,
@@ -524,12 +524,12 @@ fun Poll.toModel() = TelegramPoll (
     allowsMultipleAnswers(),
     correctOptionId(),
     explanation(),
-    explanationEntities().map { it.toModel() },
+    explanationEntities()?.map { it.toModel() } ?: emptyList(),
     openPeriod(),
     closeDate()?.toZonedDateTime(),
 )
 
-fun PollOption.toModel() = TelegramPollOption(text(), voterCount(), textEntities().map { it.toModel() })
+fun PollOption.toModel() = TelegramPollOption(text(), voterCount(), textEntities()?.map { it.toModel() } ?: emptyList())
 
 fun Venue.toModel() = TelegramVenue(
     location().toModel(), title(), address(), foursquareId(), foursquareType(), googlePlaceId(), googlePlaceType()

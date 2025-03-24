@@ -31,6 +31,6 @@ class TelegramGameEntity {
     )
     var photo: MutableList<TelegramPhotoSizeEntity> = mutableListOf()
 
-    @OneToMany(mappedBy = "parentGame", orphanRemoval = true)
+    @OneToMany(mappedBy = "parentGame", cascade = [CascadeType.ALL], orphanRemoval = true)
     var textEntities: MutableList<TelegramMessageEntityEntity> = mutableListOf()
 }
