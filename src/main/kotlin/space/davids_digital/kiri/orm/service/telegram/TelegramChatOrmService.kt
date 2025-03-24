@@ -21,6 +21,11 @@ class TelegramChatOrmService(
         return repo.findById(id).map(mapper::toModel).orElse(null)
     }
 
+    @Transactional(readOnly = true)
+    fun existsById(id: Long): Boolean {
+        return repo.existsById(id)
+    }
+
     @Transactional
     fun saveChat(chat: TelegramChat): TelegramChat {
         return mapper.toModel(repo.save(mapper.toEntity(chat)!!))!!

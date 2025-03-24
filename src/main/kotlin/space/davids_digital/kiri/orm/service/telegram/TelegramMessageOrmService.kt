@@ -59,6 +59,7 @@ class TelegramMessageOrmService(
         return mapper.toModel(repo.save(mapper.toEntity(message)!!))!!
     }
 
+    @Transactional
     fun getChatMessages(chatId: Long): List<TelegramMessage> {
         return repo.getAllByIdChatId(chatId).mapNotNull(mapper::toModel)
     }
