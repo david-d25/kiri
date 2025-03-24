@@ -1,4 +1,4 @@
-package space.davids_digital.kiri.orm.repository
+package space.davids_digital.kiri.orm.repository.telegram
 
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository

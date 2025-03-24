@@ -13,6 +13,6 @@ class TelegramPaidMediaInfoEntity {
     @Column(name = "star_count")
     var starCount: Int = 0
 
-    @OneToMany(mappedBy = "paidMediaInfo", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "parentPaidMediaInfo", cascade = [CascadeType.ALL], orphanRemoval = true)
     var paidMedia: MutableList<TelegramPaidMediaEntity> = mutableListOf()
 }

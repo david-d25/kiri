@@ -10,6 +10,6 @@ class TelegramInlineKeyboardMarkupEntity {
     @Column(name = "internal_id")
     var internalId: Long = 0
 
-    @OneToMany(mappedBy = "markup", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "parentMarkup", cascade = [CascadeType.ALL], orphanRemoval = true)
     var buttons: MutableList<TelegramInlineKeyboardButtonPlacementEntity> = mutableListOf()
 }

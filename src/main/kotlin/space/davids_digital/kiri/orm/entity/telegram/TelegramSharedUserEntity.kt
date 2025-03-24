@@ -18,7 +18,7 @@ class TelegramSharedUserEntity {
     @Column(name = "username")
     var username: String? = null
 
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "telegram_shared_users_photo_cross_links",
         joinColumns = [JoinColumn(name = "user_id", referencedColumnName = "user_id")],

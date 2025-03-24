@@ -25,7 +25,7 @@ class TelegramChatEntity {
     @Column(name = "last_name")
     var lastName: String? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "photo_id", referencedColumnName = "internal_id")
     var photo: TelegramChatPhotoEntity? = null
 
@@ -45,7 +45,7 @@ class TelegramChatEntity {
     )
     var pinnedMessage: TelegramMessageEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "permissions_id", referencedColumnName = "internal_id")
     var permissions: TelegramChatPermissionsEntity? = null
 
@@ -61,7 +61,7 @@ class TelegramChatEntity {
     @Column(name = "linked_chat_id")
     var linkedChatId: Long? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "location_id", referencedColumnName = "internal_id")
     var location: TelegramChatLocationEntity? = null
 

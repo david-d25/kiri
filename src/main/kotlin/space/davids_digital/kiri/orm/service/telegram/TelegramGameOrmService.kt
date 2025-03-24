@@ -1,0 +1,20 @@
+package space.davids_digital.kiri.orm.service.telegram
+
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import space.davids_digital.kiri.model.telegram.TelegramGame
+import space.davids_digital.kiri.orm.mapping.TelegramGameEntityMapper
+import space.davids_digital.kiri.orm.repository.telegram.TelegramGameRepository
+
+@Service
+class TelegramGameOrmService(
+    private val repo: TelegramGameRepository,
+    private val mapper: TelegramGameEntityMapper,
+    private val messageEntityOrmService: TelegramMessageEntityOrmService
+) {
+    @Transactional
+    fun save(model: TelegramGame): TelegramGame {
+        model.textEntities.forEach(messageEntityOrmService::save)
+        return mapper.toModel(repo.save(mapper.toEntity(model)!!))!!
+    }
+}

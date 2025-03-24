@@ -20,20 +20,20 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramPaidMediaVideoEntit
 )
 abstract class TelegramPaidMediaEntityMapper {
     @Mapping(target = "internalId", ignore = true)
-    @Mapping(target = "paidMediaInfo", ignore = true)
+    @Mapping(target = "parentPaidMediaInfo", ignore = true)
     abstract fun toEntity(model: Preview?): TelegramPaidMediaPreviewEntity?
 
     @Mapping(target = "internalId", ignore = true)
-    @Mapping(target = "paidMediaInfo", ignore = true)
+    @Mapping(target = "parentPaidMediaInfo", ignore = true)
     @Mapping(source = "photo", target = "photoSizes")
     abstract fun toEntity(model: Photo?): TelegramPaidMediaPhotoEntity?
 
     @Mapping(target = "internalId", ignore = true)
-    @Mapping(target = "paidMediaInfo", ignore = true)
+    @Mapping(target = "parentPaidMediaInfo", ignore = true)
     abstract fun toEntity(model: Video?): TelegramPaidMediaVideoEntity?
 
     @Mapping(target = "internalId", ignore = true)
-    @Mapping(target = "paidMediaInfo", ignore = true)
+    @Mapping(target = "parentPaidMediaInfo", ignore = true)
     abstract fun toEntity(model: Unknown?): TelegramPaidMediaUnknownEntity?
 
     fun toEntity(model: TelegramPaidMedia?): TelegramPaidMediaEntity? {

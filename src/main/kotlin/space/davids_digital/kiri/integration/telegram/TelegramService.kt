@@ -14,12 +14,14 @@ import org.springframework.stereotype.Service
 import space.davids_digital.kiri.Settings
 import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.model.telegram.TelegramMessage
-import space.davids_digital.kiri.orm.service.TelegramOrmService
+import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
+import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.service.exception.ServiceException
 
 @Service
 class TelegramService(
-    private val orm: TelegramOrmService,
+    private val messageOrm: TelegramMessageOrmService,
+    private val chatOrm: TelegramChatOrmService,
     private val settings: Settings
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
@@ -33,7 +35,7 @@ class TelegramService(
     }
 
     suspend fun getChats(): List<TelegramChat> {
-        return orm.getAllChats()
+        return chatOrm.getAllChats()
     }
 
     suspend fun getChat(username: String): TelegramChat {
@@ -41,7 +43,7 @@ class TelegramService(
             .checkNoErrors("Failed to get Telegram chat with username '$username'")
             .chat()
             .toModel()
-            .let { orm.saveChat(it) }
+            .let { chatOrm.saveChat(it) }
     }
 
     suspend fun getChat(id: Long): TelegramChat {
@@ -49,7 +51,7 @@ class TelegramService(
             .checkNoErrors("Failed to get Telegram chat with id $id")
             .chat()
             .toModel()
-            .let { orm.saveChat(it) }
+            .let { chatOrm.saveChat(it) }
     }
 
     suspend fun sendText(chatId: Long, text: String) {
@@ -57,12 +59,12 @@ class TelegramService(
     }
 
     suspend fun getChatMessages(chatId: Long): List<TelegramMessage> {
-        return orm.getChatMessages(chatId)
+        return messageOrm.getChatMessages(chatId)
     }
 
     private fun onMessageReceived(message: Message) {
         log.debug("Received Telegram message from chat {}", message.chat().id())
-        orm.saveMessage(message.toModel())
+        messageOrm.save(message.toModel())
         // TODO: Implement
     }
 

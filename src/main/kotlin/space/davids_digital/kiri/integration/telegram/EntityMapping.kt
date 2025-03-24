@@ -334,7 +334,7 @@ fun MessageOrigin.toModel(): TelegramMessageOrigin {
 
 fun TextQuote.toModel() = TelegramTextQuote (
     text = text(),
-    entities = entities()?.map { it.toModel() },
+    entities = entities()?.map { it.toModel() } ?: emptyList(),
     position = position(),
     isManual = isManual == true,
 )

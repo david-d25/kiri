@@ -10,7 +10,7 @@ class TelegramExternalReplyInfoEntity {
     @Column(name = "internal_id")
     var internalId: Long = 0
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "origin_id", referencedColumnName = "internal_id")
     var origin: TelegramMessageOriginEntity? = null
 
@@ -20,7 +20,7 @@ class TelegramExternalReplyInfoEntity {
     @Column(name = "message_id")
     var messageId: Long? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "link_preview_options_id", referencedColumnName = "internal_id")
     var linkPreviewOptions: TelegramLinkPreviewOptionsEntity? = null
 
@@ -40,7 +40,7 @@ class TelegramExternalReplyInfoEntity {
     @JoinColumn(name = "paid_media_info_id", referencedColumnName = "internal_id")
     var paidMedia: TelegramPaidMediaInfoEntity? = null
 
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "telegram_external_reply_info_photo_cross_links",
         joinColumns = [JoinColumn(name = "reply_info_id", referencedColumnName = "internal_id")],
@@ -71,11 +71,11 @@ class TelegramExternalReplyInfoEntity {
     @Column(name = "has_media_spoiler")
     var hasMediaSpoiler: Boolean = false
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "contact_id", referencedColumnName = "internal_id")
     var contact: TelegramContactEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "dice_id", referencedColumnName = "internal_id")
     var dice: TelegramDiceEntity? = null
 
@@ -83,7 +83,7 @@ class TelegramExternalReplyInfoEntity {
     @JoinColumn(name = "game_id", referencedColumnName = "internal_id")
     var game: TelegramGameEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "giveaway_id", referencedColumnName = "internal_id")
     var giveaway: TelegramGiveawayEntity? = null
 
@@ -94,11 +94,11 @@ class TelegramExternalReplyInfoEntity {
     )
     var giveawayWinners: TelegramGiveawayWinnersEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "invoice_id", referencedColumnName = "internal_id")
     var invoice: TelegramInvoiceEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "location_id", referencedColumnName = "internal_id")
     var location: TelegramLocationEntity? = null
 
@@ -106,7 +106,7 @@ class TelegramExternalReplyInfoEntity {
     @JoinColumn(name = "poll_id", referencedColumnName = "id")
     var poll: TelegramPollEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "venue_id", referencedColumnName = "internal_id")
     var venue: TelegramVenueEntity? = null
 }

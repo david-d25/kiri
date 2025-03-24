@@ -37,7 +37,7 @@ class TelegramVideoEntity {
     @Column(name = "file_size")
     var fileSize: Long? = null
 
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "telegram_video_cover_cross_links",
         joinColumns = [JoinColumn(name = "video_file_unique_id", referencedColumnName = "file_unique_id")],

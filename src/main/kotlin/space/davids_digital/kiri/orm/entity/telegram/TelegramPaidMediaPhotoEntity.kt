@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.orm.entity.telegram
 
+import jakarta.persistence.CascadeType
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.JoinColumn
@@ -9,7 +10,7 @@ import jakarta.persistence.ManyToMany
 @Entity
 @DiscriminatorValue("photo")
 class TelegramPaidMediaPhotoEntity : TelegramPaidMediaEntity() {
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "telegram_paid_media_photo_sizes",
         joinColumns = [JoinColumn(name = "paid_media_id", referencedColumnName = "internal_id")],

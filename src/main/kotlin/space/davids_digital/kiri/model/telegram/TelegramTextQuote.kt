@@ -12,7 +12,7 @@ data class TelegramTextQuote (
      * Special entities that appear in the quote.
      * Currently, only bold, italic, underline, strikethrough, spoiler, and custom_emoji entities are kept in quotes.
      */
-    val entities: List<TelegramMessageEntity>? = null,
+    val entities: List<TelegramMessageEntity> = emptyList(),
     /**
      * Approximate quote position in the original message in UTF-16 code units as specified by the sender.
      */

@@ -26,7 +26,7 @@ data class TelegramGame (
     /**
      * Special entities that appear in [text], such as usernames, URLs, bot commands, etc.
      */
-    val textEntities: List<TelegramMessageEntity>? = null,
+    val textEntities: List<TelegramMessageEntity> = emptyList(),
     /**
      * Animation that will be displayed in the game message in chats. Upload via [BotFather](https://t.me/botfather).
      */

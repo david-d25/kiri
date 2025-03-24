@@ -12,9 +12,9 @@ class TelegramInlineKeyboardButtonPlacementEntity {
 
     @ManyToOne
     @JoinColumn(name = "markup_id", referencedColumnName = "internal_id", nullable = false)
-    var markup: TelegramInlineKeyboardMarkupEntity? = null
+    var parentMarkup: TelegramInlineKeyboardMarkupEntity? = null
 
-    @ManyToOne
+    @OneToOne(cascade = [CascadeType.ALL])
     @JoinColumn(name = "button_id", referencedColumnName = "internal_id", nullable = false)
     var button: TelegramInlineKeyboardButtonEntity? = null
 

@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.orm.entity.telegram
 
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
@@ -9,7 +10,7 @@ import jakarta.persistence.OneToOne
 @Entity
 @DiscriminatorValue("fill")
 class TelegramBackgroundTypeFillEntity : TelegramBackgroundTypeEntity() {
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "fill_id", referencedColumnName = "internal_id")
     var fill: TelegramBackgroundFillEntity? = null
 
