@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.agent.engine.EngineEventBus
 import space.davids_digital.kiri.agent.frame.DynamicDataFrame
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
@@ -30,6 +31,9 @@ class AppManager(
     private fun init() {
         availableApps["telegram"] = { TelegramApp(telegramService) }
     }
+
+    override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close)
+    override fun getSubProviders() = openedApps
 
     @AgentToolMethod(name = "list", description = "List all available apps")
     fun listApps(): String {
@@ -67,7 +71,4 @@ class AppManager(
         log.info("Closed app '$id'")
         return "Closed '$id'"
     }
-
-    override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close)
-    override fun getSubProviders() = openedApps
 }

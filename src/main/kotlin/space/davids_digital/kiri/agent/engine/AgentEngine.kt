@@ -2,18 +2,26 @@ package space.davids_digital.kiri.agent.engine
 
 import com.anthropic.models.Model
 import jakarta.annotation.PostConstruct
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppManager
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.FrameRenderer
-import space.davids_digital.kiri.agent.frame.createdAtNow
+import space.davids_digital.kiri.agent.frame.addCreatedAtNow
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
@@ -30,6 +38,7 @@ import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import space.davids_digital.kiri.llm.dsl.llmToolUseResult
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.coroutineContext
 
 @Service
 class AgentEngine(
@@ -41,6 +50,7 @@ class AgentEngine(
     private val toolCallExecutor: ToolCallExecutor,
     private val frameRenderer: FrameRenderer,
     private val frames: FrameBuffer,
+    private val eventBus: EngineEventBus,
     private val anthropicMessagesService: AnthropicMessagesService,
 ) : AgentToolProvider {
     companion object {
@@ -51,10 +61,18 @@ class AgentEngine(
 
     private val running = AtomicBoolean(false)
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private var currentSleepJob: Job? = null
 
     @PostConstruct
     private fun init() {
         resetFrames()
+
+        engineScope.launch {
+            eventBus.subscribeToEvents().collect { event ->
+                handleEvent(event)
+            }
+        }
+
         start()
     }
 
@@ -88,7 +106,7 @@ class AgentEngine(
     private fun resetFrames() {
         frames.clear()
         frames.addStatic {
-            createdAtNow()
+            addCreatedAtNow()
             tag = "system"
             content = "System started."
         }
@@ -224,23 +242,47 @@ class AgentEngine(
         log.info("Tool registry updated, registered $methodsRegistered tool methods")
     }
 
+    private suspend fun handleEvent(event: EngineEvent) {
+        currentSleepJob?.cancelAndJoin()
+
+        TODO()
+    }
+
     override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep)
 
     @AgentToolMethod(description = "Think to yourself")
     fun think(thoughts: String) {
         log.debug("Kiri thinks: $thoughts")
         frames.addStatic {
-            createdAtNow()
+            addCreatedAtNow()
             tag = "thought"
             content = thoughts
         }
     }
 
     @AgentToolMethod(description = "Sleep for a specified amount of time")
-    fun sleep(seconds: Long) {
+    suspend fun sleep(seconds: Long) {
         log.debug("Kiri is going to sleep for $seconds seconds")
-        engineScope.launch {
+        val sleptAt = System.currentTimeMillis()
+        try {
+            currentSleepJob = coroutineContext[Job]
             delay(seconds * 1000)
+            currentSleepJob = null
+            log.debug("Kiri woke up after sleeping for $seconds seconds")
+            frames.addStatic {
+                addCreatedAtNow()
+                tag = "system"
+                content = "Woke up after sleeping for $seconds seconds."
+            }
+        } catch (e: CancellationException) {
+            log.debug("Kiri was woken up from sleep")
+            val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
+            frames.addStatic {
+                addCreatedAtNow()
+                tag = "system"
+                content = "Sleep was interrupted, slept for $sleptFor seconds."
+            }
+            throw e
         }
     }
 }
