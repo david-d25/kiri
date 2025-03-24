@@ -2,10 +2,11 @@ package space.davids_digital.kiri.agent.frame
 
 import org.springframework.stereotype.Component
 import java.util.LinkedList
+import java.util.concurrent.ConcurrentLinkedQueue
 
 @Component
 class FrameBuffer : Iterable<Frame> {
-    private val frames = LinkedList<Frame>()
+    private val frames = ConcurrentLinkedQueue<Frame>()
 
     fun clear() {
         frames.clear()

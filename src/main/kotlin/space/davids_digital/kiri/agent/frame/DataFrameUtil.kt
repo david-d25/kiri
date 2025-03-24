@@ -6,6 +6,6 @@ import java.time.format.DateTimeFormatter
 
 private val DATETIME_PATTERN = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm 'UTC'")
 
-fun StaticDataFrame.Builder.createdAtNow() {
+fun StaticDataFrame.Builder.addCreatedAtNow() {
     attributes["created-at"] = ZonedDateTime.now(ZoneOffset.UTC).format(DATETIME_PATTERN)
 }
