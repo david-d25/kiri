@@ -47,7 +47,7 @@ class TelegramMessageEntityEntity {
     @Column(name = "type")
     var type: String = "" // MENTION, HASHTAG, etc.
 
-    @Column(name = "offset")
+    @Column(name = "\"offset\"") // 'offset' is a reserved word in SQL
     var offset: Int = 0
 
     @Column(name = "length")
