@@ -10,7 +10,7 @@ class TelegramPassportDataEntity {
     @Column(name = "internal_id")
     var internalId: Long = 0
 
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "telegram_passport_data_elements_cross_links",
         joinColumns = [JoinColumn(name = "passport_data_id", referencedColumnName = "internal_id")],
@@ -18,7 +18,7 @@ class TelegramPassportDataEntity {
     )
     var data: MutableList<TelegramEncryptedPassportElementEntity> = mutableListOf()
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "credentials_id", referencedColumnName = "internal_id", nullable = false)
     var credentials: TelegramEncryptedCredentialsEntity? = null
 }

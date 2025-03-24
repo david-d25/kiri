@@ -15,6 +15,6 @@ abstract class TelegramPaidMediaInfoEntityMapper {
 
     @AfterMapping
     protected fun setBackReference(@MappingTarget entity: TelegramPaidMediaInfoEntity?) {
-        entity?.paidMedia?.forEach { it.paidMediaInfo = entity }
+        entity?.paidMedia?.forEach { it.parentPaidMediaInfo = entity }
     }
 }

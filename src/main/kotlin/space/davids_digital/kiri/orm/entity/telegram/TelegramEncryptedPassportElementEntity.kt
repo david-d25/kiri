@@ -26,7 +26,7 @@ class TelegramEncryptedPassportElementEntity {
     @Column(name = "hash_base64")
     var hashBase64: String? = null
 
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.MERGE, CascadeType.PERSIST])
     @JoinTable(
         name = "telegram_encrypted_passport_elements_files_cross_links",
         joinColumns = [JoinColumn(name = "element_id", referencedColumnName = "internal_id")],
@@ -34,7 +34,7 @@ class TelegramEncryptedPassportElementEntity {
     )
     var files: MutableList<TelegramPassportFileEntity> = mutableListOf()
 
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.MERGE, CascadeType.PERSIST])
     @JoinTable(
         name = "telegram_encrypted_passport_elements_translations_cross_links",
         joinColumns = [JoinColumn(name = "element_id", referencedColumnName = "internal_id")],

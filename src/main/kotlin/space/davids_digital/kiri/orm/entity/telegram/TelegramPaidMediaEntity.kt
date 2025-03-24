@@ -14,5 +14,5 @@ abstract class TelegramPaidMediaEntity {
 
     @ManyToOne
     @JoinColumn(name = "paid_media_info_id", referencedColumnName = "internal_id")
-    var paidMediaInfo: TelegramPaidMediaInfoEntity? = null
+    var parentPaidMediaInfo: TelegramPaidMediaInfoEntity? = null
 }

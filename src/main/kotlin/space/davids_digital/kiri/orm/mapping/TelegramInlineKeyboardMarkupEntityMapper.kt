@@ -33,7 +33,7 @@ abstract class TelegramInlineKeyboardMarkupEntityMapper {
             row.forEachIndexed { colIndex, button ->
                 val buttonEntity = toEntity(button)
                 val placement = TelegramInlineKeyboardButtonPlacementEntity().apply {
-                    this.markup = entity
+                    this.parentMarkup = entity
                     this.button = buttonEntity
                     this.rowIndex = rowIndex
                     this.columnIndex = colIndex

@@ -22,7 +22,7 @@ class TelegramChatSharedEntity {
     @Column(name = "username")
     var username: String? = null
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "telegram_chat_shared_photo_cross_links",
         joinColumns = [JoinColumn(name = "chat_shared_id", referencedColumnName = "internal_id")],

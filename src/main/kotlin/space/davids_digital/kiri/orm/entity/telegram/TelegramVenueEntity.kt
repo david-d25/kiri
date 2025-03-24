@@ -10,7 +10,7 @@ class TelegramVenueEntity {
     @Column(name = "internal_id")
     var internalId: Long = 0
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "location_id", referencedColumnName = "internal_id")
     var location: TelegramLocationEntity? = null
 

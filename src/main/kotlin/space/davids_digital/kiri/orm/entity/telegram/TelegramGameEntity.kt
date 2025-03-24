@@ -23,7 +23,7 @@ class TelegramGameEntity {
     @JoinColumn(name = "animation_id", referencedColumnName = "file_unique_id")
     var animation: TelegramAnimationEntity? = null
 
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "telegram_game_photos",
         joinColumns = [JoinColumn(name = "game_id", referencedColumnName = "internal_id")],
@@ -31,6 +31,6 @@ class TelegramGameEntity {
     )
     var photo: MutableList<TelegramPhotoSizeEntity> = mutableListOf()
 
-    @OneToMany(mappedBy = "parentGame", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "parentGame", orphanRemoval = true)
     var textEntities: MutableList<TelegramMessageEntityEntity> = mutableListOf()
 }

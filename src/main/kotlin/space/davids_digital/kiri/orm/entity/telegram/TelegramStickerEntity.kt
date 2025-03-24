@@ -41,7 +41,7 @@ class TelegramStickerEntity {
     @JoinColumn(name = "premium_animation_file_id", referencedColumnName = "file_unique_id")
     var premiumAnimation: TelegramFileEntity? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "mask_position_id", referencedColumnName = "internal_id")
     var maskPosition: TelegramMaskPositionEntity? = null
 

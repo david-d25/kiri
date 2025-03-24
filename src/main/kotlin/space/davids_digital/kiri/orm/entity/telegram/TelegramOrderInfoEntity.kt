@@ -19,7 +19,7 @@ class TelegramOrderInfoEntity {
     @Column(name = "email")
     var email: String? = null
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "shipping_address_id", referencedColumnName = "internal_id")
     var shippingAddress: TelegramShippingAddressEntity? = null
 }

@@ -13,7 +13,7 @@ class TelegramUsersSharedEntity {
     @Column(name = "request_id", nullable = false)
     var requestId: Long = 0
 
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "telegram_users_shared_cross_links",
         joinColumns = [JoinColumn(name = "users_shared_id", referencedColumnName = "internal_id")],

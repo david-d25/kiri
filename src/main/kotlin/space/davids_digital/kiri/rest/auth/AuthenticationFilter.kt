@@ -22,10 +22,10 @@ class AuthenticationFilter(private val userSessionOrmService: UserSessionOrmServ
         filterChain: FilterChain
     ) {
         val httpRequest = request as HttpServletRequest
-        val userVkId = getCookie(httpRequest, CookieName.USER_ID)?.toLongOrNull()
+        val userId = getCookie(httpRequest, CookieName.USER_ID)?.toLongOrNull()
         val sessionToken = getCookie(httpRequest, CookieName.AUTH_TOKEN)
-        if (userVkId != null && sessionToken != null) {
-            val session = getValidatedSession(userVkId, sessionToken)
+        if (userId != null && sessionToken != null) {
+            val session = getValidatedSession(userId, sessionToken)
             if (session != null) {
                 SecurityContextHolder.getContext().authentication = UserAuthentication(session)
             }
@@ -43,9 +43,9 @@ class AuthenticationFilter(private val userSessionOrmService: UserSessionOrmServ
         return null
     }
 
-    private fun getValidatedSession(userVkId: Long, sessionToken: String): UserSession? {
+    private fun getValidatedSession(userId: Long, sessionToken: String): UserSession? {
         val sessions = try {
-            userSessionOrmService.getUnexpiredUserSessionsByVkId(userVkId)
+            userSessionOrmService.getUnexpiredUserSessionsByUserId(userId)
         } catch (e: UserSessionDecryptException) {
             throw InvalidSessionStateException(e.message)
         }

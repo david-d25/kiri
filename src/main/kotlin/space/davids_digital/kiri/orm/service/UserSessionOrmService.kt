@@ -2,6 +2,7 @@ package space.davids_digital.kiri.orm.service
 
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.UserSession
 import space.davids_digital.kiri.orm.entity.UserSessionEntity
 import space.davids_digital.kiri.orm.repository.UserSessionRepository
@@ -18,10 +19,12 @@ class UserSessionOrmService(
     private val userSessionRepository: UserSessionRepository,
     private val cryptographyService: CryptographyService
 ) {
+    @Transactional
     fun deleteUserSession(sessionId: UUID) {
         userSessionRepository.deleteById(sessionId)
     }
 
+    @Transactional
     fun createUserSession(userId: Long, sessionToken: String, validUntil: ZonedDateTime): UserSession {
         val entity = UserSessionEntity()
         entity.userId = userId
@@ -34,12 +37,14 @@ class UserSessionOrmService(
         return toModel(userSessionRepository.save(entity))
     }
 
-    fun getUnexpiredUserSessionsByVkId(vkUserId: Long): Collection<UserSession> {
-        return userSessionRepository.findAllByUserIdAndValidUntilAfter(vkUserId, ZonedDateTime.now())
+    @Transactional(readOnly = true)
+    fun getUnexpiredUserSessionsByUserId(userId: Long): Collection<UserSession> {
+        return userSessionRepository.findAllByUserIdAndValidUntilAfter(userId, ZonedDateTime.now())
             .map { toModel(it) }
             .toList()
     }
 
+    @Transactional
     @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
     fun cleanUpOldTokens() {
         userSessionRepository.deleteByValidUntilBefore(ZonedDateTime.now())
