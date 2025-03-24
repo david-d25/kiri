@@ -26,11 +26,15 @@ class TelegramApp(
         text(
             runBlocking {
                 buildString {
+                    val chats = service.getChats()
                     appendLine("<chats>")
-                    service.getChats().forEach { chat ->
+                    chats.forEach { chat ->
                         val id = chat.id
                         val title = chat.title?.escapeHTML() ?: "<no_title/>"
                         appendLine("""<chat id="$id">$title</chat>""")
+                    }
+                    if (chats.isEmpty()) {
+                        appendLine("<no_chats/>")
                     }
                     appendLine("</chats>")
                 }
@@ -46,7 +50,15 @@ class TelegramApp(
                     val title = chat.title?.escapeHTML()
                     val titleAttr = if (title != null) " title=\"$title\"" else ""
                     appendLine("""<chat id="$id"$titleAttr>""")
-                    // TODO messages
+
+                    val chatMessages = service.getChatMessages(id)
+                    chatMessages.forEach {
+                        val text = it.text?.escapeHTML()
+                        appendLine("""<message>$text</message>""")
+                    }
+                    if (chatMessages.isEmpty()) {
+                        appendLine("<no_messages/>")
+                    }
                     appendLine("</chat>")
                 }
             }

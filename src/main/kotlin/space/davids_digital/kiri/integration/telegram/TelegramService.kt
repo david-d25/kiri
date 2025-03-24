@@ -64,7 +64,23 @@ class TelegramService(
 
     private fun onMessageReceived(message: Message) {
         log.debug("Received Telegram message from chat {}", message.chat().id())
-        messageOrm.save(message.toModel())
+        try {
+            if (!chatOrm.existsById(message.chat().id())) {
+                log.debug("Chat with id ${message.chat().id()} does not exist, fetching and saving")
+                val chat = bot.getChat(message.chat().id())
+                    .checkNoErrors("Failed to get Telegram chat with id ${message.chat().id()}")
+                    .chat()
+                    .toModel()
+                chatOrm.saveChat(chat)
+            }
+        } catch (e: Exception) {
+            log.error("Failed to get and save Telegram chat", e)
+        }
+        try {
+            messageOrm.save(message.toModel())
+        } catch (e: Exception) {
+            log.error("Failed to save Telegram message", e)
+        }
         // TODO: Implement
     }
 
