@@ -10,14 +10,9 @@ import space.davids_digital.kiri.orm.repository.telegram.TelegramPollRepository
 class TelegramPollOrmService(
     private val repo: TelegramPollRepository,
     private val mapper: TelegramPollEntityMapper,
-    private val messageEntityOrm: TelegramMessageEntityOrmService,
-    private val pollOptionOrm: TelegramPollOptionOrmService,
 ) {
     @Transactional
     fun save(model: TelegramPoll): TelegramPoll {
-        model.questionEntities.forEach(messageEntityOrm::save)
-        model.explanationEntities.forEach(messageEntityOrm::save)
-        model.options.forEach(pollOptionOrm::save)
         return mapper.toModel(repo.save(mapper.toEntity(model)!!))!!
     }
 }

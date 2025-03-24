@@ -10,11 +10,11 @@ import space.davids_digital.kiri.orm.repository.telegram.TelegramGameRepository
 class TelegramGameOrmService(
     private val repo: TelegramGameRepository,
     private val mapper: TelegramGameEntityMapper,
-    private val messageEntityOrmService: TelegramMessageEntityOrmService
+    private val animationOrmService: TelegramAnimationOrmService,
 ) {
     @Transactional
     fun save(model: TelegramGame): TelegramGame {
-        model.textEntities.forEach(messageEntityOrmService::save)
+        model.animation?.let(animationOrmService::save)
         return mapper.toModel(repo.save(mapper.toEntity(model)!!))!!
     }
 }

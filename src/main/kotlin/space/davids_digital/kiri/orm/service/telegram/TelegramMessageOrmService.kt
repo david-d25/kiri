@@ -15,7 +15,6 @@ class TelegramMessageOrmService(
     private val mapper: TelegramMessageEntityMapper,
     private val storyOrm: TelegramStoryOrmService,
     private val userOrm: TelegramUserOrmService,
-    private val messageEntityOrm: TelegramMessageEntityOrmService,
     private val animationOrm: TelegramAnimationOrmService,
     private val audioOrm: TelegramAudioOrmService,
     private val documentOrm: TelegramDocumentOrmService,
@@ -30,15 +29,12 @@ class TelegramMessageOrmService(
     private val chatBackgroundOrm: TelegramChatBackgroundOrmService,
     private val giveawayWinnersOrm: TelegramGiveawayWinnersOrmService,
     private val giveawayCompleted: TelegramGiveawayCompletedOrmService,
-    private val quoteOrm: TelegramTextQuoteOrmService,
 ) {
     @Transactional
     fun save(message: TelegramMessage): TelegramMessage {
         message.replyToMessage?.let(::save)
-        message.quote?.let(quoteOrm::save)
         message.replyToStory?.let(storyOrm::save)
         message.viaBot?.let(userOrm::save)
-        message.entities.forEach(messageEntityOrm::save)
         message.animation?.let(animationOrm::save)
         message.audio?.let(audioOrm::save)
         message.document?.let(documentOrm::save)
@@ -48,7 +44,6 @@ class TelegramMessageOrmService(
         message.video?.let(videoOrm::save)
         message.videoNote?.let(videoNoteOrm::save)
         message.voice?.let(voiceOrm::save)
-        message.captionEntities.forEach(messageEntityOrm::save)
         message.game?.let(gameOrm::save)
         message.poll?.let(pollOrm::save)
         message.pinnedMessage?.let {

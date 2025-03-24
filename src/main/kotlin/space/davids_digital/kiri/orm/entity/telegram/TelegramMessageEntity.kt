@@ -57,7 +57,7 @@ class TelegramMessageEntity {
     @JoinColumn(name = "external_reply_info_id", referencedColumnName = "internal_id")
     var externalReplyInfo: TelegramExternalReplyInfoEntity? = null
 
-    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     @JoinColumn(name = "quote_id", referencedColumnName = "internal_id")
     var quote: TelegramTextQuoteEntity? = null
 
@@ -89,6 +89,7 @@ class TelegramMessageEntity {
 
     @OneToMany(
         mappedBy = "parentMessageText",
+        cascade = [CascadeType.ALL],
         orphanRemoval = true,
         targetEntity = TelegramMessageEntityEntity::class
     )
@@ -158,6 +159,7 @@ class TelegramMessageEntity {
 
     @OneToMany(
         mappedBy = "parentMessageCaption",
+        cascade = [CascadeType.ALL],
         orphanRemoval = true,
         targetEntity = TelegramMessageEntityEntity::class
     )

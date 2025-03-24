@@ -16,6 +16,6 @@ class TelegramPollOptionEntity {
     @Column(name = "voter_count")
     var voterCount: Int = 0
 
-    @OneToMany(mappedBy = "parentPollOption", orphanRemoval = true)
+    @OneToMany(mappedBy = "parentPollOption", cascade = [CascadeType.ALL], orphanRemoval = true)
     var textEntities: MutableList<TelegramMessageEntityEntity> = mutableListOf()
 }
