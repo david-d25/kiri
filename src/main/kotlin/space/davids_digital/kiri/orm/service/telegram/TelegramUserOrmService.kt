@@ -15,4 +15,14 @@ class TelegramUserOrmService(
     fun save(telegramUser: TelegramUser): TelegramUser {
         return mapper.toModel(repo.save(mapper.toEntity(telegramUser)!!))!!
     }
+
+    @Transactional
+    fun findById(id: Long): TelegramUser? {
+        return mapper.toModel(repo.findById(id).orElse(null))
+    }
+
+    @Transactional
+    fun existsById(id: Long): Boolean {
+        return repo.existsById(id)
+    }
 }

@@ -3,18 +3,13 @@ package space.davids_digital.kiri.agent.engine
 import com.anthropic.models.Model
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -22,6 +17,7 @@ import space.davids_digital.kiri.agent.app.AppManager
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.FrameRenderer
 import space.davids_digital.kiri.agent.frame.addCreatedAtNow
+import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
@@ -68,7 +64,7 @@ class AgentEngine(
         resetFrames()
 
         engineScope.launch {
-            eventBus.subscribeToEvents().collect { event ->
+            eventBus.subscribe().collect { event ->
                 handleEvent(event)
             }
         }
@@ -92,15 +88,15 @@ class AgentEngine(
     }
 
     fun softStop() {
-        log.info("Soft stopping Kiri engine")
+        log.info("Soft stopping agent engine")
         running.set(false)
     }
 
     fun hardStop() {
-        log.info("Hard stopping Kiri engine")
+        log.info("Hard stopping agent engine")
         running.set(false)
         engineScope.cancel()
-        log.info("Kiri engine stopped")
+        log.info("Agent engine stopped")
     }
 
     private fun resetFrames() {
@@ -108,11 +104,15 @@ class AgentEngine(
         frames.addStatic {
             addCreatedAtNow()
             tag = "system"
-            content = "System started."
+            content = dataFrameContent {
+                text("System started.")
+            }
         }
         frames.addStatic {
             tag = "system"
-            content = "System is cold-started. Please explore the environment to warm up your memory."
+            content = dataFrameContent {
+                text("System is cold-started. Please explore the environment to warm up your memory.")
+            }
         }
     }
 
@@ -220,7 +220,9 @@ class AgentEngine(
         log.error("Engine error", e)
         frames.addStatic {
             tag = "system"
-            content = "Engine error: ${e.message}"
+            content = dataFrameContent {
+                text("Engine error: ${e.message}")
+            }
         }
         if (running.get()) {
             log.info("Will try to recover in $RECOVERY_TIMEOUT_MS ms")
@@ -228,9 +230,13 @@ class AgentEngine(
         // Try to recover
         delay(RECOVERY_TIMEOUT_MS)
         if (running.get()) {
+            running.set(false)
+            log.info("Recovering engine")
             frames.addStatic {
                 tag = "system"
-                content = "Attempting to recover..."
+                content = dataFrameContent {
+                    text("Attempting to recover...")
+                }
             }
             start()
         }
@@ -239,50 +245,77 @@ class AgentEngine(
     private fun updateToolRegistry() {
         toolRegistry.clear()
         val methodsRegistered = toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
-        log.info("Tool registry updated, registered $methodsRegistered tool methods")
+        log.debug("Tool registry updated, registered $methodsRegistered tool methods")
     }
 
     private suspend fun handleEvent(event: EngineEvent) {
-        currentSleepJob?.cancelAndJoin()
-
-        TODO()
+        currentSleepJob?.cancelAndJoin() // TODO
     }
 
     override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep)
 
     @AgentToolMethod(description = "Think to yourself")
     fun think(thoughts: String) {
-        log.debug("Kiri thinks: $thoughts")
+        log.debug("Agent thinks: $thoughts")
         frames.addStatic {
             addCreatedAtNow()
             tag = "thought"
-            content = thoughts
+            content = dataFrameContent {
+                text(thoughts)
+            }
         }
     }
 
-    @AgentToolMethod(description = "Sleep for a specified amount of time")
+    @AgentToolMethod(
+        description = "Sleep for a specified amount of time. Pass 0 to sleep infinitely until something happens."
+    )
     suspend fun sleep(seconds: Long) {
-        log.debug("Kiri is going to sleep for $seconds seconds")
+        if (seconds == 0L) {
+            log.debug("Agent is going to sleep")
+        } else {
+            log.debug("Agent is going to sleep for $seconds seconds")
+        }
         val sleptAt = System.currentTimeMillis()
+
+        if (currentSleepJob != null) {
+            log.debug("Agent is already sleeping, cancelling current sleep")
+            currentSleepJob?.cancelAndJoin()
+        }
+
+        val newSleepJob = engineScope.launch(context = Job()) {
+            try {
+                if (seconds == 0L) {
+                    delay(Long.MAX_VALUE)
+                } else {
+                    delay(seconds * 1000)
+                }
+                log.debug("Agent woke up after sleeping for $seconds seconds")
+                frames.addStatic {
+                    addCreatedAtNow()
+                    tag = "system"
+                    content = dataFrameContent {
+                        text("Slept for $seconds seconds.")
+                    }
+                }
+            } catch (_: CancellationException) {
+                log.debug("Agent was woken up from sleep")
+                val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
+                frames.addStatic {
+                    addCreatedAtNow()
+                    tag = "system"
+                    content = dataFrameContent {
+                        text("Slept for $sleptFor seconds.")
+                    }
+                }
+            }
+        }
+
+        currentSleepJob = newSleepJob
+
         try {
-            currentSleepJob = coroutineContext[Job]
-            delay(seconds * 1000)
+            newSleepJob.join()
+        } finally {
             currentSleepJob = null
-            log.debug("Kiri woke up after sleeping for $seconds seconds")
-            frames.addStatic {
-                addCreatedAtNow()
-                tag = "system"
-                content = "Woke up after sleeping for $seconds seconds."
-            }
-        } catch (e: CancellationException) {
-            log.debug("Kiri was woken up from sleep")
-            val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
-            frames.addStatic {
-                addCreatedAtNow()
-                tag = "system"
-                content = "Sleep was interrupted, slept for $sleptFor seconds."
-            }
-            throw e
         }
     }
 }
