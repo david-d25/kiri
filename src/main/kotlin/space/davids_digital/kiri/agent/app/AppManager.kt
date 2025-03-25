@@ -47,8 +47,15 @@ class AppManager(
 
     @AgentToolMethod(name = "open", description = "Open app by ID")
     fun open(id: String): String {
-        openedApps.find { it.id == id }?.let {
-            return "App with ID '$id' is already opened"
+        val foundApp = openedApps.find { it.id == id }
+        if (foundApp != null) {
+            frames.add(DynamicDataFrame(
+                tagProvider = { "app" },
+                attributesProvider = { mapOf() },
+                contentProvider = foundApp::render
+            ))
+            log.info("App '$id' already opened, rendering again")
+            return "Opened '$id'"
         }
         val appFactory = availableApps[id] ?: return "App with ID '$id' not found"
         val app = appFactory()

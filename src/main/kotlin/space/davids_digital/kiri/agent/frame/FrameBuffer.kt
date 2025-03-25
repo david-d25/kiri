@@ -29,6 +29,9 @@ class FrameBuffer : Iterable<Frame> {
     }
 
     override fun iterator(): Iterator<Frame> {
+        while (frames.size > 15) { // TODO: make this configurable
+            frames.poll()
+        }
         return frames.iterator()
     }
 }

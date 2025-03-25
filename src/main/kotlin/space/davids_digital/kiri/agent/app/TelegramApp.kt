@@ -4,14 +4,15 @@ import io.ktor.util.escapeHTML
 import kotlinx.coroutines.runBlocking
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
+import space.davids_digital.kiri.agent.notification.NotificationManager
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.integration.telegram.TelegramService
 
 @AgentToolNamespace("telegram")
 class TelegramApp(
-    private val service: TelegramService,
-): AgentApp("Telegram") {
+    private val service: TelegramService
+): AgentApp("telegram") {
     private var openedChatId: Long? = null
 
     override fun render(): List<DataFrame.ContentPart> {
@@ -50,11 +51,11 @@ class TelegramApp(
                     val title = chat.title?.escapeHTML()
                     val titleAttr = if (title != null) " title=\"$title\"" else ""
                     appendLine("""<chat id="$id"$titleAttr>""")
-
-                    val chatMessages = service.getChatMessages(id)
+                    val chatMessages = service.getChatMessages(id).takeLast(20)
                     chatMessages.forEach {
                         val text = it.text?.escapeHTML()
-                        appendLine("""<message>$text</message>""")
+                        val sentAt = it.date.toString()
+                        appendLine("""<message sent_at="$sentAt">$text</message>""")
                     }
                     if (chatMessages.isEmpty()) {
                         appendLine("<no_messages/>")
