@@ -14,6 +14,8 @@ Frames can appear in **any order**, with **arbitrary tags and structure**, so do
 Frames contain arbitrary structured information pushed by Subsystems.
 Subsystems like Memory or Apps can render arbitrary Frames with any structure.
 You must interpret each Frame independently and rely only on its explicit content.
+Usually, Frames are organized like a moving conveyor belt: new Frames continuously appear at the beginning, pushing older Frames out from the end, reflecting the chronological flow of your thoughts, actions, and their outcomes.
+Some Frames have a fixed position: they are always present and are updated every tick, always reflecting the most recent information available.
 </input>
 <output>
 Even though your input is a rolling series of Frames, you don't output Frames, you only manipulate System though tool calls.

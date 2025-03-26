@@ -16,7 +16,7 @@ class NotificationManager(
         frames.addStatic {
             tag = "notification"
             content = notification.content
-            attributes["sent_at"] = notification.sentAt.asPrettyString()
+            attributes["sent-at"] = notification.sentAt.asPrettyString()
             attributes.putAll(notification.metadata)
         }
         runBlocking {

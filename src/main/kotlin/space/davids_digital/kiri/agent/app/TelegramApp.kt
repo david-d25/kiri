@@ -55,7 +55,7 @@ class TelegramApp(
                     chatMessages.forEach {
                         val text = it.text?.escapeHTML()
                         val sentAt = it.date.toString()
-                        appendLine("""<message sent_at="$sentAt">$text</message>""")
+                        appendLine("""<message sent-at="$sentAt">$text</message>""")
                     }
                     if (chatMessages.isEmpty()) {
                         appendLine("<no_messages/>")

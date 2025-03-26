@@ -1,19 +1,41 @@
 package space.davids_digital.kiri.agent.frame
 
 import org.springframework.stereotype.Component
-import java.util.LinkedList
 import java.util.concurrent.ConcurrentLinkedQueue
 
 @Component
 class FrameBuffer : Iterable<Frame> {
-    private val frames = ConcurrentLinkedQueue<Frame>()
+    private val fixedFrames = ConcurrentLinkedQueue<DataFrame>()
+    private val rollingFrames = ConcurrentLinkedQueue<Frame>()
+
+    val onlyFixed get() = fixedFrames.iterator()
+    val onlyRolling get() = rollingFrames.iterator()
 
     fun clear() {
-        frames.clear()
+        clearFixed()
+        clearRolling()
+    }
+
+    fun clearFixed() {
+        fixedFrames.clear()
+    }
+
+    fun clearRolling() {
+        rollingFrames.clear()
     }
 
     fun add(frame: Frame) {
-        frames.add(frame)
+        rollingFrames.add(frame)
+        trim()
+    }
+
+    fun addFixed(frame: DataFrame) {
+        fixedFrames.add(frame)
+        trim()
+    }
+
+    fun removeFixed(frame: DataFrame) {
+        fixedFrames.remove(frame)
     }
 
     fun addStatic(block: StaticDataFrame.Builder.() -> Unit) {
@@ -29,9 +51,15 @@ class FrameBuffer : Iterable<Frame> {
     }
 
     override fun iterator(): Iterator<Frame> {
-        while (frames.size > 15) { // TODO: make this configurable
-            frames.poll()
+        return sequence {
+            yieldAll(fixedFrames)
+            yieldAll(rollingFrames)
+        }.iterator()
+    }
+
+    private fun trim() {
+        while (rollingFrames.isNotEmpty() && fixedFrames.size + rollingFrames.size > 15) { // TODO: make this configurable
+            rollingFrames.poll()
         }
-        return frames.iterator()
     }
 }
