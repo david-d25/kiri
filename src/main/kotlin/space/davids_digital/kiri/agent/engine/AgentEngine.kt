@@ -34,7 +34,6 @@ import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import space.davids_digital.kiri.llm.dsl.llmToolUseResult
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.coroutineContext
 
 @Service
 class AgentEngine(
@@ -62,13 +61,9 @@ class AgentEngine(
     @PostConstruct
     private fun init() {
         resetFrames()
-
         engineScope.launch {
-            eventBus.subscribe().collect { event ->
-                handleEvent(event)
-            }
+            eventBus.subscribe().collect(::handleEvent)
         }
-
         start()
     }
 
@@ -95,12 +90,12 @@ class AgentEngine(
     fun hardStop() {
         log.info("Hard stopping agent engine")
         running.set(false)
-        engineScope.cancel()
+        engineScope.cancel() // TODO don't cancel the whole scope
         log.info("Agent engine stopped")
     }
 
     private fun resetFrames() {
-        frames.clear()
+        frames.clearRolling()
         frames.addStatic {
             addCreatedAtNow()
             tag = "system"
@@ -141,10 +136,7 @@ class AgentEngine(
                     }
                 }
             }
-
-            for (frame in frames) {
-                frameRenderer.render(frame, this)
-            }
+            frameRenderer.render(frames, this)
         }
     }
 

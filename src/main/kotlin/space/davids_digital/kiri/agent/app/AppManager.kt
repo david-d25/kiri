@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.Settings
 import space.davids_digital.kiri.agent.engine.EngineEventBus
+import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.DynamicDataFrame
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
@@ -26,6 +27,7 @@ class AppManager(
 
     private val availableApps = mutableMapOf<String, () -> AgentApp>()
     private val openedApps = mutableSetOf<AgentApp>()
+    private val appFrames = mutableMapOf<String, DataFrame>()
 
     @PostConstruct
     private fun init() {
@@ -49,23 +51,19 @@ class AppManager(
     fun open(id: String): String {
         val foundApp = openedApps.find { it.id == id }
         if (foundApp != null) {
-            frames.add(DynamicDataFrame(
-                tagProvider = { "app" },
-                attributesProvider = { mapOf() },
-                contentProvider = foundApp::render
-            ))
-            log.info("App '$id' already opened, rendering again")
-            return "Opened '$id'"
+            return "App '$id' is already opened"
         }
         val appFactory = availableApps[id] ?: return "App with ID '$id' not found"
         val app = appFactory()
         openedApps.add(app)
         app.onOpened()
-        frames.add(DynamicDataFrame(
+        val frame = DynamicDataFrame(
             tagProvider = { "app" },
             attributesProvider = { mapOf() },
             contentProvider = app::render
-        ))
+        )
+        appFrames[app.id] = frame
+        frames.addFixed(frame)
         log.info("Opened app '$id'")
         return "Opened '$id'"
     }
@@ -73,6 +71,8 @@ class AppManager(
     @AgentToolMethod(name = "close", description = "Close app by ID")
     fun close(id: String): String {
         val app = openedApps.find { it.id == id } ?: return "App with ID '$id' not found"
+        val frame = appFrames.remove(id)
+        frame?.let(frames::removeFixed)
         app.onClose()
         openedApps.remove(app)
         log.info("Closed app '$id'")
