@@ -1,5 +1,7 @@
 package space.davids_digital.kiri.orm.service.telegram
 
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramInaccessibleMessage
@@ -60,7 +62,10 @@ class TelegramMessageOrmService(
     }
 
     @Transactional
-    fun getChatMessages(chatId: Long): List<TelegramMessage> {
-        return repo.getAllByIdChatId(chatId).mapNotNull(mapper::toModel)
+    fun getChatMessages(chatId: Long, limit: Long): List<TelegramMessage> {
+        return repo.getAllByIdChatId(
+            chatId,
+            PageRequest.of(0, limit.toInt(), Sort.by(Sort.Direction.DESC, "date"))
+        ).mapNotNull(mapper::toModel)
     }
 }

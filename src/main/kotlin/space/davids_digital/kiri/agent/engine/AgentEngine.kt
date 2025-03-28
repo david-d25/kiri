@@ -236,8 +236,7 @@ class AgentEngine(
 
     private fun updateToolRegistry() {
         toolRegistry.clear()
-        val methodsRegistered = toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
-        log.debug("Tool registry updated, registered $methodsRegistered tool methods")
+        toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
     }
 
     private suspend fun handleEvent(event: EngineEvent) {

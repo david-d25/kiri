@@ -68,6 +68,19 @@ class TelegramService(
             .let { chatOrm.saveChat(it) }
     }
 
+    suspend fun chatExists(id: Long): Boolean {
+        if (chatOrm.existsById(id)) {
+            return true
+        }
+        try {
+            bot.getChat(id).checkNoErrors().chat().toModel().let { chatOrm.saveChat(it) }
+            return true
+        } catch (e: Exception) {
+            log.info("Could not fetch chat with id $id (${e.message}), will assume it doesn't exist")
+            return false
+        }
+    }
+
     fun getUser(id: Long) = userOrm.findById(id)
 
     suspend fun sendText(chatId: Long, text: String) {
@@ -86,8 +99,8 @@ class TelegramService(
         }
     }
 
-    suspend fun getChatMessages(chatId: Long): List<TelegramMessage> {
-        return messageOrm.getChatMessages(chatId)
+    suspend fun getChatMessages(chatId: Long, limit: Long): List<TelegramMessage> {
+        return messageOrm.getChatMessages(chatId, limit)
     }
 
     private fun onMessageReceived(message: Message) {
