@@ -55,7 +55,7 @@ dependencies {
     implementation("com.anthropic:anthropic-java:0.7.0")
 
     // Google GenAI
-    implementation("com.google.genai:google-genai:0.1.0")
+    implementation("com.google.genai:google-genai:0.3.0")
 
     runtimeOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.10")

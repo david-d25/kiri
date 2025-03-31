@@ -73,6 +73,7 @@ class FrameRenderer {
             toolResult {
                 val result = frame.resultProvider()
                 id = result.toolUseId
+                name = result.name
                 output = result.output
             }
         }

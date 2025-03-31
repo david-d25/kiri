@@ -115,11 +115,11 @@ class LlmMessageRequestDslTest {
         assertEquals("Perform mathematical calculations", function.description)
 
         val params = function.parameters
-        assertEquals("Calculator function parameters", params.description)
-        assertEquals(1, params.properties.size)
-        assertEquals(listOf("expression"), params.required)
+        assertEquals("Calculator function parameters", params?.description)
+        assertEquals(1, params?.properties?.size)
+        assertEquals(listOf("expression"), params?.required)
 
-        val expressionParam = params.properties["expression"]
+        val expressionParam = params?.properties["expression"]
         assertTrue(expressionParam is ParameterValue.StringValue)
         assertEquals("Mathematical expression to evaluate",
             (expressionParam as ParameterValue.StringValue).description)
@@ -265,11 +265,11 @@ class LlmMessageRequestDslTest {
         assertEquals("test_function", function.name)
 
         val params = function.parameters
-        assertEquals(4, params.properties.size)
-        assertEquals(listOf("stringParam", "numberParam"), params.required)
+        assertEquals(4, params?.properties?.size)
+        assertEquals(listOf("stringParam", "numberParam"), params?.required)
 
         // Check string parameter
-        val stringParam = params.properties["stringParam"] as ParameterValue.StringValue
+        val stringParam = params?.properties["stringParam"] as ParameterValue.StringValue
         assertEquals("A string parameter", stringParam.description)
         assertEquals(listOf("option1", "option2", "option3"), stringParam.enum)
 

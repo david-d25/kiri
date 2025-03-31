@@ -1,16 +1,7 @@
 package space.davids_digital.kiri.agent.engine
 
-import com.anthropic.models.Model
 import jakarta.annotation.PostConstruct
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppManager
@@ -19,13 +10,9 @@ import space.davids_digital.kiri.agent.frame.FrameRenderer
 import space.davids_digital.kiri.agent.frame.addCreatedAtNow
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
-import space.davids_digital.kiri.agent.tool.AgentToolMethod
-import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
-import space.davids_digital.kiri.agent.tool.AgentToolProvider
-import space.davids_digital.kiri.agent.tool.AgentToolRegistry
-import space.davids_digital.kiri.agent.tool.AgentToolScanner
-import space.davids_digital.kiri.agent.tool.ToolCallExecutor
+import space.davids_digital.kiri.agent.tool.*
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
+import space.davids_digital.kiri.integration.google.GoogleGenAiMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
@@ -47,6 +34,7 @@ class AgentEngine(
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
     private val anthropicMessagesService: AnthropicMessagesService,
+    private val googleGenAiMessagesService: GoogleGenAiMessagesService,
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 5000L
@@ -114,14 +102,14 @@ class AgentEngine(
     private suspend fun tick() {
         updateToolRegistry()
         val request = buildRequest()
-        val response = anthropicMessagesService.request(request)
+        val response = googleGenAiMessagesService.request(request)
         handleResponse(response)
     }
 
-    private fun buildRequest(): LlmMessageRequest<Model> {
+    private fun buildRequest(): LlmMessageRequest<String> {
         val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
         return llmMessageRequest {
-            model = Model.CLAUDE_3_7_SONNET_LATEST
+            model = "gemini-2.0-flash"
             system = systemText ?: ""
             maxOutputTokens = 1024
             temperature = 0.5
@@ -158,6 +146,7 @@ class AgentEngine(
                 proxy.provider = {
                     llmToolUseResult {
                         id = toolUse.id
+                        name = toolUse.name
                         output {
                             text(it)
                         }

@@ -211,7 +211,10 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
         )
     }
 
-    private fun buildInputSchema(parameters: ParameterValue.ObjectValue): Tool.InputSchema {
+    private fun buildInputSchema(parameters: ParameterValue.ObjectValue?): Tool.InputSchema {
+        if (parameters == null) {
+            return Tool.InputSchema.builder().type(JsonValue.from("object")).build()
+        }
         val builder = Tool.InputSchema.builder()
             .type(JsonValue.from("object"))
             .properties(JsonValue.from(parameters.properties.mapValues { parameterToJson(it.value) }))
@@ -279,7 +282,6 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
                 }
                 JsonValue.from(map)
             }
-
             is ParameterValue.StringValue -> {
                 val map = mutableMapOf("type" to JsonValue.from("string"))
                 if (value.description != null) {
@@ -290,7 +292,6 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
                 }
                 JsonValue.from(map)
             }
-
             is ParameterValue.NumberValue -> {
                 val map = mutableMapOf("type" to JsonValue.from("number"))
                 if (value.description != null) {
