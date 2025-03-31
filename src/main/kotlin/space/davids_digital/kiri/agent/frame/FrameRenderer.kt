@@ -18,7 +18,7 @@ class FrameRenderer {
      * @param frames The frames to render.
      * @param target The target LLM message request builder.
      */
-    fun render(frames: FrameBuffer, target: LlmMessageRequestBuilder<*>) {
+    fun render(frames: FrameBuffer, target: LlmMessageRequestBuilder) {
         target.userMessage {
             text("<fixed>\n")
             for (frame in frames.onlyFixed) {
@@ -61,7 +61,7 @@ class FrameRenderer {
         text(builder.toString())
     }
 
-    private fun LlmMessageRequestBuilder<*>.renderToolCallFrame(frame: ToolCallFrame) {
+    private fun LlmMessageRequestBuilder.renderToolCallFrame(frame: ToolCallFrame) {
         assistantMessage {
             toolUse {
                 id = frame.toolUse.id

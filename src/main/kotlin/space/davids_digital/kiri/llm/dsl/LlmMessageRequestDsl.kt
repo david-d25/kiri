@@ -7,12 +7,12 @@ import space.davids_digital.kiri.llm.LlmMessageRequest.Message.ContentItem.ToolR
 @DslMarker
 annotation class LlmMessageRequestDsl
 
-fun <MODEL> llmMessageRequest(block: LlmMessageRequestBuilder<MODEL>.() -> Unit) =
-    LlmMessageRequestBuilder<MODEL>().apply(block).build()
+fun llmMessageRequest(block: LlmMessageRequestBuilder.() -> Unit) =
+    LlmMessageRequestBuilder().apply(block).build()
 
 @LlmMessageRequestDsl
-class LlmMessageRequestBuilder<MODEL> {
-    var model: MODEL? = null
+class LlmMessageRequestBuilder {
+    var model: String? = null
     var system: String = ""
     var messages: MutableList<LlmMessageRequest.Message> = mutableListOf()
     var maxOutputTokens: Long = 0
@@ -35,7 +35,7 @@ class LlmMessageRequestBuilder<MODEL> {
         tools = LlmMessageRequestToolsBuilder().apply(block).build()
     }
 
-    fun build(): LlmMessageRequest<MODEL> {
+    fun build(): LlmMessageRequest {
         requireNotNull(model) { "model must be set" }
         return LlmMessageRequest(model!!, system, messages, maxOutputTokens, temperature, tools)
     }
