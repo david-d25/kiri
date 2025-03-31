@@ -11,6 +11,7 @@ fun llmToolUseResult(block: LlmToolUseResultBuilder.() -> Unit) = LlmToolUseResu
 @LlmToolUseResultDsl
 class LlmToolUseResultBuilder {
     var id: String = ""
+    var name: String = ""
     var output: LlmToolUseResult.Output = LlmToolUseResult.Output.Text("")
 
     fun output(block: LlmToolUseResultOutputBuilder.() -> Unit) {
@@ -18,8 +19,8 @@ class LlmToolUseResultBuilder {
     }
 
     fun build(): LlmToolUseResult {
-        require(id.isNotBlank()) { "id must be set" }
-        return LlmToolUseResult(id, output)
+        require(id.isNotBlank() && name.isNotBlank()) { "at least one of [id, name] must be set" }
+        return LlmToolUseResult(id, name, output)
     }
 }
 

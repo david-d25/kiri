@@ -21,9 +21,12 @@ data class Settings (
             val password: String,
         )
     }
-    data class Integration(val telegram: Telegram, val anthropic: Anthropic, val openai: OpenAI) {
+    data class Integration(val telegram: Telegram, val anthropic: Anthropic, val openai: OpenAI, val google: Google) {
         data class Telegram(val apiKey: String)
         data class Anthropic(val apiKey: String)
         data class OpenAI(val apiKey: String)
+        data class Google(val genAi: GenAi) {
+            data class GenAi(val apiKey: String)
+        }
     }
 }

@@ -20,6 +20,9 @@ app:
       apiKey: # Override in application-local.yml, see local/readme.md
     openai:
       apiKey: # Override in application-local.yml, see local/readme.md
+    google:
+      genAi:
+        apiKey: # Override in application-local.yml, see local/readme.md
 
 server:
   port: 8080
