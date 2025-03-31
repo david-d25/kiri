@@ -1,7 +1,7 @@
 package space.davids_digital.kiri.llm
 
-data class LlmMessageRequest<MODEL> (
-    val model: MODEL,
+data class LlmMessageRequest (
+    val model: String,
     val system: String,
     val messages: List<Message>,
     val maxOutputTokens: Long,

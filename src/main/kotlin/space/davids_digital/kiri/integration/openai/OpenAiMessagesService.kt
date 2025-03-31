@@ -22,7 +22,7 @@ class OpenAiMessagesService(settings: Settings) : LlmService<ModelId> {
         retry = RetryStrategy(maxRetries = 5)
     )
 
-    override suspend fun request(request: LlmMessageRequest<ModelId>): LlmMessageResponse {
+    override suspend fun request(request: LlmMessageRequest): LlmMessageResponse {
         return TODO()
     }
 }

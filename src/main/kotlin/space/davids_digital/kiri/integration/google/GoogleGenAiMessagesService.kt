@@ -21,14 +21,14 @@ class GoogleGenAiMessagesService(settings: Settings) : LlmService<String> {
 
     private val client = Client.builder().apiKey(settings.integration.google.genAi.apiKey).build()
 
-    override suspend fun request(request: LlmMessageRequest<String>): LlmMessageResponse {
+    override suspend fun request(request: LlmMessageRequest): LlmMessageResponse {
         val content = buildContent(request)
         val config = buildConfig(request)
         val response = client.models.generateContent(request.model, content, config)
         return parseResponse(response)
     }
 
-    private fun buildContent(request: LlmMessageRequest<String>) = request.messages.map { message ->
+    private fun buildContent(request: LlmMessageRequest) = request.messages.map { message ->
         val builder = Content.builder()
         when (message.role) {
             Message.Role.USER -> builder.role("user")
@@ -90,7 +90,7 @@ class GoogleGenAiMessagesService(settings: Settings) : LlmService<String> {
         }
     }
 
-    private fun buildConfig(request: LlmMessageRequest<String>): GenerateContentConfig {
+    private fun buildConfig(request: LlmMessageRequest): GenerateContentConfig {
         val mode = when(request.tools.choice) {
             LlmMessageRequest.Tools.ToolChoice.AUTO -> "AUTO"
             LlmMessageRequest.Tools.ToolChoice.NONE -> "NONE"

@@ -54,13 +54,13 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
 
     private val anthropic = AnthropicOkHttpClient.builder().apiKey(settings.integration.anthropic.apiKey).build()
 
-    override suspend fun request(request: LlmMessageRequest<Model>): LlmMessageResponse {
+    override suspend fun request(request: LlmMessageRequest): LlmMessageResponse {
         val params = buildParams(request)
         val response = anthropic.messages().create(params)
         return parseResponse(response)
     }
 
-    private fun buildParams(request: LlmMessageRequest<Model>) = MessageCreateParams.builder().apply {
+    private fun buildParams(request: LlmMessageRequest) = MessageCreateParams.builder().apply {
         model(request.model)
         system(request.system)
         maxTokens(request.maxOutputTokens)

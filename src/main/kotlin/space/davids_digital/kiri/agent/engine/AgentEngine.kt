@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.agent.engine
 
+import com.anthropic.models.Model
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
@@ -102,14 +103,14 @@ class AgentEngine(
     private suspend fun tick() {
         updateToolRegistry()
         val request = buildRequest()
-        val response = googleGenAiMessagesService.request(request)
+        val response = anthropicMessagesService.request(request)
         handleResponse(response)
     }
 
-    private fun buildRequest(): LlmMessageRequest<String> {
+    private fun buildRequest(): LlmMessageRequest {
         val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
         return llmMessageRequest {
-            model = "gemini-2.0-flash"
+            model = "claude-3-7-sonnet-latest"
             system = systemText ?: ""
             maxOutputTokens = 1024
             temperature = 0.5
