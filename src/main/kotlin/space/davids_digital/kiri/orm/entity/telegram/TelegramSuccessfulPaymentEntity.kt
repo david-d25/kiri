@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "telegram_successful_payments")
+@Table(schema = "telegram", name = "successful_payments")
 class TelegramSuccessfulPaymentEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

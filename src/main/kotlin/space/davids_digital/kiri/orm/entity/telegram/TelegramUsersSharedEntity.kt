@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_users_shared")
+@Table(schema = "telegram", name = "users_shared")
 class TelegramUsersSharedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,7 +15,8 @@ class TelegramUsersSharedEntity {
 
     @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
-        name = "telegram_users_shared_cross_links",
+        schema = "telegram",
+        name = "users_shared_cross_links",
         joinColumns = [JoinColumn(name = "users_shared_id", referencedColumnName = "internal_id")],
         inverseJoinColumns = [JoinColumn(name = "shared_user_id", referencedColumnName = "user_id")]
     )

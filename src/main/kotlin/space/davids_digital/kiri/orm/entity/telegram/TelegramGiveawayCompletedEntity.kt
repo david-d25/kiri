@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_giveaways_completed")
+@Table(schema = "telegram", name = "giveaways_completed")
 class TelegramGiveawayCompletedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

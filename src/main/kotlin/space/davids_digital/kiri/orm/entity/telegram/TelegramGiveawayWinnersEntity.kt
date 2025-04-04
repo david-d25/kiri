@@ -5,7 +5,7 @@ import space.davids_digital.kiri.orm.entity.telegram.id.TelegramGiveawayWinnersI
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "telegram_giveaway_winners")
+@Table(schema = "telegram", name = "giveaway_winners")
 class TelegramGiveawayWinnersEntity {
     @EmbeddedId
     var id: TelegramGiveawayWinnersId = TelegramGiveawayWinnersId()
@@ -18,7 +18,8 @@ class TelegramGiveawayWinnersEntity {
 
     @ElementCollection
     @CollectionTable(
-        name = "telegram_giveaway_winner_user_ids",
+        schema = "telegram",
+        name = "giveaway_winner_user_ids",
         joinColumns = [
             JoinColumn(name = "chat_id", referencedColumnName = "chat_id"),
             JoinColumn(name = "giveaway_message_id", referencedColumnName = "giveaway_message_id")

@@ -8,7 +8,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "telegram_forum_topics_edited")
+@Table(schema = "telegram", name = "forum_topics_edited")
 class TelegramForumTopicEditedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -8,6 +8,8 @@ class FrameBuffer : Iterable<Frame> {
     private val fixedFrames = ConcurrentLinkedQueue<DataFrame>()
     private val rollingFrames = ConcurrentLinkedQueue<Frame>()
 
+    var hardLimit = 16
+
     val onlyFixed get() = fixedFrames.iterator()
     val onlyRolling get() = rollingFrames.iterator()
 
@@ -58,7 +60,7 @@ class FrameBuffer : Iterable<Frame> {
     }
 
     private fun trim() {
-        while (rollingFrames.isNotEmpty() && fixedFrames.size + rollingFrames.size > 15) { // TODO: make this configurable
+        while (rollingFrames.isNotEmpty() && fixedFrames.size + rollingFrames.size > hardLimit) {
             rollingFrames.poll()
         }
     }

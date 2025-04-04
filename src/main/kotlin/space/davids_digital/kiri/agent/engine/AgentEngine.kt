@@ -34,8 +34,7 @@ class AgentEngine(
     private val frameRenderer: FrameRenderer,
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
-    private val anthropicMessagesService: AnthropicMessagesService,
-    private val googleGenAiMessagesService: GoogleGenAiMessagesService,
+    private val anthropicMessagesService: AnthropicMessagesService
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 5000L
@@ -85,19 +84,8 @@ class AgentEngine(
 
     private fun resetFrames() {
         frames.clearRolling()
-        frames.addStatic {
-            addCreatedAtNow()
-            tag = "system"
-            content = dataFrameContent {
-                text("System started.")
-            }
-        }
-        frames.addStatic {
-            tag = "system"
-            content = dataFrameContent {
-                text("System is cold-started. Please explore the environment to warm up your memory.")
-            }
-        }
+        frames.addSimpleText("system", "System started.")
+        frames.addSimpleText("system", "System is cold-started. Please explore the environment to warm up your memory.")
     }
 
     private suspend fun tick() {
@@ -200,12 +188,7 @@ class AgentEngine(
 
     private suspend fun handleError(e: Exception) {
         log.error("Engine error", e)
-        frames.addStatic {
-            tag = "system"
-            content = dataFrameContent {
-                text("Engine error: ${e.message}")
-            }
-        }
+        frames.addSimpleText("system", "Engine error: ${e.message}")
         if (running.get()) {
             log.info("Will try to recover in $RECOVERY_TIMEOUT_MS ms")
         }
@@ -214,12 +197,7 @@ class AgentEngine(
         if (running.get()) {
             running.set(false)
             log.info("Recovering engine")
-            frames.addStatic {
-                tag = "system"
-                content = dataFrameContent {
-                    text("Attempting to recover...")
-                }
-            }
+            frames.addSimpleText("system", "Attempting to recover...")
             start()
         }
     }
@@ -230,7 +208,17 @@ class AgentEngine(
     }
 
     private suspend fun handleEvent(event: EngineEvent) {
-        currentSleepJob?.cancelAndJoin() // TODO
+        currentSleepJob?.cancelAndJoin() // TODO separate event for interruption?
+    }
+
+    private fun FrameBuffer.addSimpleText(tagName: String, text: String) {
+        frames.addStatic {
+            addCreatedAtNow()
+            tag = tagName
+            content = dataFrameContent {
+                text(text)
+            }
+        }
     }
 
     override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep)
@@ -238,13 +226,7 @@ class AgentEngine(
     @AgentToolMethod(description = "Think to yourself")
     fun think(thoughts: String) {
         log.debug("Agent thinks: $thoughts")
-        frames.addStatic {
-            addCreatedAtNow()
-            tag = "thought"
-            content = dataFrameContent {
-                text(thoughts)
-            }
-        }
+        frames.addSimpleText("thought", thoughts)
     }
 
     @AgentToolMethod(
@@ -271,23 +253,11 @@ class AgentEngine(
                     delay(seconds * 1000)
                 }
                 log.debug("Agent woke up after sleeping for $seconds seconds")
-                frames.addStatic {
-                    addCreatedAtNow()
-                    tag = "system"
-                    content = dataFrameContent {
-                        text("Slept for $seconds seconds.")
-                    }
-                }
+                frames.addSimpleText("system", "Slept for $seconds seconds.")
             } catch (_: CancellationException) {
                 log.debug("Agent was woken up from sleep")
                 val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
-                frames.addStatic {
-                    addCreatedAtNow()
-                    tag = "system"
-                    content = dataFrameContent {
-                        text("Slept for $sleptFor seconds.")
-                    }
-                }
+                frames.addSimpleText("system", "Slept for $sleptFor seconds.")
             }
         }
 

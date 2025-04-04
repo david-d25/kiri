@@ -56,6 +56,8 @@ class SpringConfig {
         return Flyway.configure()
             .dataSource(dataSource)
             .baselineOnMigrate(true)
+            .schemas("kiri", "telegram")
+            .defaultSchema("kiri")
             .load().also {
                 it.migrate()
             }

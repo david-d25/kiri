@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_external_reply_info")
+@Table(schema = "telegram", name = "external_reply_info")
 class TelegramExternalReplyInfoEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,7 +42,8 @@ class TelegramExternalReplyInfoEntity {
 
     @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
-        name = "telegram_external_reply_info_photo_cross_links",
+        schema = "telegram",
+        name = "external_reply_info_photo_cross_links",
         joinColumns = [JoinColumn(name = "reply_info_id", referencedColumnName = "internal_id")],
         inverseJoinColumns = [JoinColumn(name = "photo_id", referencedColumnName = "file_unique_id")]
     )

@@ -7,7 +7,7 @@ import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageId
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "telegram_messages")
+@Table(schema = "telegram", name = "messages")
 class TelegramMessageEntity {
     @EmbeddedId
     var id: TelegramMessageId = TelegramMessageId()
@@ -120,7 +120,8 @@ class TelegramMessageEntity {
 
     @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
-        name = "telegram_messages_photo_cross_links",
+        schema = "telegram",
+        name = "messages_photo_cross_links",
         joinColumns = [
             JoinColumn(name = "chat_id", referencedColumnName = "chat_id"),
             JoinColumn(name = "message_id", referencedColumnName = "message_id")
@@ -207,7 +208,8 @@ class TelegramMessageEntity {
 
     @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
-        name = "telegram_messages_new_chat_photo_cross_links",
+        schema = "telegram",
+        name = "messages_new_chat_photo_cross_links",
         joinColumns = [
             JoinColumn(name = "chat_id", referencedColumnName = "chat_id"),
             JoinColumn(name = "message_id", referencedColumnName = "message_id")

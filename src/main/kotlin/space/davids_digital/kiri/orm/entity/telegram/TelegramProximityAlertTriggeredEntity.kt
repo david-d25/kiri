@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_proximity_alerts_triggered")
+@Table(schema = "telegram", name = "proximity_alerts_triggered")
 class TelegramProximityAlertTriggeredEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

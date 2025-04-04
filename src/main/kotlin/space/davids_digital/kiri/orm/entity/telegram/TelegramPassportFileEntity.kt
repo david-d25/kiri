@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "telegram_passport_files")
+@Table(schema = "telegram", name = "passport_files")
 class TelegramPassportFileEntity {
     @Id
     @Column(name = "file_unique_id")

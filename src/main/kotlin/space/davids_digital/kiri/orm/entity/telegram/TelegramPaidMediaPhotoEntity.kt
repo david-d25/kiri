@@ -12,7 +12,8 @@ import jakarta.persistence.ManyToMany
 class TelegramPaidMediaPhotoEntity : TelegramPaidMediaEntity() {
     @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
-        name = "telegram_paid_media_photo_sizes",
+        schema = "telegram",
+        name = "paid_media_photo_sizes",
         joinColumns = [JoinColumn(name = "paid_media_id", referencedColumnName = "internal_id")],
         inverseJoinColumns = [JoinColumn(name = "photo_size_id", referencedColumnName = "file_unique_id")]
     )

@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "telegram_polls")
+@Table(schema = "telegram", name = "polls")
 class TelegramPollEntity {
     @Id
     @Column(name = "id")
@@ -48,7 +48,8 @@ class TelegramPollEntity {
 
     @OneToMany(orphanRemoval = true, cascade = [CascadeType.ALL])
     @JoinTable(
-        name = "telegram_poll_options_map",
+        schema = "telegram",
+        name = "poll_options_map",
         joinColumns = [JoinColumn(name = "poll_id", referencedColumnName = "id")],
         inverseJoinColumns = [JoinColumn(name = "poll_option_id", referencedColumnName = "internal_id")]
     )

@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_link_preview_options")
+@Table(schema = "telegram", name = "link_preview_options")
 class TelegramLinkPreviewOptionsEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

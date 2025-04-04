@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_inline_keyboard_buttons_cross_links")
+@Table(schema = "telegram", name = "inline_keyboard_buttons_cross_links")
 class TelegramInlineKeyboardButtonPlacementEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

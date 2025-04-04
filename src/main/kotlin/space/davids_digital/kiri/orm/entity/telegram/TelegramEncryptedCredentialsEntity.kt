@@ -4,7 +4,7 @@ import jakarta.persistence.*
 
 // TODO encrypt?
 @Entity
-@Table(name = "telegram_encrypted_credentials")
+@Table(schema = "telegram", name = "encrypted_credentials")
 class TelegramEncryptedCredentialsEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

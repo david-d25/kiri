@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import space.davids_digital.kiri.orm.entity.telegram.id.TelegramStoryId
 
 @Entity
-@Table(name = "telegram_stories")
+@Table(schema = "telegram", name = "stories")
 @IdClass(TelegramStoryId::class)
 class TelegramStoryEntity {
     @Id
