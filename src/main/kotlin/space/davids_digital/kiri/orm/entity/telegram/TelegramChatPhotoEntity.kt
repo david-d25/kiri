@@ -8,7 +8,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "telegram_chat_photos")
+@Table(schema = "telegram", name = "chat_photos")
 class TelegramChatPhotoEntity {
     @Id
     @Column(name = "internal_id")

@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "telegram_message_origins")
+@Table(schema = "telegram", name = "message_origins")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
 abstract class TelegramMessageOriginEntity {

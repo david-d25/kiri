@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "telegram_video_chat_scheduled")
+@Table(schema = "telegram", name = "video_chat_scheduled")
 class TelegramVideoChatScheduledEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

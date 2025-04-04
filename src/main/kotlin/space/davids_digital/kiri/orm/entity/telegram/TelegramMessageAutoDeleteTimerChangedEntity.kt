@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_message_auto_delete_timer_changes")
+@Table(schema = "telegram", name = "message_auto_delete_timer_changes")
 class TelegramMessageAutoDeleteTimerChangedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -5,12 +5,7 @@ import java.time.ZonedDateTime
 import java.util.*
 
 @Entity
-@Table(
-    name = "user_sessions",
-    indexes = [
-        Index(name = "user_sessions_user_id_idx", columnList = "user_id")
-    ]
-)
+@Table(schema = "kiri", name = "user_sessions")
 class UserSessionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

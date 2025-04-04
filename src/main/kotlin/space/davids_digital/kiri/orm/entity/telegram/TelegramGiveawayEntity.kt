@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.OffsetDateTime
 
 @Entity
-@Table(name = "telegram_giveaways")
+@Table(schema = "telegram", name = "giveaways")
 class TelegramGiveawayEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,7 +34,8 @@ class TelegramGiveawayEntity {
 
     @ElementCollection
     @CollectionTable(
-        name = "telegram_giveaway_country_codes",
+        schema = "telegram",
+        name = "giveaway_country_codes",
         joinColumns = [JoinColumn(name = "giveaway_id", referencedColumnName = "internal_id")]
     )
     @Column(name = "country_code")
@@ -42,7 +43,8 @@ class TelegramGiveawayEntity {
 
     @ElementCollection
     @CollectionTable(
-        name = "telegram_giveaway_chat_ids",
+        schema = "telegram",
+        name = "giveaway_chat_ids",
         joinColumns = [JoinColumn(name = "giveaway_id", referencedColumnName = "internal_id")]
     )
     @Column(name = "chat_id")

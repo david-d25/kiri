@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_videos")
+@Table(schema = "telegram", name = "videos")
 class TelegramVideoEntity {
     @Id
     @Column(name = "file_unique_id")
@@ -39,7 +39,8 @@ class TelegramVideoEntity {
 
     @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
-        name = "telegram_video_cover_cross_links",
+        schema = "telegram",
+        name = "video_cover_cross_links",
         joinColumns = [JoinColumn(name = "video_file_unique_id", referencedColumnName = "file_unique_id")],
         inverseJoinColumns = [JoinColumn(name = "photo_size_id", referencedColumnName = "file_unique_id")]
     )

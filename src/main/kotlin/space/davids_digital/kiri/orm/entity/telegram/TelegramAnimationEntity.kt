@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_animations")
+@Table(schema = "telegram", name = "animations")
 class TelegramAnimationEntity {
     @Id
     @Column(name = "file_unique_id")

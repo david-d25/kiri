@@ -6,7 +6,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "telegram_photo_sizes")
+@Table(schema = "telegram", name = "photo_sizes")
 class TelegramPhotoSizeEntity {
     @Id
     @Column(name = "file_unique_id")

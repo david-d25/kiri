@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "telegram_switch_inline_query_chosen_chats")
+@Table(schema = "telegram", name = "switch_inline_query_chosen_chats")
 class TelegramSwitchInlineQueryChosenChatEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
