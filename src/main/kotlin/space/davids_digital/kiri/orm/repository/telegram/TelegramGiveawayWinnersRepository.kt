@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.repository.telegram
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import space.davids_digital.kiri.orm.entity.telegram.TelegramGiveawayWinnersEntity
-import space.davids_digital.kiri.orm.entity.telegram.id.TelegramGiveawayWinnersId
+import space.davids_digital.kiri.orm.entity.telegram.id.TelegramGiveawayWinnersEntityId
 
 @Repository
-interface TelegramGiveawayWinnersRepository: JpaRepository<TelegramGiveawayWinnersEntity, TelegramGiveawayWinnersId>
+interface TelegramGiveawayWinnersRepository: JpaRepository<TelegramGiveawayWinnersEntity, TelegramGiveawayWinnersEntityId>

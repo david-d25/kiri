@@ -1,14 +1,14 @@
 package space.davids_digital.kiri.orm.entity.telegram
 
 import jakarta.persistence.*
-import space.davids_digital.kiri.orm.entity.telegram.id.TelegramGiveawayWinnersId
+import space.davids_digital.kiri.orm.entity.telegram.id.TelegramGiveawayWinnersEntityId
 import java.time.OffsetDateTime
 
 @Entity
 @Table(schema = "telegram", name = "giveaway_winners")
 class TelegramGiveawayWinnersEntity {
     @EmbeddedId
-    var id: TelegramGiveawayWinnersId = TelegramGiveawayWinnersId()
+    var id: TelegramGiveawayWinnersEntityId = TelegramGiveawayWinnersEntityId()
 
     @Column(name = "winners_selection_date")
     var winnersSelectionDate: OffsetDateTime = OffsetDateTime.now()
