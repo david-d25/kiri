@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.service.telegram
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramPaidMediaInfo
-import space.davids_digital.kiri.orm.mapping.TelegramPaidMediaInfoEntityMapper
+import space.davids_digital.kiri.orm.mapping.telegram.TelegramPaidMediaInfoEntityMapper
 import space.davids_digital.kiri.orm.repository.telegram.TelegramPaidMediaInfoRepository
 
 @Service

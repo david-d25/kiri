@@ -32,17 +32,6 @@ class SpringConfig {
     }
 
     @Bean
-    fun dataSource(settings: Settings): DataSource {
-        val dataSource = DriverManagerDataSource()
-        val ( host, port, dbName, username, password ) = settings.database.postgres
-        dataSource.setDriverClassName("org.postgresql.Driver")
-        dataSource.url = "jdbc:postgresql://$host:$port/$dbName"
-        dataSource.username = username
-        dataSource.password = password
-        return dataSource
-    }
-
-    @Bean
     fun restTemplate(): RestTemplate {
         val restTemplate = RestTemplate()
         val messageConverters = restTemplate.messageConverters

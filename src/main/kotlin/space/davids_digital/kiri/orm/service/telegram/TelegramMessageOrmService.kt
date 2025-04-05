@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramInaccessibleMessage
 import space.davids_digital.kiri.model.telegram.TelegramMessage
-import space.davids_digital.kiri.orm.mapping.TelegramMessageEntityMapper
+import space.davids_digital.kiri.orm.mapping.telegram.TelegramMessageEntityMapper
 import space.davids_digital.kiri.orm.repository.telegram.TelegramInaccessibleMessageRepository
 import space.davids_digital.kiri.orm.repository.telegram.TelegramMessageRepository
 

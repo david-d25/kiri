@@ -3,14 +3,14 @@ package space.davids_digital.kiri.orm.entity.telegram
 import jakarta.persistence.*
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
-import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageId
+import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageEntityId
 import java.time.OffsetDateTime
 
 @Entity
 @Table(schema = "telegram", name = "messages")
 class TelegramMessageEntity {
     @EmbeddedId
-    var id: TelegramMessageId = TelegramMessageId()
+    var id: TelegramMessageEntityId = TelegramMessageEntityId()
 
     @Column(name = "message_thread_id")
     var messageThreadId: Long? = null

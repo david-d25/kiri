@@ -1,6 +1,5 @@
 package space.davids_digital.kiri.agent.engine
 
-import com.anthropic.models.Model
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
@@ -13,7 +12,6 @@ import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
-import space.davids_digital.kiri.integration.google.GoogleGenAiMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
@@ -83,7 +81,7 @@ class AgentEngine(
     }
 
     private fun resetFrames() {
-        frames.clearRolling()
+        frames.clearOnlyRolling()
         frames.addSimpleText("system", "System started.")
         frames.addSimpleText("system", "System is cold-started. Please explore the environment to warm up your memory.")
     }

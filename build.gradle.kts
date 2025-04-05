@@ -69,6 +69,9 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8") // To support Optional
     implementation("com.github.ben-manes.caffeine:caffeine:3.2.0")
 
+    // Database connection pooling
+    implementation("com.zaxxer:HikariCP")
+
     // Flyway
     implementation("org.flywaydb:flyway-database-postgresql:11.3.2")
 
@@ -92,6 +95,9 @@ dependencies {
     implementation("org.springframework:spring-context:6.2.3")
     implementation("org.springframework:spring-web:6.2.3")
     implementation("org.springframework:spring-webmvc:6.2.3")
+
+    // PostgreSQL vectors support
+    implementation("org.hibernate.orm:hibernate-vector:6.4.0.Final")
 
     // Tests
     testImplementation(kotlin("test"))

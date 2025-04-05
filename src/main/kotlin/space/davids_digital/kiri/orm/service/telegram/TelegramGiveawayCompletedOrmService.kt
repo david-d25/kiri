@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramGiveawayCompleted
-import space.davids_digital.kiri.orm.mapping.TelegramGiveawayCompletedEntityMapper
+import space.davids_digital.kiri.orm.mapping.telegram.TelegramGiveawayCompletedEntityMapper
 import space.davids_digital.kiri.orm.repository.telegram.TelegramGiveawayCompletedRepository
 
 @Service

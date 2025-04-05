@@ -13,16 +13,16 @@ class FrameBuffer : Iterable<Frame> {
     val onlyFixed get() = fixedFrames.iterator()
     val onlyRolling get() = rollingFrames.iterator()
 
-    fun clear() {
-        clearFixed()
-        clearRolling()
+    fun clearAll() {
+        clearOnlyFixed()
+        clearOnlyRolling()
     }
 
-    fun clearFixed() {
+    fun clearOnlyFixed() {
         fixedFrames.clear()
     }
 
-    fun clearRolling() {
+    fun clearOnlyRolling() {
         rollingFrames.clear()
     }
 

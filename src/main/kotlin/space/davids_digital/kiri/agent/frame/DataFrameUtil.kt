@@ -9,4 +9,4 @@ private val DATETIME_PATTERN = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm 'UT
 fun StaticDataFrame.Builder.addCreatedAtNow() {
     attributes["created-at"] = ZonedDateTime.now(ZoneOffset.UTC).asPrettyString()
 }
-fun ZonedDateTime.asPrettyString() = format(DATETIME_PATTERN)
+fun ZonedDateTime.asPrettyString(): String = format(DATETIME_PATTERN)
