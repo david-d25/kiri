@@ -30,6 +30,31 @@ class MemoryOrmService(
     private val memoryLinkMapper: MemoryLinkEntityMapper,
 ) {
     @Transactional
+    fun getAllMemoryLinks(): List<MemoryLink> {
+        return memoryLinkRepository.findAll().mapNotNull(memoryLinkMapper::toModel)
+    }
+
+    @Transactional
+    fun getMemoryPoint(id: UUID): MemoryPoint? {
+        return memoryPointMapper.toModel(memoryPointRepository.findById(id).orElse(null))
+    }
+
+    @Transactional
+    fun getMemoryLinksByMemoryKeys(keys: Collection<UUID>): List<MemoryLink> {
+        return memoryLinkRepository.findByMemoryKeyIdIn(keys).mapNotNull(memoryLinkMapper::toModel)
+    }
+
+    @Transactional
+    fun getMemoryPointsByIds(ids: Collection<UUID>): List<MemoryPoint> {
+        return memoryPointRepository.findByIdIn(ids).mapNotNull(memoryPointMapper::toModel)
+    }
+
+    @Transactional
+    fun getMemoryKeysByIds(ids: Collection<UUID>): List<MemoryKey> {
+        return memoryKeyRepository.findByIdIn(ids).mapNotNull(memoryKeyMapper::toModel)
+    }
+
+    @Transactional
     fun getOrCreateMemoryPoint(value: String): MemoryPoint {
         val entity = memoryPointRepository.findByValue(value)
             ?: memoryPointRepository.save(

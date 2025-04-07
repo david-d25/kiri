@@ -8,4 +8,5 @@ import java.util.UUID
 @Repository
 interface MemoryPointRepository: JpaRepository<MemoryPointEntity, UUID> {
     fun findByValue(value: String): MemoryPointEntity?
+    fun findByIdIn(ids: Collection<UUID>): List<MemoryPointEntity>
 }
