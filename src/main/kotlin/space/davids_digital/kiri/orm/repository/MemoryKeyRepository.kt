@@ -10,6 +10,7 @@ import java.util.UUID
 @Repository
 interface MemoryKeyRepository : JpaRepository<MemoryKeyEntity, UUID> {
     fun findByKeyText(keyText: String): MemoryKeyEntity?
+    fun findByIdIn(ids: Collection<UUID>): List<MemoryKeyEntity>
 
     @Query(
         """

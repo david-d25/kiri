@@ -14,6 +14,7 @@ import java.util.*
 interface MemoryLinkRepository : JpaRepository<MemoryLinkEntity, MemoryLinkEntityId> {
     fun findByMemoryPointId(memoryPointId: UUID): List<MemoryLinkEntity>
     fun findByMemoryKeyId(memoryKeyId: UUID): List<MemoryLinkEntity>
+    fun findByMemoryKeyIdIn(keyIds: Collection<UUID>): List<MemoryLinkEntity>
 
     @Modifying
     @Query(

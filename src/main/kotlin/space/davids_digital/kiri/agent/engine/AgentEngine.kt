@@ -99,7 +99,7 @@ class AgentEngine(
             model = "claude-3-7-sonnet-latest"
             system = systemText ?: ""
             maxOutputTokens = 1024
-            temperature = 0.5
+            temperature = 1.0
             tools {
                 choice = REQUIRED
                 allowParallelUse = false
