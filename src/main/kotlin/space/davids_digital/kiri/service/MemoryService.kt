@@ -2,9 +2,11 @@ package space.davids_digital.kiri.service
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import space.davids_digital.kiri.integration.openai.OpenAiEmbeddingService
 import space.davids_digital.kiri.model.MemoryKey
 import space.davids_digital.kiri.model.MemoryPoint
 import space.davids_digital.kiri.model.ScoredMemoryPoint
+import space.davids_digital.kiri.orm.service.EmbeddingModelOrmService
 import space.davids_digital.kiri.orm.service.MemoryOrmService
 import java.time.ZonedDateTime
 import kotlin.math.ceil
@@ -14,12 +16,40 @@ import kotlin.math.pow
 
 @Service
 class MemoryService(
-    private val orm: MemoryOrmService
+    private val orm: MemoryOrmService,
+    private val openAiEmbeddingService: OpenAiEmbeddingService,
+    private val embeddingModelOrmService: EmbeddingModelOrmService
 ) {
     val decayRate: Double = 0.99
     val reinforcementFactor: Double = 0.05
     val minWeight: Double = 0.01
     val maxWeight: Double = 2.0
+
+    @Transactional
+    suspend fun getOrCreateKeys(texts: List<String>): List<MemoryKey> {
+        if (texts.isEmpty()) {
+            return emptyList()
+        }
+        val modelName = "text-embedding-3-large"
+        val dimensionality = 2000
+        val model = embeddingModelOrmService.getOrCreate(modelName, "openai", dimensionality)
+        val existingKeys = texts.associate { it to orm.getMemoryKeyByText(it) }.toMutableMap()
+        val missingTexts = texts.filter { existingKeys[it] == null }
+        val newKeys = openAiEmbeddingService.createEmbeddings(modelName, missingTexts, dimensionality)
+        missingTexts.forEachIndexed { index, memoryKey ->
+            val embedding = newKeys[index]
+            val key = orm.getOrCreateMemoryKey(memoryKey, embedding, model.id)
+            existingKeys[memoryKey] = key
+        }
+        if (existingKeys.values.any { it == null }) {
+            error("Couldn't create some of the memory keys")
+        }
+        return texts.map { existingKeys[it]!! }
+    }
+
+    suspend fun getOrCreatePoint(text: String): MemoryPoint {
+        return orm.getOrCreateMemoryPoint(text)
+    }
 
     @Transactional
     fun remember(keys: List<MemoryKey>, point: MemoryPoint, timestamp: ZonedDateTime) {

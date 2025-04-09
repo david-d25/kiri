@@ -88,6 +88,7 @@ class AgentEngine(
 
     private suspend fun tick() {
         updateToolRegistry()
+        memoryManager.tick()
         val request = buildRequest()
         val response = anthropicMessagesService.request(request)
         handleResponse(response)
@@ -102,7 +103,7 @@ class AgentEngine(
             temperature = 1.0
             tools {
                 choice = REQUIRED
-                allowParallelUse = false
+                allowParallelUse = true
                 toolRegistry.iterate().forEach {
                     function {
                         name = it.fullName

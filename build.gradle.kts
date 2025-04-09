@@ -97,7 +97,7 @@ dependencies {
     implementation("org.springframework:spring-webmvc:6.2.3")
 
     // PostgreSQL vectors support
-    implementation("org.hibernate.orm:hibernate-vector:6.4.0.Final")
+    implementation("org.hibernate.orm:hibernate-vector:6.6.13.Final")
 
     // Tests
     testImplementation(kotlin("test"))

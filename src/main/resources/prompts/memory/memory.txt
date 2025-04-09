@@ -1,11 +1,5 @@
 You are tasked with creating a hippocampus imitation for an autonomous LLM agent. Your job is to take a given context (a block of text containing user messages, assistant internal thoughts, and system app UIs) and transform it into a stream of key-value memory points. These memory points will be stored in a database for later retrieval, with keys being turned into embeddings by the system.
 
-Here is the context you will be working with:
-
-<context>
-{{CONTEXT}}
-</context>
-
 Your task is to extract key pieces of information from this context and create key-value pairs. Each key should serve as an "address" for the memory, while the value should contain the relevant information. Follow these guidelines:
 
 1. Create multiple key-value pairs from the given context.
@@ -37,3 +31,9 @@ Write a JSON array as follows, and avoid writing anything else, otherwise the sy
   ...
 ]
 ```
+
+Here is the context you will be working with:
+
+<context>
+{{CONTEXT}}
+</context>

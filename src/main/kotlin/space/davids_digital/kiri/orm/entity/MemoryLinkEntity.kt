@@ -18,11 +18,11 @@ import java.util.UUID
 class MemoryLinkEntity {
     @Id
     @Column(name = "memory_key_id")
-    var memoryKeyId: UUID = UUID.randomUUID()
+    var memoryKeyId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
 
     @Id
     @Column(name = "memory_point_id")
-    var memoryPointId: UUID = UUID.randomUUID()
+    var memoryPointId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
 
     @Column(name = "weight")
     var weight: Double = 0.0

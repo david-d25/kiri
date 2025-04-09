@@ -42,10 +42,9 @@ spring:
     open-in-view: false
     show-sql: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none # Disabled because of pgvector
     properties:
-      hibernate:
-        format_sql: true
+      hibernate.format_sql: true
 
 logging:
   level:

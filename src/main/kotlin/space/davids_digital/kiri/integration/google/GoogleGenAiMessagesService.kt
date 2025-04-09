@@ -16,7 +16,7 @@ import space.davids_digital.kiri.service.LlmService
 import kotlin.jvm.optionals.getOrNull
 
 @Service
-class GoogleGenAiMessagesService(settings: Settings) : LlmService<String> {
+class GoogleGenAiMessagesService(settings: Settings) : LlmService {
     private val log = LoggerFactory.getLogger(this::class.java)
 
     private val client = Client.builder().apiKey(settings.integration.google.genAi.apiKey).build()
@@ -146,6 +146,15 @@ class GoogleGenAiMessagesService(settings: Settings) : LlmService<String> {
                 if (value.required.isNotEmpty()) {
                     schema.required(value.required)
                 }
+                if (value.description != null) {
+                    schema.description(value.description)
+                }
+                return schema.build()
+            }
+            is ParameterValue.ArrayValue -> {
+                val schema = Schema.builder()
+                    .type("array")
+                    .items(parameterToSchema(value.items))
                 if (value.description != null) {
                     schema.description(value.description)
                 }

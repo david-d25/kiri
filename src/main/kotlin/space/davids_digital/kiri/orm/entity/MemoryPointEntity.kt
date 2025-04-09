@@ -1,19 +1,13 @@
 package space.davids_digital.kiri.orm.entity
 
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.Table
+import jakarta.persistence.*
 import java.time.OffsetDateTime
-import java.util.UUID
+import java.util.*
 
 @Entity
 @Table(schema = "kiri", name = "memory_points")
 class MemoryPointEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     var id: UUID = UUID.randomUUID()
 

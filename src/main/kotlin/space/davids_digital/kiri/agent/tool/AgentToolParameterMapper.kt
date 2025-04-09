@@ -158,7 +158,17 @@ class AgentToolParameterMapper {
         type: KType,
         description: String?
     ): LlmMessageRequest.Tools.Function.ParameterValue {
-        val classifier = type.classifier as? KClass<*> ?: return createStringValue(description)
+        val classifier = type.classifier as? KClass<*> ?: error("Missing type classifier")
+
+        if (classifier == Array::class || classifier.isSubclassOf(Collection::class)) {
+            val elementType = type.arguments.firstOrNull()?.type
+            val itemSchema = if (elementType != null) {
+                mapType(elementType, null)
+            } else {
+                error("Missing element type for array or collection")
+            }
+            return LlmMessageRequest.Tools.Function.ParameterValue.ArrayValue(description, itemSchema)
+        }
 
         return when {
             // Handle primitive types

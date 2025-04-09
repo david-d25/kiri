@@ -18,7 +18,6 @@ import com.anthropic.models.Message.StopReason.Companion.STOP_SEQUENCE
 import com.anthropic.models.Message.StopReason.Companion.TOOL_USE
 import com.anthropic.models.MessageCreateParams
 import com.anthropic.models.MessageParam
-import com.anthropic.models.Model
 import com.anthropic.models.TextBlockParam
 import com.anthropic.models.Tool
 import com.anthropic.models.ToolChoice
@@ -49,7 +48,7 @@ import java.util.Base64
 import kotlin.jvm.optionals.getOrNull
 
 @Service
-class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
+class AnthropicMessagesService(settings: Settings) : LlmService {
     private val log = LoggerFactory.getLogger(this::class.java)
 
     private val anthropic = AnthropicOkHttpClient.builder().apiKey(settings.integration.anthropic.apiKey).build()
@@ -277,6 +276,16 @@ class AnthropicMessagesService(settings: Settings) : LlmService<Model> {
                 if (value.required.isNotEmpty()) {
                     map["required"] = JsonValue.from(value.required)
                 }
+                if (value.description != null) {
+                    map["description"] = JsonValue.from(value.description)
+                }
+                JsonValue.from(map)
+            }
+            is ParameterValue.ArrayValue -> {
+                val map = mutableMapOf(
+                    "type" to JsonValue.from("array"),
+                    "items" to parameterToJson(value.items)
+                )
                 if (value.description != null) {
                     map["description"] = JsonValue.from(value.description)
                 }

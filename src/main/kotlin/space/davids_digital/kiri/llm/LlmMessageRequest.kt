@@ -26,6 +26,7 @@ data class LlmMessageRequest (
                     val properties: Map<String, ParameterValue>,
                     val required: List<String>
                 ) : ParameterValue()
+                data class ArrayValue (val description: String?, val items: ParameterValue) : ParameterValue()
                 data class StringValue (val description: String?, val enum: List<String>?) : ParameterValue()
                 data class NumberValue (val description: String?) : ParameterValue()
                 data class BooleanValue (val description: String?) : ParameterValue()

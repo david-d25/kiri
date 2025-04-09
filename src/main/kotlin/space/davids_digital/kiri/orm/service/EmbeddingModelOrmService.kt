@@ -14,14 +14,15 @@ class EmbeddingModelOrmService(
 ) {
     @Transactional
     fun getOrCreate(name: String, vendor: String, dimensions: Int): EmbeddingModel {
-        val entity = repo.findByNameAndVendorAndDimensionality(name, vendor, dimensions)
-            ?: repo.save(
+        val entity = repo.findByNameAndVendorAndDimensionality(name, vendor, dimensions).orElseGet {
+            repo.save(
                 EmbeddingModelEntity().also {
                     it.name = name
                     it.vendor = vendor
                     it.dimensionality = dimensions
                 }
             )
+        }
         return mapper.toModel(entity)!!
     }
 }
