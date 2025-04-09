@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.orm.service
 
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.MemoryKey
@@ -67,21 +68,34 @@ class MemoryOrmService(
 
     @Transactional
     fun getOrCreateMemoryKey(keyText: String, embedding: FloatArray, embeddingModelId: Long): MemoryKey {
-        val entity = memoryKeyRepository.findByKeyText(keyText)
-            ?: memoryKeyRepository.save(
+        memoryKeyRepository.findByKeyText(keyText)?.let {
+            return memoryKeyMapper.toModel(it)!!
+        }
+
+        return try {
+            val saved = memoryKeyRepository.save(
                 MemoryKeyEntity().also {
                     it.keyText = keyText
                     it.embedding = embedding
                     it.embeddingModel = embeddingModelRepository.getReferenceById(embeddingModelId)
                 }
             )
-        return memoryKeyMapper.toModel(entity)!!
+            memoryKeyMapper.toModel(saved)!!
+        } catch (e: DataIntegrityViolationException) {
+            memoryKeyRepository.findByKeyText(keyText)?.let {
+                memoryKeyMapper.toModel(it)!!
+            } ?: throw IllegalStateException("Race condition during memory key creation", e)
+        }
+    }
+
+    @Transactional
+    fun getMemoryKeyByText(keyText: String): MemoryKey? {
+        return memoryKeyRepository.findByKeyText(keyText)?.let { memoryKeyMapper.toModel(it) }
     }
 
     @Transactional(readOnly = true)
     fun findNearestMemoryKeys(embedding: FloatArray, limit: Int): List<MemoryKey> {
-        val embeddingStr = embedding.joinToString(",", "[", "]")
-        return memoryKeyRepository.findNearest(embeddingStr, limit).map { memoryKeyMapper.toModel(it)!! }
+        return memoryKeyRepository.findNearest(embedding, limit).map { memoryKeyMapper.toModel(it)!! }
     }
 
     @Transactional(readOnly = true)

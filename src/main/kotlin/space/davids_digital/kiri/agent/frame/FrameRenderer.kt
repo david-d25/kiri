@@ -7,26 +7,23 @@ import space.davids_digital.kiri.llm.dsl.LlmMessageRequestUserMessageBuilder
 
 @Component
 class FrameRenderer {
-    /**
-     * Renders frames to a LLM message request builder.
-     * Output of one frame has the following format:
-     * ```
-     * <type attribute1="value1" attribute2="value2" ...>
-     *     content
-     * </type>
-     * ```
-     * @param frames The frames to render.
-     * @param target The target LLM message request builder.
-     */
     fun render(frames: FrameBuffer, target: LlmMessageRequestBuilder) {
+        render(frames.onlyFixed, frames.onlyRolling, target)
+    }
+
+    fun render(fixedFrames: Iterable<DataFrame>, rollingFrames: Iterable<Frame>, target: LlmMessageRequestBuilder) {
+        render(fixedFrames.iterator(), rollingFrames.iterator(), target)
+    }
+
+    fun render(fixedFrames: Iterator<DataFrame>, rollingFrames: Iterator<Frame>, target: LlmMessageRequestBuilder) {
         target.userMessage {
             text("<fixed>\n")
-            for (frame in frames.onlyFixed) {
+            for (frame in fixedFrames) {
                 renderDataFrame(frame)
             }
             text("</fixed>\n")
         }
-        for (frame in frames.onlyRolling) {
+        for (frame in rollingFrames) {
             when (frame) {
                 is DataFrame -> target.userMessage { renderDataFrame(frame) }
                 is ToolCallFrame -> target.renderToolCallFrame(frame)

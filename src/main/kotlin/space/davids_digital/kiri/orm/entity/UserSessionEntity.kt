@@ -8,9 +8,8 @@ import java.util.*
 @Table(schema = "kiri", name = "user_sessions")
 class UserSessionEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    var id: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
+    var id: UUID = UUID.randomUUID()
 
     @Column(name = "user_id")
     var userId: Long = 0

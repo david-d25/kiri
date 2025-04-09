@@ -12,6 +12,7 @@ class FrameBuffer : Iterable<Frame> {
 
     val onlyFixed get() = fixedFrames.iterator()
     val onlyRolling get() = rollingFrames.iterator()
+    val size get() = fixedFrames.size + rollingFrames.size
 
     fun clearAll() {
         clearOnlyFixed()
@@ -26,9 +27,13 @@ class FrameBuffer : Iterable<Frame> {
         rollingFrames.clear()
     }
 
-    fun add(frame: Frame) {
+    fun addRolling(frame: Frame) {
         rollingFrames.add(frame)
         trim()
+    }
+
+    fun removeRolling(frame: Frame) {
+        rollingFrames.remove(frame)
     }
 
     fun addFixed(frame: DataFrame) {
@@ -43,13 +48,13 @@ class FrameBuffer : Iterable<Frame> {
     fun addStatic(block: StaticDataFrame.Builder.() -> Unit) {
         val builder = StaticDataFrame.Builder()
         builder.block()
-        add(builder.build())
+        addRolling(builder.build())
     }
 
     fun addToolCall(block: ToolCallFrame.Builder.() -> Unit) {
         val builder = ToolCallFrame.Builder()
         builder.block()
-        add(builder.build())
+        addRolling(builder.build())
     }
 
     override fun iterator(): Iterator<Frame> {
