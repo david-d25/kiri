@@ -99,6 +99,8 @@ dependencies {
     // PostgreSQL vectors support
     implementation("org.hibernate.orm:hibernate-vector:6.6.13.Final")
 
+    implementation("org.jsoup:jsoup:1.19.1")
+
     // Tests
     testImplementation(kotlin("test"))
 }
