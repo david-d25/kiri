@@ -17,7 +17,7 @@ class LlmMessageRequestDslTest {
     @Test
     fun `create simple request`() {
         val model = "test-model"
-        val request = llmMessageRequest<String> {
+        val request = llmMessageRequest {
             this.model = model
             system = "You are a helpful assistant."
             maxOutputTokens = 100
@@ -40,7 +40,7 @@ class LlmMessageRequestDslTest {
 
     @Test
     fun `create request with multiple messages`() {
-        val request = llmMessageRequest<String> {
+        val request = llmMessageRequest {
             model = "test-model"
             system = "You are a helpful assistant."
             maxOutputTokens = 100
@@ -74,7 +74,7 @@ class LlmMessageRequestDslTest {
 
     @Test
     fun `create request with tools`() {
-        val request = llmMessageRequest<String> {
+        val request = llmMessageRequest {
             model = "test-model"
             system = "You are a helpful assistant."
             maxOutputTokens = 150
@@ -129,7 +129,7 @@ class LlmMessageRequestDslTest {
     fun `create request with complex message content`() {
         val imageData = ByteArray(10) { it.toByte() }
 
-        val request = llmMessageRequest<String> {
+        val request = llmMessageRequest {
             model = "test-model"
             system = "You are a helpful assistant."
 
@@ -182,7 +182,7 @@ class LlmMessageRequestDslTest {
 
     @Test
     fun `create request with tool result`() {
-        val request = llmMessageRequest<String> {
+        val request = llmMessageRequest {
             model = "test-model"
 
             assistantMessage {
@@ -224,7 +224,7 @@ class LlmMessageRequestDslTest {
 
     @Test
     fun `create request with different parameter value types`() {
-        val request = llmMessageRequest<String> {
+        val request = llmMessageRequest {
             model = "test-model"
 
             tools {

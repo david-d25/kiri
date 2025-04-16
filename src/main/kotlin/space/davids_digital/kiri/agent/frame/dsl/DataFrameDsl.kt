@@ -20,6 +20,10 @@ class FrameContentBuilder {
         parts.add(DataFrame.Text(text))
     }
 
+    fun line(text: String) {
+        parts.add(DataFrame.Text(text + "\n"))
+    }
+
     fun image(data: ByteArray, type: LlmImageType) {
         parts.add(DataFrame.Image(data, type))
     }

@@ -83,7 +83,6 @@ class AgentEngine(
     private fun resetFrames() {
         frames.clearOnlyRolling()
         frames.addSimpleText("system", "System started.")
-        frames.addSimpleText("system", "System is cold-started. Please explore the environment to warm up your memory.")
     }
 
     private suspend fun tick() {
@@ -99,7 +98,7 @@ class AgentEngine(
         return llmMessageRequest {
             model = "claude-3-7-sonnet-latest"
             system = systemText ?: ""
-            maxOutputTokens = 1024
+            maxOutputTokens = 2048
             temperature = 1.0
             tools {
                 choice = REQUIRED
@@ -222,9 +221,8 @@ class AgentEngine(
 
     override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep)
 
-    @AgentToolMethod(description = "Think to yourself")
+    @AgentToolMethod(description = "Think to yourself.")
     fun think(thoughts: String) {
-        log.debug("Agent thinks: $thoughts")
         frames.addSimpleText("thought", thoughts)
     }
 

@@ -9,6 +9,8 @@ import com.pengrad.telegrambot.model.Update
 import com.pengrad.telegrambot.model.User
 import com.pengrad.telegrambot.response.BaseResponse
 import com.pengrad.telegrambot.utility.kotlin.extension.request.getChat
+import com.pengrad.telegrambot.utility.kotlin.extension.request.getFile
+import com.pengrad.telegrambot.utility.kotlin.extension.request.getMe
 import com.pengrad.telegrambot.utility.kotlin.extension.request.sendMessage
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.runBlocking
@@ -46,6 +48,7 @@ class TelegramService(
     fun start() {
         bot = TelegramBot(settings.integration.telegram.apiKey)
         bot.setUpdatesListener(::processUpdates, ::onBotException)
+        updateSelfInfo()
     }
 
     suspend fun getChats(): List<TelegramChat> {
@@ -103,6 +106,11 @@ class TelegramService(
         return messageOrm.getChatMessages(chatId, limit)
     }
 
+    // todo cache
+    suspend fun getFileContent(fileId: String): ByteArray {
+        return bot.getFileContent(bot.getFile(fileId).file())
+    }
+
     private fun onMessageReceived(message: Message) {
         log.debug("Received Telegram message from chat {}", message.chat().id())
         message.chat()?.let(::refreshChat)
@@ -112,7 +120,13 @@ class TelegramService(
         } catch (e: Exception) {
             log.error("Failed to save Telegram message", e)
         }
-        sendNewMessageNotification(message)
+        if (needToSendNotification(message)) {
+            sendNewMessageNotification(message)
+        }
+    }
+
+    private fun needToSendNotification(message: Message): Boolean {
+        return message.chat()?.type() == Chat.Type.Private
     }
 
     private fun sendNewMessageNotification(message: Message) {
@@ -123,7 +137,7 @@ class TelegramService(
             content = dataFrameContent {
                 val from = user?.firstName ?: "(user)"
                 val text = message.text()
-                text("$from: $text")
+                text("New message from $from: $text")
             }
         ))
     }
@@ -145,6 +159,14 @@ class TelegramService(
             }
         } catch (e: Exception) {
             log.error("Failed to get and save Telegram chat", e)
+        }
+    }
+
+    private fun updateSelfInfo() {
+        try {
+            userOrm.save(bot.getMe().user().toModel())
+        } catch (e: Exception) {
+            log.error("Failed to get and save bot info", e)
         }
     }
 

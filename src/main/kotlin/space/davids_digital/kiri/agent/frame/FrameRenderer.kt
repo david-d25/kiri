@@ -17,11 +17,11 @@ class FrameRenderer {
 
     fun render(fixedFrames: Iterator<DataFrame>, rollingFrames: Iterator<Frame>, target: LlmMessageRequestBuilder) {
         target.userMessage {
-            text("<fixed>\n")
+            text("<pinned>\n")
             for (frame in fixedFrames) {
                 renderDataFrame(frame)
             }
-            text("</fixed>\n")
+            text("</pinned>\n")
         }
         for (frame in rollingFrames) {
             when (frame) {
