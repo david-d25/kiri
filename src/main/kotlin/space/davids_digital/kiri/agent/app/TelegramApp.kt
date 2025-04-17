@@ -16,9 +16,10 @@ import java.time.ZonedDateTime
 
 private const val MAX_TEXT_LENGTH = 4000
 private const val MAX_LIST_ITEMS = 50
-private const val MAX_MEDIA_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
-private const val MAX_DISPLAYED_MESSAGES = 16 // Max number of messages to display
-private const val TIMEOUT_MS = 5000 // Timeout for external calls in ms
+private const val MAX_MEDIA_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+private const val MAX_IMAGE_SIDE_LENGTH = 1568
+private const val MAX_IMAGE_PIXELS = 1150000
+private const val MAX_DISPLAYED_MESSAGES: Long = 16
 
 @AgentToolNamespace("telegram")
 class TelegramApp(
@@ -64,15 +65,6 @@ class TelegramApp(
         }
     }
 
-    private fun chatTypeToTag(type: TelegramChat.Type): String {
-        return when (type) {
-            TelegramChat.Type.PRIVATE -> "private-chat"
-            TelegramChat.Type.GROUP -> "group-chat"
-            TelegramChat.Type.SUPERGROUP -> "supergroup-chat"
-            else -> "chat"
-        }
-    }
-
     @AgentToolMethod
     suspend fun openChat(id: Long): String {
         if (service.chatExists(id)) {
@@ -106,7 +98,48 @@ class TelegramApp(
         return result
     }
 
+    private fun ByteArray.getImageType(): LlmImageType? {
+        if (this.size < 12) return null
+
+        return when {
+            this[0] == 0xFF.toByte() && this[1] == 0xD8.toByte() -> LlmImageType.JPEG
+            this[0] == 0x89.toByte() && this[1] == 0x50.toByte() -> LlmImageType.PNG
+            this[0] == 0x47.toByte() && this[1] == 0x49.toByte() -> LlmImageType.GIF
+            this[0] == 0x52.toByte() && this[1] == 0x49.toByte() && // 'RIFF'
+                    this[2] == 0x46.toByte() && this[3] == 0x46.toByte() &&
+                    this[8] == 0x57.toByte() && this[9] == 0x45.toByte() &&
+                    this[10] == 0x42.toByte() && this[11] == 0x50.toByte() -> LlmImageType.WEBP
+            else -> null
+        }
+    }
+
+    private fun pickOptimalImage(sizes: List<TelegramPhotoSize>): TelegramPhotoSize? {
+        if (sizes.isEmpty()) return null
+        val sorted = sizes.sortedByDescending { it.width * it.height }
+        for (size in sorted) {
+            if (size.fileSize == null) {
+                continue
+            }
+            if (size.fileSize <= MAX_MEDIA_SIZE_BYTES
+                && size.width <= MAX_IMAGE_SIDE_LENGTH
+                && size.height <= MAX_IMAGE_SIDE_LENGTH
+                && size.width * size.height <= MAX_IMAGE_PIXELS) {
+                return size
+            }
+        }
+        return null
+    }
+
     // region rendering
+
+    private fun chatTypeToTag(type: TelegramChat.Type): String {
+        return when (type) {
+            TelegramChat.Type.PRIVATE -> "private-chat"
+            TelegramChat.Type.GROUP -> "group-chat"
+            TelegramChat.Type.SUPERGROUP -> "supergroup-chat"
+            else -> "chat"
+        }
+    }
 
     private fun FrameContentBuilder.renderChatList() {
         val chats = runBlocking { service.getChats() }
@@ -147,7 +180,7 @@ class TelegramApp(
         val messages: List<TelegramMessage>
         runBlocking {
             chat = service.getChat(id)
-            messages = service.getChatMessages(id, 16)
+            messages = service.getChatMessages(id, MAX_DISPLAYED_MESSAGES)
         }
         val unsafeTitle = chat.title ?: (chat.firstName + (chat.lastName?.let { " $it" } ?: ""))
         val title = unsafeTitle.safe()
@@ -175,79 +208,104 @@ class TelegramApp(
     }
 
     private fun FrameContentBuilder.renderMessage(message: TelegramMessage) {
+        val fromId = message.fromId
         val from = getUserDisplayNameOrNull(message.fromId)
+        val forwarded = message.forwardOrigin != null
 
-        line("""<message from="$from">""") // todo 'from' not always needed
-        // todo maybe 'message' is not needed?
-        // todo editDate
-        // todo viaBot
-        // todo hasProtectedContent
-        // todo isFromOffline
-        // todo effectId
-        // todo hasMediaSpoiler
+        text("<message")
+        if (from != null) {
+            text(""" from="$from"""")
+        }
+        if (message.editDate != null) {
+            text(""" edit-date="${message.editDate.asPrettyString()}" """)
+        }
+        if (message.viaBot != null) {
+            val value = if (message.viaBot.username != null) {
+                "@" + message.viaBot.username
+            } else {
+                "id " + message.viaBot.id.toString()
+            }
+            text(""" via-bot="$value"""")
+        }
+        if (message.hasProtectedContent) {
+            text(""" forwarding-prohibited""")
+        }
+        if (message.hasMediaSpoiler) {
+            text(""" has-media-spoiler""")
+        }
+        if (message.isFromOffline) {
+            text(""" sent-automatically""")
+        }
+        line(">")
+        if (forwarded) {
+            text("<forwarded")
+            renderMessageOriginAttributes(message.forwardOrigin)
+            line(">")
+        }
 
-        // todo entities
-        message.text?.let {                         line(it.escapeHTML())                                       }
-        message.sticker?.let {                      renderSticker(it)                                           }
-        message.photo.firstOrNull()?.let {          renderImage(it)                                             }
-        message.webAppData?.let {                   renderWebAppData(it)                                        }
-        message.giveaway?.let {                     renderGiveaway(it)                                          }
-        message.giveawayCreated?.let {              renderGiveawayCreated(it)                                   }
-        message.giveawayWinners?.let {              renderGiveawayWinners(it)                                   }
-        message.giveawayCompleted?.let {            renderGiveawayCompleted(it)                                 }
-        message.newChatPhoto.firstOrNull()?.let {   renderNewChatPhoto(it)                                      }
-        message.newChatTitle?.let {                 renderNewChatTitle(it)                                      }
-        message.leftChatMemberId?.let {             renderLeftChatMember(it)                                    }
-        message.videoChatScheduled?.let {           renderVideoChatScheduled(it)                                }
-        message.videoChatEnded?.let {               renderVideoChatEnded(it)                                    }
-        message.videoChatParticipantsInvited?.let { renderVideoChatParticipantsInvited(message.fromId ?: 0, it) }
-        message.replyMarkup?.let {                  renderReplyMarkup(it)                                       }
-        message.generalForumTopicUnhidden?.let {    line("<service>General forum topic hidden</service>")       }
-        message.generalForumTopicHidden?.let {      line("<service>General forum topic hidden</service>")       }
-        message.forumTopicCreated?.let {            renderForumTopicCreated(it)                                 }
-        message.forumTopicEdited?.let {             renderForumTopicEdited(it)                                  }
-        message.forumTopicClosed?.let {             line("<service>Forum topic closed</service>")               }
-        message.forumTopicReopened?.let {           line("<service>Forum topic reopened</service>")             }
-        message.chatBackgroundSet?.let {            line("<service>Chat background was changed</service>")      }
-        message.replyToMessage?.let {               renderReplyToMessage(it)                                    }
-        message.contact?.let {                      renderContact(it)                                           }
-        message.quote?.let {                        renderQuote(it)                                             }
-        message.replyToStory?.let {                 renderReplyToStory(it)                                      }
-        message.story?.let {                        renderStory(it)                                             }
-        message.video?.let {                        renderVideo(it)                                             }
-        message.animation?.let {                    renderAnimation(it)                                         }
-        message.audio?.let {                        renderAudio(it)                                             }
-        message.document?.let {                     renderDocument(it)                                          }
-        message.poll?.let {                         renderPoll(it)                                              }
-        message.venue?.let {                        renderVenue(it)                                             }
-        message.location?.let {                     renderLocation(it)                                          }
-        message.paidMediaInfo?.let {                renderPaidMediaInfo(it)                                     }
-        message.chatBoostAdded?.let {               renderChatBoostAdded(it)                                    }
-        message.dice?.let {                         renderDice(it)                                              }
-        message.game?.let {                         renderGame(it)                                              }
-        message.invoice?.let {                      renderInvoice(it)                                           }
-        message.successfulPayment?.let {            renderSuccessfulPayment(it)                                 }
-        message.refundedPayment?.let {              renderRefundedPayment(it)                                   }
-        message.usersShared?.let {                  renderUsersShared(it)                                       }
-        message.chatShared?.let {                   renderChatShared(it)                                        }
-
-        // todo caption
-        // todo captionEntities
-        // todo showCaptionAboveMedia
-
-        // todo messageAutoDeleteTimerChanged
-        // todo migrateToChatId
-        // todo migrateFromChatId
-        // todo pinnedMessage
-        // todo connectedWebsite
-        // todo writeAccessAllowed
-        // todo passportData
-        // todo proximityAlertTriggered
-        // todo forwardOrigin
-        // todo externalReplyInfo
-
-        message.authorSignature?.let {              renderAuthorSignature(it)                                   }
-
+        if (message.caption != null && message.showCaptionAboveMedia) {
+            renderCaption(message.caption, message.captionEntities)
+        }
+        message.text?.let {                             line(toHtml(it.safe(), message.entities))                   }
+        message.sticker?.let {                          renderSticker(it)                                           }
+        message.webAppData?.let {                       renderWebAppData()                                          }
+        message.giveaway?.let {                         renderGiveaway(it)                                          }
+        message.giveawayCreated?.let {                  renderGiveawayCreated(it)                                   }
+        message.giveawayWinners?.let {                  renderGiveawayWinners()                                     }
+        message.giveawayCompleted?.let {                renderGiveawayCompleted(it)                                 }
+        message.newChatTitle?.let {                     renderNewChatTitle(it)                                      }
+        message.leftChatMemberId?.let {                 renderLeftChatMember(it)                                    }
+        message.videoChatScheduled?.let {               renderVideoChatScheduled(it)                                }
+        message.videoChatEnded?.let {                   renderVideoChatEnded(it)                                    }
+        message.videoChatParticipantsInvited?.let {     renderVideoChatParticipantsInvited(message.fromId ?: 0, it) }
+        message.replyMarkup?.let {                      renderReplyMarkup(it)                                       }
+        message.generalForumTopicUnhidden?.let {        line("<service>General forum topic hidden</service>")       }
+        message.generalForumTopicHidden?.let {          line("<service>General forum topic hidden</service>")       }
+        message.forumTopicCreated?.let {                renderForumTopicCreated(it)                                 }
+        message.forumTopicEdited?.let {                 renderForumTopicEdited(it)                                  }
+        message.forumTopicClosed?.let {                 line("<service>Forum topic closed</service>")               }
+        message.forumTopicReopened?.let {               line("<service>Forum topic reopened</service>")             }
+        message.chatBackgroundSet?.let {                line("<service>Chat background was changed</service>")      }
+        message.replyToMessage?.let {                   renderReplyToMessage(it)                                    }
+        message.contact?.let {                          renderContact(it)                                           }
+        message.quote?.let {                            renderQuote(it)                                             }
+        message.replyToStory?.let {                     renderReplyToStory(it)                                      }
+        message.story?.let {                            renderStory(it)                                             }
+        message.video?.let {                            renderVideo(it)                                             }
+        message.animation?.let {                        renderAnimation(it)                                         }
+        message.audio?.let {                            renderAudio(it)                                             }
+        message.document?.let {                         renderDocument(it)                                          }
+        message.poll?.let {                             renderPoll(it)                                              }
+        message.venue?.let {                            renderVenue(it)                                             }
+        message.location?.let {                         renderLocation(it)                                          }
+        message.paidMediaInfo?.let {                    renderPaidMediaInfo(it)                                     }
+        message.chatBoostAdded?.let {                   renderChatBoostAdded(fromId ?: -1, it)                      }
+        message.dice?.let {                             renderDice(it)                                              }
+        message.game?.let {                             renderGame(it)                                              }
+        message.invoice?.let {                          renderInvoice(it)                                           }
+        message.successfulPayment?.let {                renderSuccessfulPayment(it)                                 }
+        message.refundedPayment?.let {                  renderRefundedPayment(it)                                   }
+        message.usersShared?.let {                      renderUsersShared(fromId ?: -1, it)                         }
+        message.chatShared?.let {                       renderChatShared(it)                                        }
+        message.passportData?.let {                     renderPassportData()                                        }
+        message.migrateToChatId?.let {                  renderMigrateToChatId(it)                                   }
+        message.migrateFromChatId?.let {                renderMigrateFromChatId(it)                                 }
+        message.messageAutoDeleteTimerChanged?.let {    renderMessageAutoDeleteTimerChanged(it)                     }
+        message.pinnedMessage?.let {                    renderPinnedMessage(fromId ?: -1, it)                       }
+        message.connectedWebsite?.let {                 renderConnectedWebsite(it)                                  }
+        message.writeAccessAllowed?.let {               renderWriteAccessAllowed()                                  }
+        message.proximityAlertTriggered?.let {          renderProximityAlertTriggered(it)                           }
+        message.externalReplyInfo?.let {                renderExternalReplyInfo(it)                                 }
+        message.authorSignature?.let {                  renderAuthorSignature(it)                                   }
+        if (message.photo.isNotEmpty()) {
+            renderImage(message.photo)
+        }
+        if (message.newChatPhoto.isNotEmpty()) {
+            renderNewChatPhoto(message.newChatPhoto)
+        }
+        if (message.caption != null && !message.showCaptionAboveMedia) {
+            renderCaption(message.caption, message.captionEntities)
+        }
         if (message.deleteChatPhoto) {
             renderDeleteChatPhoto()
         }
@@ -269,7 +327,9 @@ class TelegramApp(
         if (message.isAutomaticForward) {
             line("<service>Automatically forwarded channel post</service>")
         }
-
+        if (forwarded) {
+            line("</forwarded>")
+        }
         line("</message>")
     }
 
@@ -331,8 +391,8 @@ class TelegramApp(
         line("This message has a game, but your Telegram App does not support it yet.")
         line("Title: ${game.title.safe()}")
         line("Description: ${game.description.safe()}")
-        game.photo.firstOrNull()?.let {
-            renderImage(it)
+        if (game.photo.isNotEmpty()) {
+            renderImage(game.photo)
         }
         game.animation?.let {
             renderAnimation(it)
@@ -398,9 +458,9 @@ class TelegramApp(
     private fun FrameContentBuilder.renderVideo(video: TelegramVideo) {
         line("""<video id="${video.fileUniqueId}" duration="${video.duration}">""")
         line("This message has a video, but your Telegram App does not support it yet.")
-        video.cover.firstOrNull()?.let {
+        if (video.cover.isNotEmpty()) {
             line("<cover>")
-            renderImage(it)
+            renderImage(video.cover)
             line("</cover>")
         }
         line("</video>")
@@ -422,9 +482,9 @@ class TelegramApp(
                 user.firstName?.let { line("First name: " + it.safe()) }
                 user.lastName?.let { line("Last name: " + it.safe()) }
                 user.username?.let { line("Username: $it") }
-                user.photo?.firstOrNull()?.let {
+                if (user.photo?.isNotEmpty() == true) {
                     line("Photo:")
-                    renderImage(it)
+                    renderImage(user.photo)
                 }
                 line("</user>")
             }
@@ -448,9 +508,9 @@ class TelegramApp(
         line("Id: ${chatShared.chatId}")
         chatShared.title?.let { line("Title: " + it.safe()) }
         chatShared.username?.let { line("Username: $it") }
-        chatShared.photo?.firstOrNull()?.let {
+        if (chatShared.photo?.isNotEmpty() == true) {
             line("Photo:")
-            renderImage(it)
+            renderImage(chatShared.photo)
         }
         line("</shared-chat>")
     }
@@ -462,7 +522,7 @@ class TelegramApp(
                 is TelegramPaidMedia.Preview -> {
                     line("""<preview width="${item.width}" height="${item.height}" duration="${item.duration}"/>""")
                 }
-                is TelegramPaidMedia.Photo -> renderImage(item.photo.first())
+                is TelegramPaidMedia.Photo -> renderImage(item.photo)
                 is TelegramPaidMedia.Video -> renderVideo(item.video)
                 else -> line("<unknown/>")
             }
@@ -478,6 +538,10 @@ class TelegramApp(
 
     private fun FrameContentBuilder.renderAuthorSignature(signature: String) {
         line("<signature>${signature.safe()}</signature>")
+    }
+
+    private fun FrameContentBuilder.renderCaption(text: String, entities: List<TelegramMessageEntity>) {
+        line("<caption>${toHtml(text, entities)}</caption>")
     }
 
     private fun FrameContentBuilder.renderContact(contact: TelegramContact) {
@@ -496,6 +560,89 @@ class TelegramApp(
         line("</reply-to>")
     }
 
+    private fun FrameContentBuilder.renderMessageOriginAttributes(origin: TelegramMessageOrigin) {
+        when (origin) {
+            is TelegramMessageOrigin.User -> {
+                val fromName = getUserDisplayNameOrNull(origin.senderUserId) ?: "id ${origin.senderUserId}"
+                val fromId = origin.senderUserId
+                val sentAt = origin.date.asPrettyString()
+                text(""" from-name="$fromName" from-id="$fromId" sent-at="$sentAt"""")
+            }
+            is TelegramMessageOrigin.HiddenUser -> {
+                val fromName = origin.senderUserName.safe()
+                val sentAt = origin.date.asPrettyString()
+                text(""" from-hidden-user="$fromName" sent-at="$sentAt"""")
+            }
+            is TelegramMessageOrigin.Chat -> {
+                val chatId = origin.senderChatId
+                val sentAt = origin.date.asPrettyString()
+                text(""" from-chat-id="$chatId" sent-at="$sentAt"""")
+                origin.authorSignature?.let {
+                    text(""" author-signature="${it.safe()}"""")
+                }
+            }
+            is TelegramMessageOrigin.Channel -> {
+                val chatId = origin.chatId
+                val sentAt = origin.date.asPrettyString()
+                val messageId = origin.messageId
+                text(""" from-chat-id="$chatId" chat-message-id="$messageId" sent-at="$sentAt"""")
+                origin.authorSignature?.let {
+                    text(""" author-signature="${it.safe()}"""")
+                }
+            }
+            is TelegramMessageOrigin.Unknown -> {
+                val sentAt = origin.date.asPrettyString()
+                text(""" sent-at="$sentAt"""")
+            }
+        }
+    }
+
+    private fun FrameContentBuilder.renderExternalReplyInfo(replyInfo: TelegramExternalReplyInfo) {
+        text("<reply-to external")
+        if (replyInfo.hasMediaSpoiler) {
+            text(""" has-media-spoiler""")
+        }
+        renderMessageOriginAttributes(replyInfo.origin)
+        line(">")
+        replyInfo.animation?.let { renderAnimation(it) }
+        replyInfo.audio?.let { renderAudio(it) }
+        replyInfo.document?.let { renderDocument(it) }
+        replyInfo.photo?.let { renderImage(it) }
+        replyInfo.sticker?.let { renderSticker(it) }
+        replyInfo.video?.let { renderVideo(it) }
+        replyInfo.videoNote?.let { renderVideoNote(it) }
+        replyInfo.voice?.let { renderVoice(it) }
+        replyInfo.paidMedia?.let { renderPaidMediaInfo(it) }
+        replyInfo.story?.let { renderStory(it) }
+        replyInfo.contact?.let { renderContact(it) }
+        replyInfo.dice?.let { renderDice(it) }
+        replyInfo.game?.let { renderGame(it) }
+        replyInfo.giveaway?.let { renderGiveaway(it) }
+        replyInfo.giveawayWinners?.let { renderGiveawayWinners() }
+        replyInfo.invoice?.let { renderInvoice(it) }
+        replyInfo.location?.let { renderLocation(it) }
+        replyInfo.poll?.let { renderPoll(it) }
+        replyInfo.venue?.let { renderVenue(it) }
+        line("</reply-to>")
+    }
+
+    private fun FrameContentBuilder.renderVideoNote(videoNote: TelegramVideoNote) {
+        line("""<video-note id="${videoNote.fileUniqueId}" duration="${videoNote.duration}">""")
+        line("This message has a video note, but your Telegram App does not support it yet.")
+        videoNote.thumbnail?.let {
+            line("<thumbnail>")
+            renderImage(it)
+            line("</thumbnail>")
+        }
+        line("</video-note>")
+    }
+
+    private fun FrameContentBuilder.renderVoice(voice: TelegramVoice) {
+        line("""<voice id="${voice.fileUniqueId}" duration="${voice.duration}">""")
+        line("This message has a voice message, but your Telegram App does not support it yet.")
+        line("</voice>")
+    }
+
     private fun FrameContentBuilder.renderForumTopicEdited(topicEdited: TelegramForumTopicEdited) {
         if (topicEdited.name != null) {
             line("<service>Forum topic name changed to ${topicEdited.name.safe()}</service>")
@@ -510,7 +657,16 @@ class TelegramApp(
     }
 
     private fun FrameContentBuilder.renderReplyMarkup(markup: TelegramInlineKeyboardMarkup) {
-        TODO()
+        line("<inline-keyboard>")
+        line("Buttons attached to the message:")
+        for (row in markup.inlineKeyboard) {
+            line("<row>")
+            for (button in row) {
+                line("<button>${button.text.safe()}</button>")
+            }
+            line("</row>")
+        }
+        line("</inline-keyboard>")
     }
 
     private fun FrameContentBuilder.renderVideoChatParticipantsInvited(
@@ -543,14 +699,22 @@ class TelegramApp(
         line("<service>Video chat scheduled to start at ${videoChatScheduled.startDate.asPrettyString()}</service>")
     }
 
+    // TODO
     private fun FrameContentBuilder.renderSticker(sticker: TelegramSticker) {
-        TODO()
+        line("""<sticker id="${sticker.fileUniqueId}" type="${sticker.type.name.lowercase()}" emoji="${sticker.emoji}" set-name="${sticker.setName}">""")
+        line("Sorry, stickers are not supported yet.")
+        sticker.thumbnail?.let {
+            line("<thumbnail>")
+            renderImage(it)
+            line("</thumbnail>")
+        }
+        line("</sticker>")
     }
 
-    private fun FrameContentBuilder.renderNewChatPhoto(newChatPhoto: TelegramPhotoSize) {
+    private fun FrameContentBuilder.renderNewChatPhoto(sizes: List<TelegramPhotoSize>) {
         line("<service>")
         line("New chat photo:")
-        renderImage(newChatPhoto)
+        renderImage(sizes)
         line("</service>")
     }
 
@@ -605,7 +769,7 @@ class TelegramApp(
         line("</giveaway-completed>")
     }
 
-    private fun FrameContentBuilder.renderGiveawayWinners(giveawayWinners: TelegramGiveawayWinners) {
+    private fun FrameContentBuilder.renderGiveawayWinners() {
         line("<giveaway-winners>")
         line("Your Telegram App does not support rendering additional info yet.")
         line("</giveaway-winners>")
@@ -662,17 +826,86 @@ class TelegramApp(
         line("</giveaway>")
     }
 
-    private fun FrameContentBuilder.renderWebAppData(webAppData: TelegramWebAppData) {
+    private fun FrameContentBuilder.renderPassportData() {
+        line("<passport-data>")
+        line("Passport data is not supported by your Telegram App.")
+        line("</passport-data>")
+    }
+
+    private fun FrameContentBuilder.renderMigrateToChatId(migrateToChatId: Long) {
+        line("<service>Chat was migrated to a supergroup. New chat id: $migrateToChatId</service>")
+    }
+
+    private fun FrameContentBuilder.renderMigrateFromChatId(migrateFromChatId: Long) {
+        line("<service>Chat was migrated from a supergroup. Old chat id: $migrateFromChatId</service>")
+    }
+
+    private fun FrameContentBuilder.renderMessageAutoDeleteTimerChanged(
+        timerChanged: TelegramMessageAutoDeleteTimerChanged
+    ) {
+        val seconds = timerChanged.messageAutoDeleteTime
+        line("<service>Message auto-delete timer changed to $seconds seconds</service>")
+    }
+
+    private fun FrameContentBuilder.renderPinnedMessage(who: Long, pinnedMessage: TelegramMaybeInaccessibleMessage) {
+        line("<service>")
+        val user = getUserDisplayNameOrNull(who) ?: "(unknown user id $who)"
+        line("$user pinned this message:")
+        when (pinnedMessage) {
+            is TelegramMessage -> renderMessage(pinnedMessage)
+            is TelegramInaccessibleMessage ->
+                line("<inaccessible-message id=${pinnedMessage.messageId} chat-id=${pinnedMessage.chatId}/>")
+        }
+        line("</service>")
+    }
+
+    private fun FrameContentBuilder.renderConnectedWebsite(connectedWebsite: String) {
+        line("<connected-website>")
+        line("Connected website: ${connectedWebsite.safe()}")
+        line("</connected-website>")
+    }
+
+    private fun FrameContentBuilder.renderWriteAccessAllowed() {
+        line("<service>")
+        line("User allowed you to write in the chat.")
+        line("</service>")
+    }
+
+    private fun FrameContentBuilder.renderProximityAlertTriggered(alert: TelegramProximityAlertTriggered) {
+        val traveler = getUserDisplayNameOrNull(alert.traveler) ?: "(unknown user id ${alert.traveler})"
+        val watcher = getUserDisplayNameOrNull(alert.watcher) ?: "(unknown user id ${alert.watcher})"
+        line("<proximity-alert>$traveler is within ${alert.distance} meters of $watcher</proximity-alert>")
+    }
+
+    private fun FrameContentBuilder.renderWebAppData() {
         line("<web-app-data>")
         line("This message has web app data, but your Telegram App does not support it yet.")
         line("</web-app-data>")
     }
 
     private fun FrameContentBuilder.renderImage(image: TelegramPhotoSize) {
+        renderImage(listOf(image))
+    }
+
+    private fun FrameContentBuilder.renderImage(sizes: List<TelegramPhotoSize>) {
+        val image = pickOptimalImage(sizes)
         line("<image>")
-        val fileId = image.fileId
-        val file = runBlocking { service.getFileContent(fileId) } // TODO check image size
-        image(file, LlmImageType.JPEG) // TODO check mime type
+        if (image == null) {
+            line("This image is too large. Requirements: ")
+            line("- Size: <= ${MAX_MEDIA_SIZE_BYTES / 1024} KB")
+            line("- Side length: <= $MAX_IMAGE_SIDE_LENGTH px")
+            line("- Total pixels: <= $MAX_IMAGE_PIXELS px")
+        } else {
+            val fileId = image.fileId
+            val file = runBlocking { service.getFileContent(fileId) }
+            val imageType = file.getImageType()
+            if (imageType == null) {
+                line("This image type is not supported by your Telegram App. " +
+                        "Supported types: ${LlmImageType.entries.joinToString(", ")}")
+            } else {
+                image(file, imageType)
+            }
+        }
         line("</image>")
     }
 
