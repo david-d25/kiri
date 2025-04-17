@@ -97,7 +97,7 @@ object TelegramHtmlMapper {
                 offset = startOffset,
                 length = endOffset - startOffset,
                 url = url,
-                userId = userId,
+//                userId = userId, // todo
                 language = language
             )
         }
@@ -122,7 +122,7 @@ object TelegramHtmlMapper {
             "<a data-entity=\"text_link\" href=\"${href.htmlEscape()}\">" to "</a>"
         }
         Type.TEXT_MENTION  -> {
-            val id = e.userId ?: return null
+            val id = e.user?.id ?: return null
             "<a data-entity=\"text_mention\" data-user-id=\"$id\" href=\"tg://user?id=$id\">" to "</a>"
         }
         // Link‑like entities – wrap into <a data-entity="..."> so they can be restored.

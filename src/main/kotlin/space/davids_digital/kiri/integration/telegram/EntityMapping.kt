@@ -185,7 +185,6 @@ fun ChatFullInfo.Type.toModel() = when (this) {
     ChatFullInfo.Type.group -> TelegramChat.Type.GROUP
     ChatFullInfo.Type.supergroup -> TelegramChat.Type.SUPERGROUP
     ChatFullInfo.Type.channel -> TelegramChat.Type.CHANNEL
-    else -> TelegramChat.Type.UNKNOWN
 }
 
 fun ChatPhoto.toModel() = TelegramChatPhoto(
@@ -209,6 +208,7 @@ fun Message.toModel(): TelegramMessage {
         isTopicMessage = isTopicMessage == true,
         isAutomaticForward = isAutomaticForward == true,
         quote = quote()?.toModel(),
+        replyToMessage = replyToMessage()?.toModel(),
         replyToStory = replyToStory()?.toModel(),
         viaBot = viaBot()?.toModel(),
         editDate = editDate()?.toZonedDateTime(),
@@ -362,10 +362,20 @@ fun MessageEntity.toModel() = TelegramMessageEntity (
     offset = offset(),
     length = length(),
     url = url(),
-    userId = user()?.id(),
+    user = user()?.toModel(),
     language = language(),
     customEmojiId = customEmojiId(),
 )
+
+fun TelegramMessageEntity.toDto(): MessageEntity {
+    val result = MessageEntity(type.toDto(), offset, length)
+    result.url(url)
+    // todo
+//    result.user(user?.toDto())
+    result.language(language)
+    result.customEmojiId(customEmojiId)
+    return result
+}
 
 fun MessageEntity.Type.toModel() = when (this) {
     MessageEntity.Type.mention -> TelegramMessageEntity.Type.MENTION
@@ -387,6 +397,28 @@ fun MessageEntity.Type.toModel() = when (this) {
     MessageEntity.Type.custom_emoji -> TelegramMessageEntity.Type.CUSTOM_EMOJI
     MessageEntity.Type.blockquote -> TelegramMessageEntity.Type.BLOCKQUOTE
     MessageEntity.Type.expandable_blockquote -> TelegramMessageEntity.Type.EXPANDABLE_BLOCKQUOTE
+}
+
+fun TelegramMessageEntity.Type.toDto() = when (this) {
+    TelegramMessageEntity.Type.MENTION -> MessageEntity.Type.mention
+    TelegramMessageEntity.Type.HASHTAG -> MessageEntity.Type.hashtag
+    TelegramMessageEntity.Type.CASHTAG -> MessageEntity.Type.cashtag
+    TelegramMessageEntity.Type.BOT_COMMAND -> MessageEntity.Type.bot_command
+    TelegramMessageEntity.Type.URL -> MessageEntity.Type.url
+    TelegramMessageEntity.Type.EMAIL -> MessageEntity.Type.email
+    TelegramMessageEntity.Type.PHONE_NUMBER -> MessageEntity.Type.phone_number
+    TelegramMessageEntity.Type.BOLD -> MessageEntity.Type.bold
+    TelegramMessageEntity.Type.ITALIC -> MessageEntity.Type.italic
+    TelegramMessageEntity.Type.CODE -> MessageEntity.Type.code
+    TelegramMessageEntity.Type.PRE -> MessageEntity.Type.pre
+    TelegramMessageEntity.Type.TEXT_LINK -> MessageEntity.Type.text_link
+    TelegramMessageEntity.Type.TEXT_MENTION -> MessageEntity.Type.text_mention
+    TelegramMessageEntity.Type.UNDERLINE -> MessageEntity.Type.underline
+    TelegramMessageEntity.Type.STRIKETHROUGH -> MessageEntity.Type.strikethrough
+    TelegramMessageEntity.Type.SPOILER -> MessageEntity.Type.spoiler
+    TelegramMessageEntity.Type.CUSTOM_EMOJI -> MessageEntity.Type.custom_emoji
+    TelegramMessageEntity.Type.BLOCKQUOTE -> MessageEntity.Type.blockquote
+    TelegramMessageEntity.Type.EXPANDABLE_BLOCKQUOTE -> MessageEntity.Type.expandable_blockquote
 }
 
 fun LinkPreviewOptions.toModel() = TelegramLinkPreviewOptions (

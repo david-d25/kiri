@@ -8,6 +8,7 @@ import space.davids_digital.kiri.agent.frame.dsl.FrameContentBuilder
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
+import space.davids_digital.kiri.integration.telegram.TelegramHtmlMapper.fromHtml
 import space.davids_digital.kiri.integration.telegram.TelegramHtmlMapper.toHtml
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.llm.LlmImageType
@@ -16,10 +17,10 @@ import java.time.ZonedDateTime
 
 private const val MAX_TEXT_LENGTH = 4000
 private const val MAX_LIST_ITEMS = 50
-private const val MAX_MEDIA_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+private const val MAX_MEDIA_SIZE_BYTES = 5 * 1024 * 1024
 private const val MAX_IMAGE_SIDE_LENGTH = 1568
 private const val MAX_IMAGE_PIXELS = 1150000
-private const val MAX_DISPLAYED_MESSAGES: Long = 16
+private const val MAX_DISPLAYED_MESSAGES: Long = 12
 
 @AgentToolNamespace("telegram")
 class TelegramApp(
@@ -33,6 +34,10 @@ class TelegramApp(
         } else {
             renderChat(openedChatId!!)
         }
+    }
+
+    fun getOpenedChatId(): Long? {
+        return openedChatId
     }
 
     private fun getUserDisplayName(userId: Long): String {
@@ -83,8 +88,9 @@ class TelegramApp(
     @AgentToolMethod(description = "Send message")
     fun send(message: String): String {
         val chatId = openedChatId ?: return "Chat is not opened"
+        var (text, entities) = fromHtml(message)
         runBlocking {
-            service.sendText(chatId, message)
+            service.sendText(chatId, text, entities)
         }
         return "Message sent"
     }
@@ -180,11 +186,11 @@ class TelegramApp(
         val messages: List<TelegramMessage>
         runBlocking {
             chat = service.getChat(id)
-            messages = service.getChatMessages(id, MAX_DISPLAYED_MESSAGES)
+            messages = service.getChatMessages(id, MAX_DISPLAYED_MESSAGES).reversed()
         }
         val unsafeTitle = chat.title ?: (chat.firstName + (chat.lastName?.let { " $it" } ?: ""))
         val title = unsafeTitle.safe()
-        val attrString = """id = "$id" title="$title""""
+        val attrString = """id="$id" title="$title""""
         val tag = chatTypeToTag(chat.type)
         line("<$tag $attrString>")
         renderChatMessages(messages)
@@ -271,6 +277,8 @@ class TelegramApp(
         message.quote?.let {                            renderQuote(it)                                             }
         message.replyToStory?.let {                     renderReplyToStory(it)                                      }
         message.story?.let {                            renderStory(it)                                             }
+        message.voice?.let {                            renderVoice(it)                                             }
+        message.videoNote?.let {                        renderVideoNote(it)                                         }
         message.video?.let {                            renderVideo(it)                                             }
         message.animation?.let {                        renderAnimation(it)                                         }
         message.audio?.let {                            renderAudio(it)                                             }
