@@ -13,18 +13,16 @@ import com.pengrad.telegrambot.utility.kotlin.extension.request.getFile
 import com.pengrad.telegrambot.utility.kotlin.extension.request.getMe
 import com.pengrad.telegrambot.utility.kotlin.extension.request.sendMessage
 import jakarta.annotation.PostConstruct
-import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.Settings
-import space.davids_digital.kiri.agent.engine.EngineEvent
 import space.davids_digital.kiri.agent.engine.EngineEventBus
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.notification.Notification
 import space.davids_digital.kiri.agent.notification.NotificationManager
 import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.model.telegram.TelegramMessage
-import space.davids_digital.kiri.model.telegram.TelegramUser
+import space.davids_digital.kiri.model.telegram.TelegramMessageEntity
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramUserOrmService
@@ -86,8 +84,10 @@ class TelegramService(
 
     fun getUser(id: Long) = userOrm.findById(id)
 
-    suspend fun sendText(chatId: Long, text: String) {
-        val message = bot.sendMessage(chatId, text).checkNoErrors("Failed to send message to chat id $chatId").message()
+    suspend fun sendText(chatId: Long, text: String, textEntities: List<TelegramMessageEntity> = emptyList()) {
+        val message = bot.sendMessage(chatId, text) {
+            entities(*textEntities.map { it.toDto() }.toTypedArray())
+        }.checkNoErrors("Failed to send message to chat id $chatId").message()
         try {
             messageOrm.save(message.toModel())
         } catch (e: Exception) {
@@ -136,8 +136,15 @@ class TelegramService(
             metadata = mapOf("app" to "telegram"),
             content = dataFrameContent {
                 val from = user?.firstName ?: "(user)"
-                val text = message.text()
-                text("New message from $from: $text")
+                if (message.text().isNullOrBlank()) {
+                    text("New message from $from")
+                } else {
+                    var text = message.text().take(128)
+                    if (text.length > 128) {
+                        text = text.substring(0, 128) + "..."
+                    }
+                    text("New message from $from: $text")
+                }
             }
         ))
     }

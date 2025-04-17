@@ -34,6 +34,10 @@ class AppManager(
         availableApps["telegram"] = { TelegramApp(telegramService) }
     }
 
+    fun getOpenedApp(id: String): AgentApp? {
+        return openedApps.find { it.id == id }
+    }
+
     override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close)
     override fun getSubProviders() = openedApps
 
@@ -59,7 +63,7 @@ class AppManager(
         app.onOpened()
         val frame = DynamicDataFrame(
             tagProvider = { "app" },
-            attributesProvider = { mapOf() },
+            attributesProvider = { mapOf("id" to app.id) },
             contentProvider = app::render
         )
         appFrames[app.id] = frame

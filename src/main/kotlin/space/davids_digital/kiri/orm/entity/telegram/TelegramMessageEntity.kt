@@ -36,7 +36,7 @@ class TelegramMessageEntity {
     @Column(name = "business_connection_id")
     var businessConnectionId: String? = null
 
-    @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    @OneToOne(orphanRemoval = true, fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
     @JoinColumn(name = "forward_origin_id", referencedColumnName = "internal_id")
     var forwardOrigin: TelegramMessageOriginEntity? = null
 
