@@ -1,0 +1,60 @@
+.checkbox {
+  display: flex;
+  align-items: center;
+  margin: 5px;
+  cursor: pointer;
+  user-select: none;
+
+  &:focus {
+    outline: 3px aqua solid;
+    outline-offset: 2px;
+  }
+
+  &[data-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    .checkboxBox {
+      border-color: #666;
+    }
+
+    .label {
+      color: #aaa;
+    }
+  }
+}
+
+.checkboxBox {
+  width: 24px;
+  height: 24px;
+  border: 2px solid white;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .checkbox[data-checked="true"] & {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .checkbox:hover:not([data-disabled="true"]) & {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .checkbox:active:not([data-disabled="true"]) & {
+    background: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.checkIcon {
+  fill: white;
+  width: 16px;
+  height: 16px;
+}
+
+.label {
+  color: white;
+  font-size: 18px;
+}

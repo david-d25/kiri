@@ -1,0 +1,52 @@
+.badgeContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  background-color: rgba(231, 76, 60, 1);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border: 2px solid #1a1a1a;
+  z-index: 1;
+
+  &[data-dot="true"] {
+    width: 10px;
+    height: 10px;
+    min-width: auto;
+    padding: 0;
+  }
+
+  &[data-type="default"] {
+    background-color: rgba(108, 122, 137, 1);
+  }
+
+  &[data-type="primary"] {
+    background-color: rgba(52, 152, 219, 1);
+  }
+
+  &[data-type="success"] {
+    background-color: rgba(46, 204, 113, 1);
+  }
+
+  &[data-type="warning"] {
+    background-color: rgba(243, 156, 18, 1);
+  }
+
+  &[data-type="error"] {
+    background-color: rgba(231, 76, 60, 1);
+  }
+}

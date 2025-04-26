@@ -1,0 +1,27 @@
+.card {
+  background: rgba(40, 40, 40, 0.7);
+  border: 2px solid white;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 5px;
+  color: white;
+  width: 300px;
+}
+
+.cardHeader {
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 20px;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cardContent {
+  padding: 15px;
+}
+
+.cardFooter {
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
