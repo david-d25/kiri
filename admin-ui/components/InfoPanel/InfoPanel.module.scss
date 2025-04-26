@@ -1,0 +1,56 @@
+.icon {
+  fill: white;
+  width: 25px;
+  height: 25px;
+  display: inline-block;
+  float: left;
+  margin-right: 8px;
+}
+
+.infoPanel {
+  display: inline-block;
+  border-radius: 5px;
+  margin: 5px;
+  border-width: 2px;
+  border-style: solid;
+  padding: 10px;
+  line-height: 25px;
+  color: white;
+  text-align: start;
+
+  &[data-type='error'] {
+    background-color: rgba(81, 46, 46, 0.85);
+    border-color: rgba(231, 76, 60, 1);
+
+    .icon {
+        fill: rgba(231, 76, 60, 1);
+    }
+  }
+
+  // Not used currently
+  &[data-type='warning'] {
+    background-color: rgba(92, 59, 0, 0.85);
+    border-color: rgba(243, 156, 18, 1);
+
+    .icon {
+        fill: rgba(243, 156, 18, 1);
+    }
+  }
+
+  // Not used currently
+  .infoPanel[data-type="neutral"] {
+    background-color: rgba(60, 60, 60, 0.85);
+    border-color: rgba(120, 120, 120, 1);
+
+    // Assuming no icon
+  }
+
+  &[data-type='info'] {
+    background-color: rgba(44, 62, 80, 0.85);
+    border-color: rgb(52, 152, 219, 1);
+
+    .icon {
+        fill: rgba(52, 152, 219, 1);
+    }
+  }
+}

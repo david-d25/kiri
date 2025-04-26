@@ -1,0 +1,68 @@
+.radioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 5px;
+}
+
+.radioOption {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+
+  &:focus {
+    outline: 3px aqua solid;
+    outline-offset: 2px;
+  }
+
+  &[data-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    .radioButton {
+      border-color: #666;
+    }
+
+    .label {
+      color: #aaa;
+    }
+  }
+}
+
+.radioButton {
+  width: 24px;
+  height: 24px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  margin-right: 10px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .radioOption[data-selected="true"] & {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .radioOption:hover:not([data-disabled="true"]) & {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .radioOption:active:not([data-disabled="true"]) & {
+    background: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.radioButtonInner {
+  width: 12px;
+  height: 12px;
+  background-color: white;
+  border-radius: 50%;
+}
+
+.label {
+  color: white;
+  font-size: 18px;
+}
