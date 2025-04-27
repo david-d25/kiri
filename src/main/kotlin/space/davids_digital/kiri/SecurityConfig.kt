@@ -3,6 +3,7 @@ package space.davids_digital.kiri
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -14,8 +15,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import space.davids_digital.kiri.orm.service.UserSessionOrmService
 import space.davids_digital.kiri.rest.auth.AuthenticationFilter
 import space.davids_digital.kiri.rest.removeAuthCookies
+import space.davids_digital.kiri.service.AdminUserService
 
 @Configuration
+@EnableMethodSecurity
 class SecurityConfig {
     @Bean
     fun corsConfigurationSource(settings: Settings): CorsConfigurationSource {
@@ -36,6 +39,7 @@ class SecurityConfig {
     fun filterChain(
         security: HttpSecurity,
         userSessionOrmService: UserSessionOrmService,
+        adminUserService: AdminUserService,
         corsConfigurationSource: CorsConfigurationSource,
         settings: Settings,
     ): SecurityFilterChain {
@@ -45,11 +49,12 @@ class SecurityConfig {
             .authorizeHttpRequests {
                 it
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                    .requestMatchers("/auth/**", "/logout", "/ping").permitAll()
+                    .requestMatchers("/auth/**", "/bootstrap", "/logout", "/ping").permitAll()
+                    .requestMatchers("/admin/**").hasRole("admin")
                     .anyRequest().authenticated()
             }
             .addFilterBefore(
-                AuthenticationFilter(userSessionOrmService),
+                AuthenticationFilter(userSessionOrmService, adminUserService),
                 UsernamePasswordAuthenticationFilter::class.java
             )
             .exceptionHandling {

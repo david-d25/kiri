@@ -5,20 +5,17 @@ import org.springframework.security.core.GrantedAuthority
 import space.davids_digital.kiri.model.UserSession
 import kotlin.jvm.Throws
 
-class UserAuthentication(val session: UserSession): Authentication {
+class UserAuthentication(
+    val session: UserSession,
+    private val authorities: Collection<GrantedAuthority> = emptyList()
+) : Authentication {
     private var authenticated = true
 
-    override fun getAuthorities(): Collection<GrantedAuthority?>? {
-        return null
-    }
+    override fun getAuthorities(): Collection<GrantedAuthority> = authorities
 
-    override fun getCredentials(): Any? {
-        return null
-    }
+    override fun getCredentials(): String = session.token
 
-    override fun getDetails(): Any? {
-        return null
-    }
+    override fun getDetails(): UserSession = session
 
     override fun getPrincipal(): Long {
         return session.userId
@@ -33,7 +30,5 @@ class UserAuthentication(val session: UserSession): Authentication {
         authenticated = isAuthenticated
     }
 
-    override fun getName(): String? {
-        return null
-    }
+    override fun getName(): String = session.firstName
 }

@@ -26,7 +26,18 @@ private const val MAX_DISPLAYED_MESSAGES: Long = 12
 class TelegramApp(
     private val service: TelegramService
 ): AgentApp("telegram") {
+
     private var openedChatId: Long? = null
+
+        set(value) = runBlocking {
+            val old = field
+            if (value != null) {
+                service.declareChatOpened(value)
+            } else if (old != null) {
+                service.declareChatClosed(old)
+            }
+            field = value
+        }
 
     override fun render(): List<DataFrame.ContentPart> = dataFrameContent {
         if (openedChatId == null) {
@@ -34,10 +45,6 @@ class TelegramApp(
         } else {
             renderChat(openedChatId!!)
         }
-    }
-
-    fun getOpenedChatId(): Long? {
-        return openedChatId
     }
 
     private fun getUserDisplayName(userId: Long): String {
@@ -166,17 +173,17 @@ class TelegramApp(
             TelegramChat.Type.PRIVATE -> {
                 val id = chat.id
                 val displayName = getUserDisplayNameOrNull(id) ?: "(unknown user)"
-                line("""<$tag id="$id">$displayName</$tag>""")
+                line("""<$tag chat-id="$id">$displayName</$tag>""")
             }
             TelegramChat.Type.GROUP, TelegramChat.Type.SUPERGROUP -> {
                 val id = chat.id
                 val title = chat.title?.safe() ?: "<no_title/>"
-                line("""<$tag id="$id">$title</$tag>""")
+                line("""<$tag chat-id="$id">$title</$tag>""")
             }
             else -> {
                 val id = chat.id
                 val type = chat.type.name
-                line("""<$tag id="$id" type="$type"/>""")
+                line("""<$tag chat-id="$id" type="$type"/>""")
             }
         }
     }

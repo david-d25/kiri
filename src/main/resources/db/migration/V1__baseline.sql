@@ -5,11 +5,21 @@ create schema if not exists kiri;
 create table kiri.user_sessions (
     id                      uuid primary key,
     user_id                 bigint not null,
-    session_token_encrypted bytea not null,
-    valid_until             timestamp with time zone not null
+    token_encrypted         bytea not null,
+    valid_until             timestamp with time zone,
+    first_name              text not null,
+    last_name               text,
+    username                text,
+    photo_url               text,
+    auth_date               timestamp with time zone not null,
+    hash                    text not null
 );
 create index idx_user_sessions__user_id on kiri.user_sessions (user_id);
 create index idx_user_sessions__valid_until on kiri.user_sessions (valid_until);
+
+create table if not exists kiri.admins (
+  user_id bigint primary key
+);
 
 create table kiri.embedding_models (
     id bigint generated always as identity primary key,

@@ -20,6 +20,10 @@ import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import space.davids_digital.kiri.llm.dsl.llmToolUseResult
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
+import space.davids_digital.kiri.rest.service.AdminEventEmitterService
+import space.davids_digital.kiri.rest.dto.EngineStartedEventDto
+import space.davids_digital.kiri.rest.dto.EngineStoppedEventDto
+import space.davids_digital.kiri.rest.dto.EngineTickEventDto
 
 @Service
 class AgentEngine(
@@ -32,7 +36,8 @@ class AgentEngine(
     private val frameRenderer: FrameRenderer,
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
-    private val anthropicMessagesService: AnthropicMessagesService
+    private val anthropicMessagesService: AnthropicMessagesService,
+    private val adminEventEmitter: AdminEventEmitterService
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 5000L
@@ -50,7 +55,7 @@ class AgentEngine(
         engineScope.launch {
             eventBus.subscribe().collect(::handleEvent)
         }
-        start()
+//        start()
     }
 
     fun start() {
@@ -58,9 +63,12 @@ class AgentEngine(
             engineScope.launch {
                 try {
                     log.info("Starting Kiri engine")
+                    adminEventEmitter.push(EngineStartedEventDto(System.currentTimeMillis()))
                     while (running.get()) {
                         tick()
+                        adminEventEmitter.push(EngineTickEventDto(System.currentTimeMillis()))
                     }
+                    adminEventEmitter.push(EngineStoppedEventDto(System.currentTimeMillis()))
                 } catch (e: Exception) {
                     handleError(e)
                 }
@@ -76,7 +84,8 @@ class AgentEngine(
     fun hardStop() {
         log.info("Hard stopping agent engine")
         running.set(false)
-        engineScope.cancel() // TODO don't cancel the whole scope
+        engineScope.coroutineContext[Job]?.cancelChildren()
+        currentSleepJob?.cancel()
         log.info("Agent engine stopped")
     }
 
@@ -205,8 +214,21 @@ class AgentEngine(
         toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
     }
 
+    /**
+     * Interrupt an ongoing sleep, if any.
+     */
+    private suspend fun interruptSleep() {
+        if (currentSleepJob != null) {
+            log.debug("Interrupting agent sleep due to event")
+            currentSleepJob?.cancelAndJoin()
+        }
+    }
+
+    /**
+     * Handle incoming engine events (e.g., wake-up signals).
+     */
     private suspend fun handleEvent(event: EngineEvent) {
-        currentSleepJob?.cancelAndJoin() // TODO separate event for interruption?
+        interruptSleep()
     }
 
     private fun FrameBuffer.addSimpleText(tagName: String, text: String) {
@@ -242,7 +264,7 @@ class AgentEngine(
             currentSleepJob?.cancelAndJoin()
         }
 
-        val newSleepJob = engineScope.launch(context = Job()) {
+        val newSleepJob = engineScope.launch {
             try {
                 if (seconds == 0L) {
                     delay(Long.MAX_VALUE)

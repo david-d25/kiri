@@ -16,6 +16,7 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.agent.engine.EngineEvent
 import space.davids_digital.kiri.agent.engine.EngineEventBus
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.notification.Notification
@@ -39,6 +40,7 @@ class TelegramService(
     private val notificationManager: NotificationManager,
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
+    private val openedChats = mutableSetOf<Long>()
 
     private lateinit var bot: TelegramBot
 
@@ -47,6 +49,14 @@ class TelegramService(
         bot = TelegramBot(settings.integration.telegram.apiKey)
         bot.setUpdatesListener(::processUpdates, ::onBotException)
         updateSelfInfo()
+    }
+
+    fun declareChatOpened(chatId: Long) {
+        openedChats.add(chatId)
+    }
+
+    fun declareChatClosed(chatId: Long) {
+        openedChats.remove(chatId)
     }
 
     suspend fun getChats(): List<TelegramChat> {
@@ -122,6 +132,8 @@ class TelegramService(
         }
         if (needToSendNotification(message)) {
             sendNewMessageNotification(message)
+        } else if (!openedChats.contains(message.chat().id())) {
+            engineEventBus.fireWakeUp()
         }
     }
 
@@ -133,7 +145,10 @@ class TelegramService(
         val user = message.from()?.toModel()
         notificationManager.push(Notification(
             sentAt = ZonedDateTime.now(),
-            metadata = mapOf("app" to "telegram"),
+            metadata = mapOf(
+                "app" to "telegram",
+                "chat-id" to message.chat().id().toString()
+            ),
             content = dataFrameContent {
                 val from = user?.firstName ?: "(user)"
                 if (message.text().isNullOrBlank()) {

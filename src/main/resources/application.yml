@@ -6,6 +6,10 @@ app:
     host: http://localhost:3000
     basePath: /kiri
     cookiesDomain: localhost
+  auth:
+    telegram:
+      callbackUrl: http://localhost:8080/auth/telegram/callback
+      botUsername: dev_kirigatewaybot
   integration:
     telegram:
       apiKey: # Override in application-local.yml, see local/readme.md

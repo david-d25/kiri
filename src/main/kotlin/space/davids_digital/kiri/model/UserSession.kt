@@ -6,6 +6,12 @@ import java.util.*
 data class UserSession(
     val id: UUID,
     val userId: Long,
-    val sessionToken: String,
-    val validUntil: ZonedDateTime
+    val token: String,
+    val validUntil: ZonedDateTime?,
+    val firstName: String,
+    val lastName: String?,
+    val username: String?,
+    val photoUrl: String?,
+    val authDate: ZonedDateTime,
+    val hash: String,
 )
