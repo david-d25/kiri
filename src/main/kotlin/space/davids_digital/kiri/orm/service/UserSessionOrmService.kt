@@ -1,5 +1,7 @@
 package space.davids_digital.kiri.orm.service
 
+import io.ktor.util.decodeBase64Bytes
+import io.ktor.util.encodeBase64
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -7,8 +9,7 @@ import space.davids_digital.kiri.model.UserSession
 import space.davids_digital.kiri.orm.entity.UserSessionEntity
 import space.davids_digital.kiri.orm.repository.UserSessionRepository
 import space.davids_digital.kiri.service.CryptographyService
-import java.nio.charset.StandardCharsets
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.crypto.BadPaddingException
@@ -20,26 +21,33 @@ class UserSessionOrmService(
     private val cryptographyService: CryptographyService
 ) {
     @Transactional
-    fun deleteUserSession(sessionId: UUID) {
+    fun delete(sessionId: UUID) {
         userSessionRepository.deleteById(sessionId)
     }
 
     @Transactional
-    fun createUserSession(userId: Long, sessionToken: String, validUntil: ZonedDateTime): UserSession {
+    fun save(session: UserSession): UserSession {
         val entity = UserSessionEntity()
-        entity.userId = userId
+        entity.userId = session.userId
         try {
-            entity.sessionTokenEncrypted = cryptographyService.encrypt(sessionToken.toByteArray(StandardCharsets.UTF_8))
+            val tokenBytes = session.token.decodeBase64Bytes()
+            entity.tokenEncrypted = cryptographyService.encrypt(tokenBytes)
         } catch (e: Exception) {
             throw RuntimeException("Encryption error", e)
         }
-        entity.validUntil = validUntil
+        entity.validUntil = session.validUntil?.toOffsetDateTime()
+        entity.firstName = session.firstName
+        entity.lastName = session.lastName
+        entity.username = session.username
+        entity.photoUrl = session.photoUrl
+        entity.authDate = session.authDate.toOffsetDateTime()
+        entity.hash = session.hash
         return toModel(userSessionRepository.save(entity))
     }
 
     @Transactional(readOnly = true)
     fun getUnexpiredUserSessionsByUserId(userId: Long): Collection<UserSession> {
-        return userSessionRepository.findAllByUserIdAndValidUntilAfter(userId, ZonedDateTime.now())
+        return userSessionRepository.findAllByUserIdAndValidUntilAfterOrNull(userId, OffsetDateTime.now())
             .map { toModel(it) }
             .toList()
     }
@@ -47,7 +55,7 @@ class UserSessionOrmService(
     @Transactional
     @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
     fun cleanUpOldTokens() {
-        userSessionRepository.deleteByValidUntilBefore(ZonedDateTime.now())
+        userSessionRepository.deleteByValidUntilBefore(OffsetDateTime.now())
     }
 
     private fun toModel(entity: UserSessionEntity): UserSession {
@@ -55,8 +63,14 @@ class UserSessionOrmService(
             UserSession(
                 entity.id,
                 entity.userId,
-                String(cryptographyService.decrypt(entity.sessionTokenEncrypted), StandardCharsets.UTF_8),
-                entity.validUntil
+                cryptographyService.decrypt(entity.tokenEncrypted).encodeBase64(),
+                entity.validUntil?.toZonedDateTime(),
+                entity.firstName,
+                entity.lastName,
+                entity.username,
+                entity.photoUrl,
+                entity.authDate.toZonedDateTime(),
+                entity.hash
             )
         } catch (_: IllegalBlockSizeException) {
             throw UserSessionDecryptException("Couldn't decrypt access tokens")

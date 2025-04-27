@@ -160,6 +160,8 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 
+// TODO use MapStruct
+
 fun ChatFullInfo.toModel() = TelegramChat(
     id = id(),
     type = type().toModel(),

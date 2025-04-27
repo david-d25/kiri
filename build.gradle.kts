@@ -1,4 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.Copy
+import org.gradle.kotlin.dsl.named
 
 version = "0.0.1"
 
@@ -23,17 +26,17 @@ allOpen {
     annotation("org.springframework.context.annotation.Configuration")
 }
 
-tasks.withType<KotlinCompile> {
+tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         freeCompilerArgs.add("-Xjsr305=strict")
     }
 }
 
-tasks.test {
+tasks.named<Test>("test") {
     useJUnitPlatform()
 }
 
-tasks.processResources {
+tasks.named<Copy>("processResources") {
     filesMatching("*") {
         expand(project.properties)
     }

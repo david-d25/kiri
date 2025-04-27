@@ -7,6 +7,8 @@ import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.GenericFilterBean
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import space.davids_digital.kiri.service.AdminUserService
 import space.davids_digital.kiri.model.UserSession
 import space.davids_digital.kiri.orm.service.UserSessionOrmService
 import space.davids_digital.kiri.orm.service.UserSessionOrmService.UserSessionDecryptException
@@ -14,7 +16,10 @@ import space.davids_digital.kiri.rest.CookieName
 import space.davids_digital.kiri.rest.exception.InvalidSessionStateException
 import java.io.IOException
 
-class AuthenticationFilter(private val userSessionOrmService: UserSessionOrmService): GenericFilterBean() {
+class AuthenticationFilter(
+    private val userSessionOrmService: UserSessionOrmService,
+    private val adminUserService: AdminUserService
+) : GenericFilterBean() {
     @Throws(IOException::class, ServletException::class)
     override fun doFilter(
         request: ServletRequest,
@@ -27,7 +32,9 @@ class AuthenticationFilter(private val userSessionOrmService: UserSessionOrmServ
         if (userId != null && sessionToken != null) {
             val session = getValidatedSession(userId, sessionToken)
             if (session != null) {
-                SecurityContextHolder.getContext().authentication = UserAuthentication(session)
+                val isAdmin = adminUserService.isAdmin(session.userId)
+                val authorities = if (isAdmin) listOf(SimpleGrantedAuthority("admin")) else emptyList()
+                SecurityContextHolder.getContext().authentication = UserAuthentication(session, authorities)
             }
         }
         filterChain.doFilter(request, response)
@@ -49,6 +56,6 @@ class AuthenticationFilter(private val userSessionOrmService: UserSessionOrmServ
         } catch (e: UserSessionDecryptException) {
             throw InvalidSessionStateException(e.message)
         }
-        return sessions.firstOrNull { it.sessionToken == sessionToken }
+        return sessions.firstOrNull { it.token == sessionToken }
     }
 }
