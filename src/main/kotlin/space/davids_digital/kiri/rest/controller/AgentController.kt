@@ -18,7 +18,7 @@ import space.davids_digital.kiri.rest.service.AdminEventEmitterService
  */
 @RestController
 @RequestMapping("/admin/agent")
-class AdminAgentController(
+class AgentController(
     private val engine: AgentEngine,
     private val frameBuffer: FrameBuffer,
     private val frameDtoMapper: FrameDtoMapper,
@@ -36,11 +36,11 @@ class AdminAgentController(
         engine.softStop()
     }
 
-    @GetMapping("/buffer")
+    @GetMapping("/framebuffer/snapshot")
     @PreAuthorize("hasRole('admin')")
     fun snapshot(): List<FrameDto> = frameBuffer.map { frameDtoMapper.map(it) }
 
-    @GetMapping("/events", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    @GetMapping("/events/subscribe", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     @PreAuthorize("hasRole('admin')")
     fun eventStream(): SseEmitter {
         val emitter = SseEmitter(0)

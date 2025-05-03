@@ -1,0 +1,18 @@
+.header {
+  height: 50px;
+  background-color: #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+
+  > .left {
+    margin-left: 15px;
+  }
+
+  > .center {
+
+  }
+
+  > .right {
+    margin-right: 15px;
+  }
+}

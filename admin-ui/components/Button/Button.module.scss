@@ -33,4 +33,17 @@
     border-bottom-width: 2px;
     transform: translateY(2px);
   }
+
+  &.lightweight {
+    border: none;
+    font-size: 18px;
+    padding: 5px 15px;
+    outline-width: 1px;
+    border-radius: 8px;
+
+    &:active {
+      transform: none;
+      margin-bottom: 5px;
+    }
+  }
 }
