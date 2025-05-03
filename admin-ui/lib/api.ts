@@ -1,4 +1,5 @@
 import axios, {AxiosRequestConfig} from "axios";
+import Router from "next/router";
 
 const apiBase = process.env.NEXT_PUBLIC__API_BASE_URL!
 
@@ -9,6 +10,22 @@ const instance = axios.create({
     },
     withCredentials: true
 });
+
+// Redirecting to `/login` if there's authorization problem
+instance.interceptors.response.use(
+    response => {
+        return response;
+    },
+    error => {
+        if (error.response && (error.response.status === 403 || error.response.status === 401)) {
+            if (!window.location.pathname.startsWith('/login')) {
+                const returnUrl = window.location.pathname + window.location.search;
+                Router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`).then(() => {});
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 export const api = {
     get: <T>(url: string, config?: AxiosRequestConfig) =>
