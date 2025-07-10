@@ -1,3 +1,7 @@
 package space.davids_digital.kiri.agent.engine
 
-class EngineEvent
+open class EngineEvent
+
+class TickEvent : EngineEvent()
+
+class WakeUpRequestEvent : EngineEvent()

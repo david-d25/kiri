@@ -1,6 +1,7 @@
 import s from './Header.module.scss';
 import Logo from "../Logo/Logo";
 import HeaderUserCard from "../HeaderUserCard/HeaderUserCard";
+import HeaderNavButton from "../HeaderNavButton/HeaderNavButton";
 
 export default function Header() {
     return (
@@ -9,7 +10,8 @@ export default function Header() {
                 <Logo/>
             </div>
             <div className={s.center}>
-
+                <HeaderNavButton url="/engine">Engine</HeaderNavButton>
+                <HeaderNavButton url="/memory">Memory</HeaderNavButton>
             </div>
             <div className={s.right}>
                 <HeaderUserCard />

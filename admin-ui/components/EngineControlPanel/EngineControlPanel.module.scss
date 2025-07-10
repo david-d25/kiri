@@ -1,0 +1,20 @@
+.root {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  grid-gap: 15px;
+  padding: 15px;
+
+  .statusBar {
+    grid-row: 1;
+    grid-column: 1 / span 2;
+  }
+
+  .fixedFramesView {
+    grid-row: 2;
+  }
+
+  .rollingFramesView {
+    grid-row: 2;
+  }
+}

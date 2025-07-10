@@ -1,6 +1,6 @@
 import {useBootstrap} from "../../hooks/bootstrap";
 import {withSSRQueries} from "../../lib/withSSRQueries";
-import {fetchBootstrap} from "../../lib/bootstrapApi";
+import {fetchBootstrap} from "../../lib/api/bootstrapApi";
 
 import styles from './login.module.scss'
 import Loading from "../../components/Loading/Loading";
