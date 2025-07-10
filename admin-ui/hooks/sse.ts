@@ -1,6 +1,6 @@
 import {QueryKey, useQueryClient} from "@tanstack/react-query";
 import {useEffect} from "react";
-import {api} from "../lib/api";
+import {api} from "../lib/api/api";
 
 export function useSse<T>(
     key: QueryKey,

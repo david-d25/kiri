@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service
 import space.davids_digital.kiri.Settings
 import space.davids_digital.kiri.agent.engine.EngineEvent
 import space.davids_digital.kiri.agent.engine.EngineEventBus
+import space.davids_digital.kiri.agent.engine.WakeUpRequestEvent
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.notification.Notification
 import space.davids_digital.kiri.agent.notification.NotificationManager
@@ -133,7 +134,7 @@ class TelegramService(
         if (needToSendNotification(message)) {
             sendNewMessageNotification(message)
         } else if (!openedChats.contains(message.chat().id())) {
-            engineEventBus.fireWakeUp()
+            engineEventBus.tryPublish(WakeUpRequestEvent())
         }
     }
 

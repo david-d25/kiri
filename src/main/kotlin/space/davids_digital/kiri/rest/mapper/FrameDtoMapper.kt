@@ -18,12 +18,9 @@ class FrameDtoMapper {
     fun map(frame: Frame): FrameDto = when (frame) {
         is DataFrame -> mapDataFrame(frame)
         is ToolCallFrame -> mapToolCallFrame(frame)
-        else -> throw IllegalArgumentException("Unsupported frame type: ${frame::class}")
     }
 
-    // ------------------------------------------------------------------------- helpers ------
-
-    private fun mapDataFrame(frame: DataFrame): DataFrameDto {
+    fun mapDataFrame(frame: DataFrame): DataFrameDto {
         val parts = frame.renderContent().map { part ->
             when (part) {
                 is DataFrame.Text -> ContentPartDto.Text(part.text)

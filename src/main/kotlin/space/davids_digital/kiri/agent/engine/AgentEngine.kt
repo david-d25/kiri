@@ -2,6 +2,9 @@ package space.davids_digital.kiri.agent.engine
 
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppManager
@@ -12,6 +15,7 @@ import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
+import space.davids_digital.kiri.integration.google.GoogleGenAiMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
@@ -20,10 +24,6 @@ import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import space.davids_digital.kiri.llm.dsl.llmToolUseResult
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
-import space.davids_digital.kiri.rest.service.AdminEventEmitterService
-import space.davids_digital.kiri.rest.dto.EngineStartedEventDto
-import space.davids_digital.kiri.rest.dto.EngineStoppedEventDto
-import space.davids_digital.kiri.rest.dto.EngineTickEventDto
 
 @Service
 class AgentEngine(
@@ -37,7 +37,7 @@ class AgentEngine(
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
     private val anthropicMessagesService: AnthropicMessagesService,
-    private val adminEventEmitter: AdminEventEmitterService
+    private val googleGenAiMessagesService: GoogleGenAiMessagesService
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 5000L
@@ -45,9 +45,13 @@ class AgentEngine(
 
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    private val running = AtomicBoolean(false)
-    private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val runContinuously = AtomicBoolean(false)
+    private val engineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var currentSleepJob: Job? = null
+
+    private val mutableState = MutableStateFlow(EngineState.STOPPED)
+
+    val state: StateFlow<EngineState> = mutableState.asStateFlow()
 
     @PostConstruct
     private fun init() {
@@ -55,20 +59,17 @@ class AgentEngine(
         engineScope.launch {
             eventBus.subscribe().collect(::handleEvent)
         }
-//        start()
+        start()
     }
 
     fun start() {
-        if (running.compareAndSet(false, true)) {
+        if (runContinuously.compareAndSet(false, true)) {
             engineScope.launch {
                 try {
                     log.info("Starting Kiri engine")
-                    adminEventEmitter.push(EngineStartedEventDto(System.currentTimeMillis()))
-                    while (running.get()) {
+                    while (runContinuously.get()) {
                         tick()
-                        adminEventEmitter.push(EngineTickEventDto(System.currentTimeMillis()))
                     }
-                    adminEventEmitter.push(EngineStoppedEventDto(System.currentTimeMillis()))
                 } catch (e: Exception) {
                     handleError(e)
                 }
@@ -78,12 +79,12 @@ class AgentEngine(
 
     fun softStop() {
         log.info("Soft stopping agent engine")
-        running.set(false)
+        runContinuously.set(false)
     }
 
     fun hardStop() {
         log.info("Hard stopping agent engine")
-        running.set(false)
+        runContinuously.set(false)
         engineScope.coroutineContext[Job]?.cancelChildren()
         currentSleepJob?.cancel()
         log.info("Agent engine stopped")
@@ -100,12 +101,14 @@ class AgentEngine(
         val request = buildRequest()
         val response = anthropicMessagesService.request(request)
         handleResponse(response)
+        eventBus.publish(TickEvent())
     }
 
     private fun buildRequest(): LlmMessageRequest {
         val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
         return llmMessageRequest {
             model = "claude-3-7-sonnet-latest"
+//            model = "gemini-2.0-flash"
             system = systemText ?: ""
             maxOutputTokens = 2048
             temperature = 1.0
@@ -196,13 +199,13 @@ class AgentEngine(
     private suspend fun handleError(e: Exception) {
         log.error("Engine error", e)
         frames.addSimpleText("system", "Engine error: ${e.message}")
-        if (running.get()) {
+        if (runContinuously.get()) {
             log.info("Will try to recover in $RECOVERY_TIMEOUT_MS ms")
         }
         // Try to recover
         delay(RECOVERY_TIMEOUT_MS)
-        if (running.get()) {
-            running.set(false)
+        if (runContinuously.get()) {
+            runContinuously.set(false)
             log.info("Recovering engine")
             frames.addSimpleText("system", "Attempting to recover...")
             start()
@@ -228,7 +231,9 @@ class AgentEngine(
      * Handle incoming engine events (e.g., wake-up signals).
      */
     private suspend fun handleEvent(event: EngineEvent) {
-        interruptSleep()
+        if (event is WakeUpRequestEvent) {
+            interruptSleep()
+        }
     }
 
     private fun FrameBuffer.addSimpleText(tagName: String, text: String) {

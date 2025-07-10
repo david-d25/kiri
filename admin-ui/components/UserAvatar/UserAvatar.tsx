@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import styles from './UserAvatar.module.scss';
-import {withRootClassName} from "../../lib/withRootClassName";
 
 type Props = {
     src?: string;
@@ -11,7 +10,7 @@ type Props = {
     textColor?: string;
 };
 
-function UserAvatar(
+export default function UserAvatar(
     {
         src,
         alt = 'User avatar',
@@ -87,5 +86,3 @@ function UserAvatar(
         </div>
     );
 }
-
-export default withRootClassName(UserAvatar);

@@ -17,7 +17,7 @@ instance.interceptors.response.use(
         return response;
     },
     error => {
-        if (error.response && (error.response.status === 403 || error.response.status === 401)) {
+        if (error.response && error.response.status === 401 && typeof window !== 'undefined') {
             if (!window.location.pathname.startsWith('/login')) {
                 const returnUrl = window.location.pathname + window.location.search;
                 Router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`).then(() => {});
