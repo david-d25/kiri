@@ -1,6 +1,5 @@
 import React from "react";
 import styles from './SkeletonLoader.module.scss';
-import {withRootClassName} from "../../lib/withRootClassName";
 
 type SkeletonType = 'text' | 'circle' | 'rectangle' | 'card';
 
@@ -13,7 +12,7 @@ type Props = {
     count?: number;
 };
 
-function SkeletonLoader(
+export default function SkeletonLoader(
     {
         type = 'text',
         width,
@@ -75,5 +74,3 @@ function SkeletonLoader(
 
     return <>{renderSkeletons()}</>;
 }
-
-export default withRootClassName(SkeletonLoader);

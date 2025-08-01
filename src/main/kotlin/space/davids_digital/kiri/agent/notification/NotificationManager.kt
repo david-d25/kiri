@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.engine.EngineEvent
 import space.davids_digital.kiri.agent.engine.EngineEventBus
+import space.davids_digital.kiri.agent.engine.WakeUpRequestEvent
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.asPrettyString
 
@@ -20,7 +21,7 @@ class NotificationManager(
             attributes.putAll(notification.metadata)
         }
         runBlocking {
-            eventBus.publish(EngineEvent()) // TODO
+            eventBus.publish(WakeUpRequestEvent()) // TODO
         }
     }
 }

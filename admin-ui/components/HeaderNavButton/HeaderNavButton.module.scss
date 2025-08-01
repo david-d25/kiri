@@ -1,0 +1,14 @@
+.headerNavButton {
+  gap: 10px;
+  color: white;
+  line-height: 50px;
+  padding: 0 20px;
+  display: inline-block;
+  height: 50px;
+
+  &.active {
+    background-color: #414141;
+    border-bottom: 4px solid white;
+    box-sizing: border-box;
+  }
+}

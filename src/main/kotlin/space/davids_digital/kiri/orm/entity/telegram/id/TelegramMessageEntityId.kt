@@ -9,5 +9,5 @@ data class TelegramMessageEntityId(
     @Column(name = "chat_id")
     var chatId: Long = 0,
     @Column(name = "message_id")
-    var messageId: Long = 0
+    var messageId: Int = 0
 ) : Serializable

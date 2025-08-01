@@ -7,7 +7,7 @@ import {useRouter} from "next/router";
 import {useLogout} from "../../hooks/logout";
 
 export default function HeaderUserCard() {
-    const { data, error, isLoading, isFetching } = useBootstrap();
+    const { data, error, isLoading } = useBootstrap();
     const router = useRouter();
     const logoutMutation = useLogout();
 
@@ -17,7 +17,7 @@ export default function HeaderUserCard() {
         )
     }
 
-    if (isLoading || isFetching) {
+    if (isLoading) {
         return (
             <div className={s.userCard}>
                 <SkeletonLoader width={40} className={s.skeletonLoader} type="circle"/>
