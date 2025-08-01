@@ -17,12 +17,11 @@ class EngineEventBus {
         eventFlow.emit(event)
     }
 
+    fun tryPublish(event: EngineEvent): Boolean {
+        return eventFlow.tryEmit(event)
+    }
+
     fun subscribe(): Flow<EngineEvent> {
         return eventFlow.asSharedFlow()
     }
-    /**
-     * Non-blocking wake-up signal: interrupts agent sleep if sleeping.
-     * Returns true if the event was emitted, false otherwise.
-     */
-    fun fireWakeUp(): Boolean = eventFlow.tryEmit(EngineEvent())
 }

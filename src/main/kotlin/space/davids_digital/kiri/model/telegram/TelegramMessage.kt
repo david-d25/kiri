@@ -3,13 +3,14 @@ package space.davids_digital.kiri.model.telegram
 import java.time.ZonedDateTime
 
 data class TelegramMessage (
+    override val chatId: Long,
     /**
      * Unique message identifier inside this chat.
      * In specific instances (e.g., message containing a video sent to a big chat), the server might automatically
      * schedule a message instead of sending it immediately. In such cases, this field will be 0 and the relevant
      * message will be unusable until it is actually sent.
      */
-    val messageId: Long,
+    override val messageId: Int,
     /**
      * Unique identifier of a message thread to which the message belongs; for supergroups only.
      */
@@ -46,10 +47,6 @@ data class TelegramMessage (
      * any potential bot chat which might share the same identifier.
      */
     val businessConnectionId: String? = null,
-    /**
-     * Chat the message belongs to.
-     */
-    val chatId: Long,
     /**
      * Information about the original message for forwarded messages.
      */
@@ -365,4 +362,4 @@ data class TelegramMessage (
      * Inline keyboard attached to the message. `login_url` buttons are represented as ordinary `url` buttons.
      */
     val replyMarkup: TelegramInlineKeyboardMarkup? = null,
-): TelegramMaybeInaccessibleMessage()
+): TelegramMaybeInaccessibleMessage(chatId, messageId)

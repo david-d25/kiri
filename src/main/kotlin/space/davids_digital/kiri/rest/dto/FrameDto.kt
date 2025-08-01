@@ -8,10 +8,6 @@ sealed interface FrameDto {
     val type: String
 }
 
-// --------------------------------------------------------------------------------------------
-// Data‑frame DTO ------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------
-
 data class DataFrameDto(
     val tag: String,
     val attributes: Map<String, String>,
@@ -24,10 +20,6 @@ sealed interface ContentPartDto {
     data class Text(val text: String) : ContentPartDto
     data class Image(val base64: String, val imageType: String) : ContentPartDto
 }
-
-// --------------------------------------------------------------------------------------------
-// Tool‑call DTO ------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------
 
 data class ToolCallFrameDto(
     val toolUse: ToolUseDto,
@@ -47,8 +39,6 @@ data class ToolResultDto(
     val name: String,
     val output: ToolOutputDto,
 )
-
-// Input/output sealed hierarchies -------------------------------------------------------------
 
 sealed interface ToolInputDto {
     data class Text(val text: String) : ToolInputDto

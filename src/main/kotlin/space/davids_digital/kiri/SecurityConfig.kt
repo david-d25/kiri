@@ -45,12 +45,12 @@ class SecurityConfig {
     ): SecurityFilterChain {
         security
             .cors { it.configurationSource(corsConfigurationSource) }
-            .csrf { it.disable() }
+            .csrf { it.disable() } // TODO prepare frontend and enable
             .authorizeHttpRequests {
                 it
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/auth/**", "/bootstrap", "/logout", "/ping").permitAll()
-                    .requestMatchers("/admin/**").hasRole("admin")
+                    .requestMatchers("/admin/**").hasAuthority("admin")
                     .anyRequest().authenticated()
             }
             .addFilterBefore(
@@ -59,9 +59,6 @@ class SecurityConfig {
             )
             .exceptionHandling {
                 it.authenticationEntryPoint { _, response, _ ->
-                    handleAuthException(response, settings.frontend.cookiesDomain)
-                }
-                it.accessDeniedHandler { _, response, _ ->
                     handleAuthException(response, settings.frontend.cookiesDomain)
                 }
             }

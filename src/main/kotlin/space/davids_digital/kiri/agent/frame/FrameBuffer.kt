@@ -1,22 +1,23 @@
 package space.davids_digital.kiri.agent.frame
 
 import org.springframework.stereotype.Component
-import space.davids_digital.kiri.rest.dto.FrameAddedEventDto
-import space.davids_digital.kiri.rest.service.AdminEventEmitterService
 import java.util.concurrent.ConcurrentLinkedQueue
 
 @Component
-class FrameBuffer(
-    private val adminEventEmitter: AdminEventEmitterService
-) : Iterable<Frame> {
+class FrameBuffer : Iterable<Frame> {
     private val fixedFrames = ConcurrentLinkedQueue<DataFrame>()
     private val rollingFrames = ConcurrentLinkedQueue<Frame>()
+    private var sequenceCounter: Long = 0
 
     var hardLimit = 16
 
     val onlyFixed get() = fixedFrames.iterator()
     val onlyRolling get() = rollingFrames.iterator()
     val size get() = fixedFrames.size + rollingFrames.size
+
+    fun observe() {
+        TODO()
+    }
 
     fun clearAll() {
         clearOnlyFixed()
@@ -31,11 +32,8 @@ class FrameBuffer(
         rollingFrames.clear()
     }
 
-    private var sequenceCounter: Long = 0
-
     fun addRolling(frame: Frame) {
         rollingFrames.add(frame)
-        publishFrameAdded()
         trim()
     }
 
@@ -45,7 +43,6 @@ class FrameBuffer(
 
     fun addFixed(frame: DataFrame) {
         fixedFrames.add(frame)
-        publishFrameAdded()
         trim()
     }
 
@@ -76,10 +73,5 @@ class FrameBuffer(
         while (rollingFrames.isNotEmpty() && fixedFrames.size + rollingFrames.size > hardLimit) {
             rollingFrames.poll()
         }
-    }
-
-    private fun publishFrameAdded() {
-        val event = FrameAddedEventDto(sequenceCounter++, System.currentTimeMillis())
-        adminEventEmitter.push(event)
     }
 }
