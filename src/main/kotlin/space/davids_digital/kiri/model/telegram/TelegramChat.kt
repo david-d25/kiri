@@ -70,7 +70,6 @@ data class TelegramChat (
         PRIVATE,
         GROUP,
         SUPERGROUP,
-        CHANNEL,
-        UNKNOWN
+        CHANNEL
     }
 }

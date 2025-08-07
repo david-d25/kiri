@@ -5,6 +5,7 @@ import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.flywaydb.core.Flyway
 import org.springframework.boot.SpringBootConfiguration
@@ -14,7 +15,6 @@ import org.springframework.boot.web.servlet.server.ServletWebServerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
-import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.servlet.config.annotation.EnableWebMvc
@@ -23,7 +23,7 @@ import javax.sql.DataSource
 @EnableWebMvc
 @EnableScheduling
 @ComponentScan("space.davids_digital.kiri")
-@EnableConfigurationProperties(Settings::class)
+@EnableConfigurationProperties(AppProperties::class)
 @SpringBootConfiguration
 class SpringConfig {
     @Bean
@@ -45,13 +45,14 @@ class SpringConfig {
         return Flyway.configure()
             .dataSource(dataSource)
             .baselineOnMigrate(true)
-            .schemas("kiri", "telegram")
-            .defaultSchema("kiri")
+            .schemas("main", "telegram")
+            .defaultSchema("main")
             .load().also {
                 it.migrate()
             }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     @Bean
     fun httpClient() = HttpClient(CIO) {
         install(ContentNegotiation) {

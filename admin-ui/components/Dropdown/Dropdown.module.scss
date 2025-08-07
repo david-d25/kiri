@@ -1,7 +1,8 @@
 .dropdownContainer {
   position: relative;
-  width: 250px;
-  margin: 5px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
 
   &[data-disabled="true"] {
     opacity: 0.5;
@@ -19,8 +20,14 @@
   }
 }
 
+.label {
+  color: white;
+  font-size: 16px;
+}
+
 .dropdownHeader {
   display: flex;
+  gap: 5px;
   align-items: center;
   justify-content: space-between;
   padding: 10px 15px;
@@ -37,7 +44,7 @@
   }
 
   &:focus {
-    outline: 3px aqua solid;
+    outline: 1px aqua solid;
     outline-offset: 2px;
   }
 

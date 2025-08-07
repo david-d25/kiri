@@ -1,12 +1,11 @@
 .button {
-  font-size: 24px;
+  font-size: 18px;
   border: 2px solid white;
   border-bottom-width: 4px;
   background: rgba(255, 255, 255, .1);
   color: white;
-  margin: 5px;
   cursor: pointer;
-  padding: 10px 30px;
+  padding: 6px 15px;
   border-radius: 10px;
 
   &:hover {
@@ -16,12 +15,12 @@
   &:active {
     background: rgba(255, 255, 255, .4);
     border-bottom-width: 2px;
-    margin-bottom: 7px;
+    margin-bottom: 2px;
     transform: translateY(2px);
   }
 
   &:focus {
-    outline: 3px aqua solid;
+    outline: 1px aqua solid;
     outline-offset: 2px;
   }
 
@@ -43,7 +42,7 @@
 
     &:active {
       transform: none;
-      margin-bottom: 5px;
+      margin-bottom: 0px;
     }
   }
 }

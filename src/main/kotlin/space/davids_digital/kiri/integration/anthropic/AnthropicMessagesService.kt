@@ -31,7 +31,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.llm.LlmImageType
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Message
@@ -48,10 +48,10 @@ import java.util.Base64
 import kotlin.jvm.optionals.getOrNull
 
 @Service
-class AnthropicMessagesService(settings: Settings) : LlmService {
+class AnthropicMessagesService(appProperties: AppProperties) : LlmService {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    private val anthropic = AnthropicOkHttpClient.builder().apiKey(settings.integration.anthropic.apiKey).build()
+    private val anthropic = AnthropicOkHttpClient.builder().apiKey(appProperties.integration.anthropic.apiKey).build()
 
     override suspend fun request(request: LlmMessageRequest): LlmMessageResponse {
         val params = buildParams(request)

@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import styles from './UserAvatar.module.scss';
+import {classnames} from "@/lib/classnames";
 
 type Props = {
-    src?: string;
+    src?: string | null;
     alt?: string;
     size?: 'small' | 'medium' | 'large';
     name?: string;
     backgroundColor?: string;
     textColor?: string;
+    className?: string;
 };
 
 export default function UserAvatar(
@@ -17,7 +19,8 @@ export default function UserAvatar(
         size = 'medium',
         name,
         backgroundColor,
-        textColor = 'white'
+        textColor = 'white',
+        className
     }: Props
 ) {
     const [imageError, setImageError] = useState(false);
@@ -65,7 +68,7 @@ export default function UserAvatar(
 
     return (
         <div
-            className={`${styles.avatar} ${styles[size]}`}
+            className={classnames(styles.avatar, styles[size], className)}
             style={{ backgroundColor: !hasImage ? getBackgroundColor() : undefined }}
         >
             {hasImage ? (

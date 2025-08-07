@@ -1,19 +1,23 @@
-version: '3.8'
-
 services:
   backend:
     build:
-      context: ..
-      dockerfile: deployment/Dockerfile.backend
+      context: backend
     container_name: kiri-backend
+    restart: unless-stopped
     ports:
       - '8080:8080'
+    environment:
+      - CONFIG_PATH=/app/config/application.yml
+    volumes:
+      - ${CONFIG_PATH}:/app/config/application.yml
 
   frontend:
     build:
-      context: ..
-      dockerfile: deployment/Dockerfile.frontend
+      context: frontend
+      args:
+        API_BASE_URL: ${API_BASE_URL}
     container_name: kiri-frontend
+    restart: unless-stopped
     ports:
       - '3000:3000'
     depends_on:

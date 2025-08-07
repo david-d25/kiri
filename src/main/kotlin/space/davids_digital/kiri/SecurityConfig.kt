@@ -21,9 +21,9 @@ import space.davids_digital.kiri.service.AdminUserService
 @EnableMethodSecurity
 class SecurityConfig {
     @Bean
-    fun corsConfigurationSource(settings: Settings): CorsConfigurationSource {
+    fun corsConfigurationSource(appProperties: AppProperties): CorsConfigurationSource {
         val corsConfiguration = CorsConfiguration()
-        corsConfiguration.allowedOrigins = listOf(settings.frontend.host)
+        corsConfiguration.allowedOrigins = listOf(appProperties.frontend.host)
         corsConfiguration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
         corsConfiguration.allowedHeaders = listOf("*")
         corsConfiguration.allowCredentials = true
@@ -41,7 +41,7 @@ class SecurityConfig {
         userSessionOrmService: UserSessionOrmService,
         adminUserService: AdminUserService,
         corsConfigurationSource: CorsConfigurationSource,
-        settings: Settings,
+        appProperties: AppProperties,
     ): SecurityFilterChain {
         security
             .cors { it.configurationSource(corsConfigurationSource) }
@@ -50,8 +50,7 @@ class SecurityConfig {
                 it
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/auth/**", "/bootstrap", "/logout", "/ping").permitAll()
-                    .requestMatchers("/admin/**").hasAuthority("admin")
-                    .anyRequest().authenticated()
+                    .anyRequest().hasAuthority("admin")
             }
             .addFilterBefore(
                 AuthenticationFilter(userSessionOrmService, adminUserService),
@@ -59,7 +58,7 @@ class SecurityConfig {
             )
             .exceptionHandling {
                 it.authenticationEntryPoint { _, response, _ ->
-                    handleAuthException(response, settings.frontend.cookiesDomain)
+                    handleAuthException(response, appProperties.frontend.cookiesDomain)
                 }
             }
             .logout { it.disable() }

@@ -11,7 +11,7 @@ class TelegramChatEntity {
 
     @Column(name = "type", nullable = false)
     @Enumerated(EnumType.STRING)
-    var type: Type = Type.UNKNOWN
+    var type: Type = Type.PRIVATE
 
     @Column(name = "title")
     var title: String? = null
@@ -38,7 +38,7 @@ class TelegramChatEntity {
     @Column(name = "invite_link")
     var inviteLink: String? = null
 
-    @ManyToOne
+    @ManyToOne(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinColumns(
         JoinColumn(name = "pinned_message_chat_id", referencedColumnName = "chat_id"),
         JoinColumn(name = "pinned_message_message_id", referencedColumnName = "message_id")
@@ -66,6 +66,6 @@ class TelegramChatEntity {
     var location: TelegramChatLocationEntity? = null
 
     enum class Type {
-        PRIVATE, GROUP, SUPERGROUP, CHANNEL, UNKNOWN
+        PRIVATE, GROUP, SUPERGROUP, CHANNEL
     }
 }

@@ -1,62 +1,3 @@
-create extension if not exists vector;
-
-create schema if not exists kiri;
-
-create table kiri.user_sessions (
-    id                      uuid primary key,
-    user_id                 bigint not null,
-    token_encrypted         bytea not null,
-    valid_until             timestamp with time zone,
-    first_name              text not null,
-    last_name               text,
-    username                text,
-    photo_url               text,
-    auth_date               timestamp with time zone not null,
-    hash                    text not null
-);
-create index idx_user_sessions__user_id on kiri.user_sessions (user_id);
-create index idx_user_sessions__valid_until on kiri.user_sessions (valid_until);
-
-create table if not exists kiri.admins (
-  user_id bigint primary key
-);
-
-create table kiri.embedding_models (
-    id bigint generated always as identity primary key,
-    name text not null,
-    vendor text not null,
-    dimensionality int not null
-);
-create unique index idx_embedding_models__name__vendor__dimensionality
-    on kiri.embedding_models(name, vendor, dimensionality);
-
-create table kiri.memory_points (
-    id uuid primary key,
-    value text not null unique,
-    created_at timestamp with time zone not null
-);
-create index idx_memory_points__created_at on kiri.memory_points(created_at);
-
-create table kiri.memory_keys (
-    id uuid primary key,
-    key_text text not null unique,
-    embedding_model_id bigint references kiri.embedding_models(id) on update cascade,
-    embedding vector(2000)
-);
-create index idx_memory_keys__embedding on kiri.memory_keys using hnsw (embedding vector_cosine_ops);
-
-create table kiri.memory_links (
-    memory_key_id uuid references memory_keys(id),
-    memory_point_id uuid references memory_points(id),
-    weight float not null,
-    last_updated_at timestamp with time zone not null,
-    primary key (memory_key_id, memory_point_id)
-);
-create index idx_memory_links__memory_key_id on kiri.memory_links(memory_key_id);
-create index idx_memory_links__memory_point_id on kiri.memory_links(memory_point_id);
-create index idx_memory_links__weight on kiri.memory_links(weight);
-create index idx_memory_links__last_updated_at on kiri.memory_links(last_updated_at);
-
 create schema if not exists telegram;
 
 create table telegram.chat_photos (
@@ -1007,3 +948,62 @@ create table telegram.chats (
         references telegram.messages(chat_id, message_id)
         on update cascade
 );
+
+create extension if not exists vector;
+
+create schema if not exists main;
+
+create table main.user_sessions (
+    id                      uuid primary key,
+    user_id                 bigint not null,
+    token_encrypted         bytea not null,
+    valid_until             timestamp with time zone,
+    first_name              text not null,
+    last_name               text,
+    username                text,
+    photo_url               text,
+    auth_date               timestamp with time zone not null,
+    hash                    text not null
+);
+create index idx_user_sessions__user_id on main.user_sessions (user_id);
+create index idx_user_sessions__valid_until on main.user_sessions (valid_until);
+
+create table if not exists main.admins (
+  user_id bigint primary key
+);
+
+create table main.embedding_models (
+    id bigint generated always as identity primary key,
+    name text not null,
+    vendor text not null,
+    dimensionality int not null
+);
+create unique index idx_embedding_models__name__vendor__dimensionality
+    on main.embedding_models(name, vendor, dimensionality);
+
+create table main.memory_points (
+    id uuid primary key,
+    value text not null unique,
+    created_at timestamp with time zone not null
+);
+create index idx_memory_points__created_at on main.memory_points(created_at);
+
+create table main.memory_keys (
+    id uuid primary key,
+    key_text text not null unique,
+    embedding_model_id bigint references main.embedding_models(id) on update cascade,
+    embedding vector(2000)
+);
+create index idx_memory_keys__embedding on main.memory_keys using hnsw (embedding vector_cosine_ops);
+
+create table main.memory_links (
+    memory_key_id uuid references memory_keys(id),
+    memory_point_id uuid references memory_points(id),
+    weight float not null,
+    last_updated_at timestamp with time zone not null,
+    primary key (memory_key_id, memory_point_id)
+);
+create index idx_memory_links__memory_key_id on main.memory_links(memory_key_id);
+create index idx_memory_links__memory_point_id on main.memory_links(memory_point_id);
+create index idx_memory_links__weight on main.memory_links(weight);
+create index idx_memory_links__last_updated_at on main.memory_links(last_updated_at);

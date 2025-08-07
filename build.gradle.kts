@@ -3,7 +3,9 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
 
-version = "0.0.1"
+allprojects {
+    version = "0.0.1"
+}
 
 plugins {
     id("org.springframework.boot") version "3.4.2"
@@ -63,7 +65,7 @@ dependencies {
     runtimeOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.10")
     implementation("com.google.code.gson:gson:2.12.1")
-    implementation("org.apache.commons:commons-text:1.13.0")
+    implementation("org.apache.commons:commons-text:1.14.0")
     implementation("jakarta.servlet:jakarta.servlet-api:6.1.0")
     implementation("org.postgresql:postgresql")
     implementation("com.fasterxml.jackson.core:jackson-databind")
@@ -98,6 +100,9 @@ dependencies {
     implementation("org.springframework:spring-context:6.2.3")
     implementation("org.springframework:spring-web:6.2.3")
     implementation("org.springframework:spring-webmvc:6.2.3")
+
+    // To support controllers with suspend functions
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
     // PostgreSQL vectors support
     implementation("org.hibernate.orm:hibernate-vector:6.6.13.Final")

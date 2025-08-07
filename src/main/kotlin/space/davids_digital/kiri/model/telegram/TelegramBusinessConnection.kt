@@ -22,7 +22,7 @@ data class TelegramBusinessConnection (
      * 	difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a 64-bit integer or
      * 	double-precision float type are safe for storing this identifier.
      */
-    val userChatId: Int,
+    val userChatId: Long,
 
     /**
      * Date the connection was established

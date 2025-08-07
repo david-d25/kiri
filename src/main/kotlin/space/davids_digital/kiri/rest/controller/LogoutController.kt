@@ -7,7 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.orm.service.UserSessionOrmService
 import space.davids_digital.kiri.rest.CookieName
 import space.davids_digital.kiri.rest.auth.UserAuthentication
@@ -15,7 +15,7 @@ import space.davids_digital.kiri.rest.auth.UserAuthentication
 @RestController
 @RequestMapping("/logout")
 class LogoutController(
-    private val settings: Settings,
+    private val appProperties: AppProperties,
     private val userSessionOrmService: UserSessionOrmService,
 ) {
     @PostMapping
@@ -30,7 +30,7 @@ class LogoutController(
             .secure(true)
             .path("/")
             .sameSite("Strict")
-            .domain(settings.frontend.cookiesDomain)
+            .domain(appProperties.frontend.cookiesDomain)
             .maxAge(0)
             .build()
         val authCookie = ResponseCookie.from(CookieName.AUTH_TOKEN, "")
@@ -38,7 +38,7 @@ class LogoutController(
             .secure(true)
             .path("/")
             .sameSite("Strict")
-            .domain(settings.frontend.cookiesDomain)
+            .domain(appProperties.frontend.cookiesDomain)
             .maxAge(0)
             .build()
 

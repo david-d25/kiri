@@ -1,33 +1,48 @@
 import React, { useState, useRef, useEffect } from "react";
 import styles from './Dropdown.module.scss';
 import ArrowDownIcon from './icons/arrow-down.svg';
+import {classnames} from "@/lib/classnames";
 
-type DropdownOption = {
+type DropdownOption<T> = {
     label: string;
-    value: string;
+    value: T;
 };
 
-type Props = {
-    options: DropdownOption[];
-    selectedValue: string;
+type Props<T> = {
+    options: DropdownOption<T>[];
+    selectedValue: T;
     placeholder?: string;
     disabled?: boolean;
-    onChange: (value: string) => void;
+    onChange: (value: T) => void;
+    className?: string;
+    label?: string;
 };
 
-export default function Dropdown(
+export default function Dropdown<T>(
     {
         options,
         selectedValue,
         placeholder = 'Select an option',
         disabled = false,
-        onChange
-    }: Props
+        onChange,
+        className,
+        label
+    }: Props<T>
 ) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const selectedOption = options.find(option => option.value === selectedValue);
+    const selectedOption = options.find(option => {
+        if (typeof selectedValue === 'object'
+            && selectedValue !== null
+            && typeof option.value === 'object'
+            && option.value !== null
+        ) {
+            // Deep equality check for objects
+            return JSON.stringify(option.value) === JSON.stringify(selectedValue);
+        }
+        return option.value === selectedValue;
+    });
 
     const toggleDropdown = () => {
         if (!disabled) {
@@ -35,7 +50,7 @@ export default function Dropdown(
         }
     };
 
-    const handleOptionClick = (value: string) => {
+    const handleOptionClick = (value: T) => {
         onChange(value);
         setIsOpen(false);
     };
@@ -88,10 +103,11 @@ export default function Dropdown(
 
     return (
         <div
-            className={styles.dropdownContainer}
+            className={classnames(styles.dropdownContainer, className)}
             ref={dropdownRef}
             data-disabled={disabled}
         >
+            {label && <label className={styles.label}>{label}</label>}
             <div
                 className={styles.dropdownHeader}
                 onClick={toggleDropdown}
@@ -107,9 +123,9 @@ export default function Dropdown(
 
             {isOpen && (
                 <div className={styles.dropdownOptions}>
-                    {options.map((option) => (
+                    {options.map((option, index) => (
                         <div
-                            key={option.value}
+                            key={index}
                             className={styles.dropdownOption}
                             data-selected={option.value === selectedValue}
                             onClick={() => handleOptionClick(option.value)}

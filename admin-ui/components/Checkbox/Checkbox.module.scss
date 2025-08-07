@@ -1,13 +1,16 @@
 .checkbox {
   display: flex;
   align-items: center;
-  margin: 5px;
+  margin: 5px 0;
   cursor: pointer;
   user-select: none;
+  outline: none;
 
   &:focus {
-    outline: 3px aqua solid;
-    outline-offset: 2px;
+    .checkboxBox {
+      outline: 2px aqua solid;
+      outline-offset: 2px;
+    }
   }
 
   &[data-disabled="true"] {

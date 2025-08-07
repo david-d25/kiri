@@ -6,9 +6,11 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramInaccessibleMessage
 import space.davids_digital.kiri.model.telegram.TelegramMessage
+import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageEntityId
 import space.davids_digital.kiri.orm.mapping.telegram.TelegramMessageEntityMapper
 import space.davids_digital.kiri.orm.repository.telegram.TelegramInaccessibleMessageRepository
 import space.davids_digital.kiri.orm.repository.telegram.TelegramMessageRepository
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class TelegramMessageOrmService(
@@ -61,11 +63,16 @@ class TelegramMessageOrmService(
         return mapper.toModel(repo.save(mapper.toEntity(message)!!))!!
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     fun getChatMessages(chatId: Long, limit: Long): List<TelegramMessage> {
-        return repo.getAllByIdChatId(
+        return repo.findAllByIdChatId(
             chatId,
             PageRequest.of(0, limit.toInt(), Sort.by(Sort.Direction.DESC, "date"))
         ).mapNotNull(mapper::toModel)
+    }
+
+    @Transactional(readOnly = true)
+    fun find(chatId: Long, messageId: Int): TelegramMessage? {
+        return mapper.toModel(repo.findById(TelegramMessageEntityId(chatId, messageId)).getOrNull())
     }
 }

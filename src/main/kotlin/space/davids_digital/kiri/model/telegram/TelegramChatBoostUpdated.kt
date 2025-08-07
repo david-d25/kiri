@@ -12,5 +12,5 @@ data class TelegramChatBoostUpdated(
     /**
      * Information about the chat boost
      */
-    val boost: TelegramChatBoost? = null,
+    val boost: TelegramChatBoost,
 )

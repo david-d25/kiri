@@ -40,10 +40,16 @@ class TelegramApp(
         }
 
     override fun render(): List<DataFrame.ContentPart> = dataFrameContent {
-        if (openedChatId == null) {
+        val chatId = openedChatId
+        if (chatId == null) {
             renderChatList()
         } else {
-            renderChat(openedChatId!!)
+            val chat = runBlocking { service.getChat(chatId) }
+            if (chat != null) {
+                renderChat(chat)
+            } else {
+                line("<error>Chat with id $chatId does not exist</error>")
+            }
         }
     }
 
@@ -188,12 +194,10 @@ class TelegramApp(
         }
     }
 
-    private fun FrameContentBuilder.renderChat(id: Long) {
-        val chat: TelegramChat
+    private fun FrameContentBuilder.renderChat(chat: TelegramChat) {
         val messages: List<TelegramMessage>
         runBlocking {
-            chat = service.getChat(id)
-            messages = service.getChatMessages(id, MAX_DISPLAYED_MESSAGES).reversed()
+            messages = service.getChatMessages(chat.id, MAX_DISPLAYED_MESSAGES).reversed()
         }
         val unsafeTitle = chat.title ?: (chat.firstName + (chat.lastName?.let { " $it" } ?: ""))
         val title = unsafeTitle.safe()

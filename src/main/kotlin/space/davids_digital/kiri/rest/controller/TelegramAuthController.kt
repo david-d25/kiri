@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.integration.telegram.TelegramAuthService
 import space.davids_digital.kiri.rest.CookieName
 import space.davids_digital.kiri.service.UserSessionService
@@ -20,7 +20,7 @@ import java.time.ZonedDateTime
 @RestController
 @RequestMapping("/auth/telegram")
 class TelegramAuthController(
-    private val settings: Settings,
+    private val appProperties: AppProperties,
     private val userSessionService: UserSessionService,
     private val telegramAuthService: TelegramAuthService
 ) {
@@ -57,13 +57,13 @@ class TelegramAuthController(
             .secure(true)
             .path("/")
             .sameSite("Strict")
-            .domain(settings.frontend.cookiesDomain)
+            .domain(appProperties.frontend.cookiesDomain)
         val authCookie = ResponseCookie.from(CookieName.AUTH_TOKEN, session.token)
             .httpOnly(true)
             .secure(true)
             .path("/")
             .sameSite("Strict")
-            .domain(settings.frontend.cookiesDomain)
+            .domain(appProperties.frontend.cookiesDomain)
 
         if (session.validUntil != null) {
             val maxAge = session.validUntil.minusSeconds(ZonedDateTime.now().toEpochSecond()).toEpochSecond()
@@ -71,7 +71,7 @@ class TelegramAuthController(
             authCookie.maxAge(maxAge)
         }
 
-        val redirectTo = settings.frontend.host.removeSuffix("/") + "/" + settings.frontend.basePath.removePrefix("/")
+        val redirectTo = appProperties.frontend.host.removeSuffix("/") + "/" + appProperties.frontend.basePath.removePrefix("/")
 
         return ResponseEntity.status(HttpStatus.FOUND)
             .header(HttpHeaders.SET_COOKIE, userIdCookie.build().toString())

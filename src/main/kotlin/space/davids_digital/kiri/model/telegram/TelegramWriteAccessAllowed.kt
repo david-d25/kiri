@@ -5,7 +5,7 @@ package space.davids_digital.kiri.model.telegram
  * attachment menu, launching a Web App from a link, or accepting an explicit request from a Web App sent by the method
  * [requestWriteAccess](https://core.telegram.org/bots/webapps#initializing-mini-apps).
  *
- * When the `requestWriteAccess` method becomes available in the Kiri codebase as a service, please replace the API
+ * When the `requestWriteAccess` method becomes available in the codebase as a service, please replace the API
  * link in this KDoc with the corresponding service call.
  */
 data class TelegramWriteAccessAllowed(

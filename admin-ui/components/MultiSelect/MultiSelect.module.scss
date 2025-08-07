@@ -1,0 +1,116 @@
+.root {
+  position: relative;
+}
+
+.body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px;
+  background: oklch(1 0 90 / 0.1);
+  border-radius: 10px;
+  border: 2px solid white;
+  box-sizing: border-box;
+  height: 45px;
+  min-width: 250px;
+}
+
+.disabled {
+  pointer-events: none;
+}
+
+.showsSuggestions .body {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.disabled .body {
+  background: #404040;
+  border-color: #505050;
+}
+
+.label {
+  color: white;
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+.disabled .label {
+  color: #808080;
+}
+
+.item {
+  padding: 5px 10px;
+  background: oklch(1 0 90 / 0.2);
+  border-radius: 5px;
+  user-select: none;
+
+  &.removeConfirmation {
+    background: #c0c0c0;
+    color: #404040;
+  }
+
+  .closeButton {
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border: none;
+    color: inherit;
+    padding: 0;
+    vertical-align: middle;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 0 0 0 5px;
+
+    &:hover {
+      background: #909090;
+    }
+
+    &:active {
+      background: #a0a0a0;
+    }
+  }
+
+  .closeButtonIcon {}
+}
+
+.disabled .item {
+  background: #505050;
+  color: #a0a0a0;
+}
+
+.textInput {
+  border: none;
+  background: transparent;
+  color: inherit;
+  min-width: 200px;
+  outline: none;
+  font-size: inherit;
+  flex: 1;
+}
+
+.suggestions {
+  background: #505050;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - 2px); // to cover the border
+  border: 2px solid white;
+  border-top: none;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  z-index: 1;
+}
+
+.suggestionItem {
+  padding: 10px;
+  white-space: nowrap;
+
+  &:hover {
+    background: #606060;
+  }
+
+  &.focused {
+    background: #707070;
+  }
+}

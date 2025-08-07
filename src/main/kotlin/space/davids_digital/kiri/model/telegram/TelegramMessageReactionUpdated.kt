@@ -14,7 +14,7 @@ data class TelegramMessageReactionUpdated(
     /**
      * Unique identifier of the message inside the chat
      */
-    val messageId: Long,
+    val messageId: Int,
 
     /**
      * The user that changed the reaction, if the user isn't anonymous
