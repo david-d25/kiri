@@ -67,7 +67,7 @@ sealed class TelegramMessageOrigin() {
         /**
          * Unique message identifier inside the chat.
          */
-        val messageId: Long,
+        val messageId: Int,
         /**
          * Signature of the original post author.
          */

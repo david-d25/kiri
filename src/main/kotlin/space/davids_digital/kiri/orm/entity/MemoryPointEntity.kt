@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 import java.util.*
 
 @Entity
-@Table(schema = "kiri", name = "memory_points")
+@Table(schema = "main", name = "memory_points")
 class MemoryPointEntity {
     @Id
     @Column(name = "id")

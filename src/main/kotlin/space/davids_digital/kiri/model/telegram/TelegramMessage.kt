@@ -14,7 +14,7 @@ data class TelegramMessage (
     /**
      * Unique identifier of a message thread to which the message belongs; for supergroups only.
      */
-    val messageThreadId: Long? = null,
+    val messageThreadId: Int? = null,
     /**
      * Sender of the message; may be empty for messages sent to channels.
      * For backward compatibility, if the message was sent on behalf of a chat,

@@ -23,7 +23,7 @@ data class TelegramMessageEntity(
     /**
      * For [Type.TEXT_MENTION] only, the mentioned user.
      */
-    val user: TelegramUser? = null,
+    val userId: Long? = null,
     /**
      * For [Type.PRE] only, the programming language of the entity text.
      */

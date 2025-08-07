@@ -1,0 +1,15 @@
+.root {
+  display: flex;
+  flex-direction: row;
+}
+
+.header {
+  flex: 0;
+}
+
+.main {
+  flex: 1;
+  max-height: 100vh;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}

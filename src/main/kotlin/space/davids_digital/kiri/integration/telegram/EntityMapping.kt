@@ -2,11 +2,18 @@ package space.davids_digital.kiri.integration.telegram
 
 import com.pengrad.telegrambot.model.Animation
 import com.pengrad.telegrambot.model.Audio
+import com.pengrad.telegrambot.model.CallbackQuery
+import com.pengrad.telegrambot.model.Chat
 import com.pengrad.telegrambot.model.ChatFullInfo
+import com.pengrad.telegrambot.model.ChatInviteLink
+import com.pengrad.telegrambot.model.ChatJoinRequest
 import com.pengrad.telegrambot.model.ChatLocation
+import com.pengrad.telegrambot.model.ChatMember
+import com.pengrad.telegrambot.model.ChatMemberUpdated
 import com.pengrad.telegrambot.model.ChatPermissions
 import com.pengrad.telegrambot.model.ChatPhoto
 import com.pengrad.telegrambot.model.ChatShared
+import com.pengrad.telegrambot.model.ChosenInlineResult
 import com.pengrad.telegrambot.model.Contact
 import com.pengrad.telegrambot.model.Dice
 import com.pengrad.telegrambot.model.Document
@@ -18,6 +25,7 @@ import com.pengrad.telegrambot.model.ForumTopicReopened
 import com.pengrad.telegrambot.model.Game
 import com.pengrad.telegrambot.model.GeneralForumTopicHidden
 import com.pengrad.telegrambot.model.GeneralForumTopicUnhidden
+import com.pengrad.telegrambot.model.InlineQuery
 import com.pengrad.telegrambot.model.Invoice
 import com.pengrad.telegrambot.model.LinkPreviewOptions
 import com.pengrad.telegrambot.model.Location
@@ -25,17 +33,23 @@ import com.pengrad.telegrambot.model.MaskPosition
 import com.pengrad.telegrambot.model.Message
 import com.pengrad.telegrambot.model.MessageAutoDeleteTimerChanged
 import com.pengrad.telegrambot.model.MessageEntity
+import com.pengrad.telegrambot.model.MessageReactionCountUpdated
+import com.pengrad.telegrambot.model.MessageReactionUpdated
 import com.pengrad.telegrambot.model.OrderInfo
 import com.pengrad.telegrambot.model.PhotoSize
 import com.pengrad.telegrambot.model.Poll
+import com.pengrad.telegrambot.model.PollAnswer
 import com.pengrad.telegrambot.model.PollOption
+import com.pengrad.telegrambot.model.PreCheckoutQuery
 import com.pengrad.telegrambot.model.ProximityAlertTriggered
 import com.pengrad.telegrambot.model.RefundedPayment
 import com.pengrad.telegrambot.model.ShippingAddress
+import com.pengrad.telegrambot.model.ShippingQuery
 import com.pengrad.telegrambot.model.Sticker
 import com.pengrad.telegrambot.model.Story
 import com.pengrad.telegrambot.model.SuccessfulPayment
 import com.pengrad.telegrambot.model.TextQuote
+import com.pengrad.telegrambot.model.Update
 import com.pengrad.telegrambot.model.User
 import com.pengrad.telegrambot.model.UsersShared
 import com.pengrad.telegrambot.model.Venue
@@ -48,6 +62,8 @@ import com.pengrad.telegrambot.model.Voice
 import com.pengrad.telegrambot.model.WebAppData
 import com.pengrad.telegrambot.model.WebAppInfo
 import com.pengrad.telegrambot.model.WriteAccessAllowed
+import com.pengrad.telegrambot.model.business.BusinessConnection
+import com.pengrad.telegrambot.model.business.BusinessMessageDeleted
 import com.pengrad.telegrambot.model.chatbackground.BackgroundFill
 import com.pengrad.telegrambot.model.chatbackground.BackgroundFillFreeformGradient
 import com.pengrad.telegrambot.model.chatbackground.BackgroundFillGradient
@@ -58,7 +74,14 @@ import com.pengrad.telegrambot.model.chatbackground.BackgroundTypeFill
 import com.pengrad.telegrambot.model.chatbackground.BackgroundTypePattern
 import com.pengrad.telegrambot.model.chatbackground.BackgroundTypeWallpaper
 import com.pengrad.telegrambot.model.chatbackground.ChatBackground
+import com.pengrad.telegrambot.model.chatboost.ChatBoost
 import com.pengrad.telegrambot.model.chatboost.ChatBoostAdded
+import com.pengrad.telegrambot.model.chatboost.ChatBoostRemoved
+import com.pengrad.telegrambot.model.chatboost.ChatBoostUpdated
+import com.pengrad.telegrambot.model.chatboost.source.ChatBoostSource
+import com.pengrad.telegrambot.model.chatboost.source.ChatBoostSourceGiftCode
+import com.pengrad.telegrambot.model.chatboost.source.ChatBoostSourceGiveaway
+import com.pengrad.telegrambot.model.chatboost.source.ChatBoostSourcePremium
 import com.pengrad.telegrambot.model.giveaway.Giveaway
 import com.pengrad.telegrambot.model.giveaway.GiveawayCompleted
 import com.pengrad.telegrambot.model.giveaway.GiveawayCreated
@@ -74,7 +97,13 @@ import com.pengrad.telegrambot.model.paidmedia.PaidMedia
 import com.pengrad.telegrambot.model.paidmedia.PaidMediaInfo
 import com.pengrad.telegrambot.model.paidmedia.PaidMediaPhoto
 import com.pengrad.telegrambot.model.paidmedia.PaidMediaPreview
+import com.pengrad.telegrambot.model.paidmedia.PaidMediaPurchased
 import com.pengrad.telegrambot.model.paidmedia.PaidMediaVideo
+import com.pengrad.telegrambot.model.reaction.ReactionCount
+import com.pengrad.telegrambot.model.reaction.ReactionType
+import com.pengrad.telegrambot.model.reaction.ReactionTypeCustomEmoji
+import com.pengrad.telegrambot.model.reaction.ReactionTypeEmoji
+import com.pengrad.telegrambot.model.reaction.ReactionTypePaid
 import com.pengrad.telegrambot.model.request.CallbackGame
 import com.pengrad.telegrambot.model.request.CopyTextButton
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton
@@ -90,13 +119,26 @@ import space.davids_digital.kiri.model.telegram.TelegramAnimation
 import space.davids_digital.kiri.model.telegram.TelegramAudio
 import space.davids_digital.kiri.model.telegram.TelegramBackgroundFill
 import space.davids_digital.kiri.model.telegram.TelegramBackgroundType
+import space.davids_digital.kiri.model.telegram.TelegramBusinessBotRights
+import space.davids_digital.kiri.model.telegram.TelegramBusinessConnection
+import space.davids_digital.kiri.model.telegram.TelegramBusinessMessagesDeleted
 import space.davids_digital.kiri.model.telegram.TelegramCallbackGame
+import space.davids_digital.kiri.model.telegram.TelegramCallbackQuery
 import space.davids_digital.kiri.model.telegram.TelegramChat
+import space.davids_digital.kiri.model.telegram.TelegramChatBoost
 import space.davids_digital.kiri.model.telegram.TelegramChatBoostAdded
+import space.davids_digital.kiri.model.telegram.TelegramChatBoostRemoved
+import space.davids_digital.kiri.model.telegram.TelegramChatBoostSource
+import space.davids_digital.kiri.model.telegram.TelegramChatBoostUpdated
+import space.davids_digital.kiri.model.telegram.TelegramChatInviteLink
+import space.davids_digital.kiri.model.telegram.TelegramChatJoinRequest
 import space.davids_digital.kiri.model.telegram.TelegramChatLocation
+import space.davids_digital.kiri.model.telegram.TelegramChatMember
+import space.davids_digital.kiri.model.telegram.TelegramChatMemberUpdated
 import space.davids_digital.kiri.model.telegram.TelegramChatPermissions
 import space.davids_digital.kiri.model.telegram.TelegramChatPhoto
 import space.davids_digital.kiri.model.telegram.TelegramChatShared
+import space.davids_digital.kiri.model.telegram.TelegramChosenInlineResult
 import space.davids_digital.kiri.model.telegram.TelegramContact
 import space.davids_digital.kiri.model.telegram.TelegramCopyTextButton
 import space.davids_digital.kiri.model.telegram.TelegramDice
@@ -118,31 +160,43 @@ import space.davids_digital.kiri.model.telegram.TelegramGiveawayWinners
 import space.davids_digital.kiri.model.telegram.TelegramInaccessibleMessage
 import space.davids_digital.kiri.model.telegram.TelegramInlineKeyboardButton
 import space.davids_digital.kiri.model.telegram.TelegramInlineKeyboardMarkup
+import space.davids_digital.kiri.model.telegram.TelegramInlineQuery
 import space.davids_digital.kiri.model.telegram.TelegramInvoice
 import space.davids_digital.kiri.model.telegram.TelegramLinkPreviewOptions
 import space.davids_digital.kiri.model.telegram.TelegramLocation
+import space.davids_digital.kiri.model.telegram.TelegramLoginUrl
 import space.davids_digital.kiri.model.telegram.TelegramMaskPosition
 import space.davids_digital.kiri.model.telegram.TelegramMaybeInaccessibleMessage
 import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.model.telegram.TelegramMessageAutoDeleteTimerChanged
 import space.davids_digital.kiri.model.telegram.TelegramMessageEntity
 import space.davids_digital.kiri.model.telegram.TelegramMessageOrigin
+import space.davids_digital.kiri.model.telegram.TelegramMessageReactionCountUpdated
+import space.davids_digital.kiri.model.telegram.TelegramMessageReactionUpdated
 import space.davids_digital.kiri.model.telegram.TelegramOrderInfo
 import space.davids_digital.kiri.model.telegram.TelegramPaidMedia
 import space.davids_digital.kiri.model.telegram.TelegramPaidMediaInfo
+import space.davids_digital.kiri.model.telegram.TelegramPaidMediaPurchased
 import space.davids_digital.kiri.model.telegram.TelegramPassportData
 import space.davids_digital.kiri.model.telegram.TelegramPassportFile
 import space.davids_digital.kiri.model.telegram.TelegramPhotoSize
 import space.davids_digital.kiri.model.telegram.TelegramPoll
+import space.davids_digital.kiri.model.telegram.TelegramPollAnswer
 import space.davids_digital.kiri.model.telegram.TelegramPollOption
+import space.davids_digital.kiri.model.telegram.TelegramPreCheckoutQuery
 import space.davids_digital.kiri.model.telegram.TelegramProximityAlertTriggered
+import space.davids_digital.kiri.model.telegram.TelegramReactionCount
+import space.davids_digital.kiri.model.telegram.TelegramReactionType
 import space.davids_digital.kiri.model.telegram.TelegramRefundedPayment
 import space.davids_digital.kiri.model.telegram.TelegramSharedUser
 import space.davids_digital.kiri.model.telegram.TelegramShippingAddress
+import space.davids_digital.kiri.model.telegram.TelegramShippingQuery
 import space.davids_digital.kiri.model.telegram.TelegramSticker
 import space.davids_digital.kiri.model.telegram.TelegramStory
 import space.davids_digital.kiri.model.telegram.TelegramSuccessfulPayment
+import space.davids_digital.kiri.model.telegram.TelegramSwitchInlineQueryChosenChat
 import space.davids_digital.kiri.model.telegram.TelegramTextQuote
+import space.davids_digital.kiri.model.telegram.TelegramUpdate
 import space.davids_digital.kiri.model.telegram.TelegramUser
 import space.davids_digital.kiri.model.telegram.TelegramUsersShared
 import space.davids_digital.kiri.model.telegram.TelegramVenue
@@ -161,6 +215,266 @@ import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 
 // TODO use MapStruct
+
+fun Update.toModel() = TelegramUpdate(
+    updateId = updateId(),
+    message = message()?.toModel(),
+    editedMessage = editedMessage()?.toModel(),
+    channelPost = channelPost()?.toModel(),
+    editedChannelPost = editedChannelPost()?.toModel(),
+    businessConnection = businessConnection()?.toModel(),
+    businessMessage = businessMessage()?.toModel(),
+    editedBusinessMessage = editedBusinessMessage()?.toModel(),
+    deletedBusinessMessages = deletedBusinessMessages()?.toModel(),
+    messageReaction = messageReaction()?.toModel(),
+    messageReactionCount = messageReactionCount()?.toModel(),
+    inlineQuery = inlineQuery()?.toModel(),
+    chosenInlineResult = chosenInlineResult()?.toModel(),
+    callbackQuery = callbackQuery()?.toModel(),
+    shippingQuery = shippingQuery()?.toModel(),
+    preCheckoutQuery = preCheckoutQuery()?.toModel(),
+    purchasedPaidMedia = purchasedPaidMedia()?.toModel(),
+    poll = poll()?.toModel(),
+    pollAnswer = pollAnswer()?.toModel(),
+    myChatMember = myChatMember()?.toModel(),
+    chatMember = chatMember()?.toModel(),
+    chatJoinRequest = chatJoinRequest()?.toModel(),
+    chatBoost = chatBoost()?.toModel(),
+    removedChatBoost = removedChatBoost()?.toModel(),
+)
+
+fun ChatBoostRemoved.toModel() = TelegramChatBoostRemoved(
+    chat = chat().toModel(),
+    boostId = boostId(),
+    removeDate = removeDate().toZonedDateTime(),
+    source = source().toModel()
+)
+
+fun ChatBoostSource.toModel() = when (this) {
+    // "user" is protected, so we can't access it directly
+    is ChatBoostSourcePremium -> TelegramChatBoostSource.Premium(user = TelegramUser(0, false, "unknown"))
+    // "user" is protected, so we can't access it directly
+    is ChatBoostSourceGiftCode -> TelegramChatBoostSource.GiftCode(user = TelegramUser(0, false, "unknown"))
+    is ChatBoostSourceGiveaway -> TelegramChatBoostSource.Giveaway(
+        giveawayMessageId = giveawayMessageId(),
+        user = TelegramUser(0, false, "unknown"), // "user" is protected, so we can't access it directly
+        prizeStarCount = prizeStarCount(),
+        isUnclaimed = isUnclaimed == true,
+    )
+    else -> throw IllegalArgumentException("Unknown ChatBoostSource type: ${this::class.java.name}")
+}
+
+fun ChatBoostUpdated.toModel() = TelegramChatBoostUpdated(
+    chat = chat().toModel(),
+    boost = boost().toModel(),
+)
+
+fun ChatBoost.toModel() = TelegramChatBoost(
+    boostId = boostId(),
+    addDate = addDate().toZonedDateTime(),
+    expirationDate = expirationDate().toZonedDateTime(),
+    source = source().toModel()
+)
+
+fun ChatJoinRequest.toModel() = TelegramChatJoinRequest(
+    chat = chat().toModel(),
+    from = from().toModel(),
+    userChatId = userChatId(),
+    date = date().toZonedDateTime(),
+    bio = bio(),
+    inviteLink = inviteLink()?.toModel(),
+)
+
+fun ChatInviteLink.toModel() = TelegramChatInviteLink(
+    inviteLink = inviteLink(),
+    creator = creator().toModel(),
+    createsJoinRequest = createsJoinRequest() == true,
+    isPrimary = isPrimary == true,
+    isRevoked = isRevoked == true,
+    name = name(),
+    expireDate = expireDate()?.toZonedDateTime(),
+    memberLimit = memberLimit(),
+    pendingJoinRequestCount = pendingJoinRequestCount()
+)
+
+fun ChatMemberUpdated.toModel() = TelegramChatMemberUpdated(
+    chat = chat().toModel(),
+    from = from().toModel(),
+    date = date().toZonedDateTime(),
+    oldChatMember = oldChatMember().toModel(),
+    newChatMember = newChatMember().toModel(),
+    inviteLink = inviteLink()?.toModel(),
+    viaJoinRequest = viaJoinRequest() == true,
+    viaChatFolderInviteLink = viaChatFolderInviteLink() == true,
+)
+
+fun ChatMember.toModel() = when (status()) {
+    ChatMember.Status.administrator -> TelegramChatMember.Administrator(
+        user = user().toModel(),
+        canBeEdited = canBeEdited() == true,
+        isAnonymous = isAnonymous == true,
+        customTitle = customTitle(),
+        canManageChat = canManageChat() == true,
+        canDeleteMessages = canDeleteMessages() == true,
+        canManageVideoChats = canManageVideoChats() == true,
+        canRestrictMembers = canRestrictMembers() == true,
+        canPromoteMembers = canPromoteMembers() == true,
+        canChangeInfo = canChangeInfo() == true,
+        canInviteUsers = canInviteUsers() == true,
+        canPostStories = canPostStories() == true,
+        canEditStories = canEditStories() == true,
+        canDeleteStories = canDeleteStories() == true,
+        canPostMessages = canPostMessages() == true,
+        canEditMessages = canEditMessages() == true,
+        canPinMessages = canPinMessages() == true,
+        canManageTopics = canManageTopics() == true
+    )
+    ChatMember.Status.member -> TelegramChatMember.Member(user().toModel(), untilDate()?.toZonedDateTime())
+    ChatMember.Status.restricted -> TelegramChatMember.Restricted(
+        user = user().toModel(),
+        isMember = isMember == true,
+        untilDate = untilDate()?.toZonedDateTime(),
+        canSendMessages = canSendMessages() == true,
+        canSendAudios = canSendAudios() == true,
+        canSendDocuments = canSendDocuments() == true,
+        canSendPhotos = canSendPhotos() == true,
+        canSendVideos = canSendVideos() == true,
+        canSendVideoNotes = canSendVideoNotes() == true,
+        canSendVoiceNotes = canSendVoiceNotes() == true,
+        canSendPolls = canSendPolls() == true,
+        canSendOtherMessages = canSendOtherMessages() == true,
+        canAddWebPagePreviews = canAddWebPagePreviews() == true,
+        canChangeInfo = canChangeInfo() == true,
+        canInviteUsers = canInviteUsers() == true,
+        canPinMessages = canPinMessages() == true,
+        canManageTopics = canManageTopics() == true
+    )
+    ChatMember.Status.creator -> TelegramChatMember.Owner(
+        user = user().toModel(),
+        isAnonymous = isAnonymous == true,
+        customTitle = customTitle()
+    )
+    ChatMember.Status.left -> TelegramChatMember.Left(user().toModel())
+    ChatMember.Status.kicked -> TelegramChatMember.Banned(user().toModel(), untilDate()?.toZonedDateTime())
+}
+
+fun PollAnswer.toModel() = TelegramPollAnswer(
+    pollId = pollId(),
+    voterChat = voterChat()?.toModel(),
+    user = user()?.toModel(),
+    optionIds = optionIds()?.toList() ?: emptyList()
+)
+
+fun PaidMediaPurchased.toModel() = TelegramPaidMediaPurchased(
+    user = from.toModel(),
+    paidMediaPayload = paidMediaPayload
+)
+
+fun PreCheckoutQuery.toModel() = TelegramPreCheckoutQuery(
+    id = id(),
+    from = from().toModel(),
+    currency = currency(),
+    totalAmount = totalAmount(),
+    invoicePayload = invoicePayload(),
+    shippingOptionId = shippingOptionId(),
+    orderInfo = orderInfo()?.toModel(),
+)
+
+fun ShippingQuery.toModel() = TelegramShippingQuery(
+    id = id(),
+    from = from().toModel(),
+    invoicePayload = invoicePayload(),
+    shippingAddress = shippingAddress()?.toModel(),
+)
+
+fun ChosenInlineResult.toModel() = TelegramChosenInlineResult(
+    resultId = resultId(),
+    from = from().toModel(),
+    location = location()?.toModel(),
+    inlineMessageId = inlineMessageId(),
+    query = query(),
+)
+
+fun InlineQuery.toModel() = TelegramInlineQuery(
+    id = id(),
+    from = from().toModel(),
+    query = query(),
+    offset = offset(),
+    chatType = chatType(),
+    location = location()?.toModel(),
+)
+
+fun MessageReactionCountUpdated.toModel() = TelegramMessageReactionCountUpdated(
+    chat = chat().toModel(),
+    messageId = messageId(),
+    date = date().toZonedDateTime(),
+    reactions = reactions()?.map { it.toModel() } ?: emptyList()
+)
+
+fun ReactionCount.toModel() = TelegramReactionCount(
+    type = type().toModel(),
+    totalCount = totalCount()
+)
+
+fun MessageReactionUpdated.toModel() = TelegramMessageReactionUpdated(
+    chat = chat().toModel(),
+    messageId = messageId(),
+    user = user().toModel(),
+    actorChat = actorChat()?.toModel(),
+    date = date().toZonedDateTime(),
+    oldReaction = oldReaction()?.map { it.toModel() } ?: emptyList(),
+    newReaction = newReaction()?.map { it.toModel() } ?: emptyList(),
+)
+
+fun ReactionType.toModel() = when (this) {
+    is ReactionTypeCustomEmoji -> TelegramReactionType.CustomEmoji(customEmojiId())
+    is ReactionTypeEmoji -> TelegramReactionType.Emoji(emoji())
+    is ReactionTypePaid -> TelegramReactionType.Paid()
+    else -> throw IllegalArgumentException("Unknown ReactionType: ${this::class.java.name}")
+}
+
+fun BusinessMessageDeleted.toModel() = TelegramBusinessMessagesDeleted(
+    businessConnectionId = businessConnectionId(),
+    chat = chat().toModel(),
+    messageIds = messageIds().toList()
+)
+
+fun Chat.toModel() = TelegramChat(
+    id = id(),
+    type = type().toModel(),
+    title = title(),
+    username = username(),
+    firstName = firstName(),
+    lastName = lastName(),
+)
+
+fun Chat.Type.toModel() = when (this) {
+    Chat.Type.Private -> TelegramChat.Type.PRIVATE
+    Chat.Type.supergroup -> TelegramChat.Type.SUPERGROUP
+    Chat.Type.group -> TelegramChat.Type.GROUP
+    Chat.Type.channel -> TelegramChat.Type.CHANNEL
+}
+
+fun BusinessConnection.toModel() = TelegramBusinessConnection(
+    id = id(),
+    user = user().toModel(),
+    userChatId = userChatId(),
+    date = date().toZonedDateTime(),
+    rights = TelegramBusinessBotRights(
+        canReply = canReply() == true,
+    ),
+    enabled = isEnabled == true,
+)
+
+fun CallbackQuery.toModel() = TelegramCallbackQuery(
+    id = id(),
+    from = from().toModel(),
+    message = maybeInaccessibleMessage()?.toModel(),
+    inlineMessageId = inlineMessageId(),
+    chatInstance = chatInstance(),
+    data = data(),
+    gameShortName = gameShortName()
+)
 
 fun ChatFullInfo.toModel() = TelegramChat(
     id = id(),
@@ -198,9 +512,9 @@ fun ChatPhoto.toModel() = TelegramChatPhoto(
 
 fun Message.toModel(): TelegramMessage {
     return TelegramMessage(
-        messageId = messageId().toLong(),
-        messageThreadId = messageThreadId()?.toLong(),
-        fromId = from().id(),
+        messageId = messageId(),
+        messageThreadId = messageThreadId(),
+        fromId = from()?.id(),
         senderBoostCount = senderBoostCount()?.toLong(),
         senderBusinessBotId = senderBusinessBot()?.id(),
         date = date().toZonedDateTime(),
@@ -324,7 +638,7 @@ fun MessageOrigin.toModel(): TelegramMessageOrigin {
             return TelegramMessageOrigin.Channel(
                 date().toZonedDateTime(),
                 chat().id(),
-                messageId().toLong(),
+                messageId(),
                 authorSignature()
             )
         }
@@ -359,12 +673,16 @@ fun User.toModel() = TelegramUser (
     hasMainWebApp = hasMainWebApp() == true,
 )
 
+fun TelegramUser.toDto(): User {
+    return User(id) // Other setters are not available
+}
+
 fun MessageEntity.toModel() = TelegramMessageEntity (
     type = type().toModel(),
     offset = offset(),
     length = length(),
     url = url(),
-    user = user()?.toModel(),
+    userId = user()?.id(),
     language = language(),
     customEmojiId = customEmojiId(),
 )
@@ -372,8 +690,7 @@ fun MessageEntity.toModel() = TelegramMessageEntity (
 fun TelegramMessageEntity.toDto(): MessageEntity {
     val result = MessageEntity(type.toDto(), offset, length)
     result.url(url)
-    // todo
-//    result.user(user?.toDto())
+    result.user(User(userId))
     result.language(language)
     result.customEmojiId(customEmojiId)
     return result
@@ -583,7 +900,7 @@ fun MaybeInaccessibleMessage.toModel(): TelegramMaybeInaccessibleMessage{
     }
 }
 
-fun InaccessibleMessage.toModel() = TelegramInaccessibleMessage(chat().id(), messageId().toLong())
+fun InaccessibleMessage.toModel() = TelegramInaccessibleMessage(chat().id(), messageId())
 
 fun Invoice.toModel() = TelegramInvoice(title(), description(), startParameter(), currency(), totalAmount().toLong())
 
@@ -762,6 +1079,11 @@ fun VideoChatParticipantsInvited.toModel() = TelegramVideoChatParticipantsInvite
 fun WebAppData.toModel() = TelegramWebAppData(data(), buttonText())
 
 fun InlineKeyboardMarkup.toModel() = TelegramInlineKeyboardMarkup(inlineKeyboard().map { it.map { it.toModel() } })
+fun TelegramInlineKeyboardMarkup.toDto() = InlineKeyboardMarkup(
+    *inlineKeyboard.map {
+        it.map { it.toDto() }.toTypedArray()
+    }.toTypedArray()
+)
 
 fun InlineKeyboardButton.toModel() = TelegramInlineKeyboardButton(
     text ?: throw IllegalArgumentException("InlineKeyboardButton.text is required"),
@@ -777,14 +1099,42 @@ fun InlineKeyboardButton.toModel() = TelegramInlineKeyboardButton(
     pay == true,
 )
 
+fun TelegramInlineKeyboardButton.toDto() = InlineKeyboardButton(
+    text,
+    url,
+    loginUrl?.toDto(),
+    callbackData,
+    switchInlineQuery,
+    switchInlineQueryCurrentChat,
+    switchInlineQueryChosenChat?.toDto(),
+    callbackGame?.toDto(),
+    pay,
+    webApp?.toDto(),
+    copyText?.toDto()
+)
+
 fun WebAppInfo.toModel() = TelegramWebAppInfo(url())
+fun TelegramWebAppInfo.toDto() = WebAppInfo(url)
 
-fun LoginUrl.toModel(): Nothing = TODO("Not yet implemented")
+fun LoginUrl.toModel() = TelegramLoginUrl("<LIBRARY SETTER NOT AVAILABLE>") // Setters are not available
+fun TelegramLoginUrl.toDto(): LoginUrl = LoginUrl(url)
+    .forwardText(forwardText)
+    .botUsername(botUsername)
+    .requestWriteAccess(requestWriteAccess)
 
-fun SwitchInlineQueryChosenChat.toModel(): Nothing = TODO("Not yet implemented")
+
+fun SwitchInlineQueryChosenChat.toModel() = TelegramSwitchInlineQueryChosenChat() // Setters are not available
+fun TelegramSwitchInlineQueryChosenChat.toDto(): SwitchInlineQueryChosenChat = SwitchInlineQueryChosenChat()
+    .query(query)
+    .allowUserChats(allowUserChats)
+    .allowBotChats(allowBotChats)
+    .allowGroupChats(allowGroupChats)
+    .allowChannelChats(allowChannelChats)
 
 fun CopyTextButton.toModel() = TelegramCopyTextButton(text)
+fun TelegramCopyTextButton.toDto() = CopyTextButton(text)
 
 fun CallbackGame.toModel() = TelegramCallbackGame()
+fun TelegramCallbackGame.toDto() = CallbackGame
 
 private fun Int.toZonedDateTime() = ZonedDateTime.ofInstant(Instant.ofEpochSecond(this.toLong()), UTC)

@@ -9,6 +9,7 @@ type Props = {
     height?: number | string;
     borderRadius?: number | string;
     animation?: 'pulse' | 'wave' | 'none';
+    className?: string;
     count?: number;
 };
 
@@ -18,7 +19,8 @@ export default function SkeletonLoader(
         width,
         height,
         borderRadius,
-        animation = 'pulse',
+        animation = 'wave',
+        className = '',
         count = 1
     }: Props
 ) {
@@ -62,7 +64,7 @@ export default function SkeletonLoader(
             skeletons.push(
                 <div
                     key={i}
-                    className={`${styles.skeleton} ${styles[`animation-${animation}`]}`}
+                    className={`${styles.skeleton} ${styles[`animation-${animation}`]} ${className}`}
                     style={getTypeStyles()}
                     data-type={type}
                 />

@@ -1,6 +1,6 @@
-.container {
+.root {
   position: relative;
-  display: inline-block;
+  height: fit-content;
 
   &[data-active='true'] .children {
     opacity: 0.5;

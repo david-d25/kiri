@@ -1,0 +1,49 @@
+.root {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 5px;
+}
+
+.pageInput {
+  margin: 0;
+  padding: 5px 2px;
+  border-radius: 5px;
+  background: transparent;
+  border: 1px solid oklch(.4 0 0);
+  width: 50px;
+  outline: none;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+.button {
+  margin: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+
+  &:hover {
+    background: oklch(.4 0 0);
+  }
+
+  &:active {
+    background: oklch(.5 0 0);
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.totalPages {
+  color: oklch(.4 0 0);
+  align-self: center;
+}

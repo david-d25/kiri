@@ -8,5 +8,5 @@ import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageEntityId
 
 @Repository
 interface TelegramMessageRepository: JpaRepository<TelegramMessageEntity, TelegramMessageEntityId> {
-    fun getAllByIdChatId(chatId: Long, pageable: Pageable): List<TelegramMessageEntity>
+    fun findAllByIdChatId(chatId: Long, pageable: Pageable): List<TelegramMessageEntity>
 }

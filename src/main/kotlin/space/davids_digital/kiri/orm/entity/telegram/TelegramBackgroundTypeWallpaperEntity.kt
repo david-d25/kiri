@@ -5,7 +5,6 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
-import jakarta.persistence.OneToOne
 
 @Entity
 @DiscriminatorValue("wallpaper")

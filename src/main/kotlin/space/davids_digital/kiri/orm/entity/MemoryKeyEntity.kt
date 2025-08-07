@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.util.*
 
 @Entity
-@Table(schema = "kiri", name = "memory_keys")
+@Table(schema = "main", name = "memory_keys")
 class MemoryKeyEntity {
     @Id
     @Column(name = "id")

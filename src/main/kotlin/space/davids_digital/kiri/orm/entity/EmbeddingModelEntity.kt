@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.entity
 import jakarta.persistence.*
 
 @Entity
-@Table(schema = "kiri", name = "embedding_models")
+@Table(schema = "main", name = "embedding_models")
 class EmbeddingModelEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

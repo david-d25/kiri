@@ -13,7 +13,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 @Entity
-@Table(schema = "kiri", name = "memory_links")
+@Table(schema = "main", name = "memory_links")
 @IdClass(MemoryLinkEntityId::class)
 class MemoryLinkEntity {
     @Id

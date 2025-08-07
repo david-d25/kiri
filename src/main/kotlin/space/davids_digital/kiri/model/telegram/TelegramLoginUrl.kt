@@ -33,5 +33,5 @@ data class TelegramLoginUrl (
     /**
      * Pass True to request the permission for your bot to send messages to the user.
      */
-    val requestWriteAccess: Boolean? = null
+    val requestWriteAccess: Boolean = false
 )

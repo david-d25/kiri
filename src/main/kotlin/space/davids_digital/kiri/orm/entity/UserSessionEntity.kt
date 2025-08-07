@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 import java.util.*
 
 @Entity
-@Table(schema = "kiri", name = "user_sessions")
+@Table(schema = "main", name = "user_sessions")
 class UserSessionEntity {
     @Id
     @Column(name = "id")

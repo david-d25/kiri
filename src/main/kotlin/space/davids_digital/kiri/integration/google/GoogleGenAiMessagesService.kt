@@ -4,7 +4,7 @@ import com.google.genai.Client
 import com.google.genai.types.*
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.llm.*
 import space.davids_digital.kiri.llm.LlmMessageRequest.Message
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.Function.ParameterValue
@@ -16,10 +16,10 @@ import space.davids_digital.kiri.service.LlmService
 import kotlin.jvm.optionals.getOrNull
 
 @Service
-class GoogleGenAiMessagesService(settings: Settings) : LlmService {
+class GoogleGenAiMessagesService(appProperties: AppProperties) : LlmService {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    private val client = Client.builder().apiKey(settings.integration.google.genAi.apiKey).build()
+    private val client = Client.builder().apiKey(appProperties.integration.google.genAi.apiKey).build()
 
     override suspend fun request(request: LlmMessageRequest): LlmMessageResponse {
         val content = buildContent(request)

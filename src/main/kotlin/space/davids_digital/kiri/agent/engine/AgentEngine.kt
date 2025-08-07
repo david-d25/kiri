@@ -107,7 +107,7 @@ class AgentEngine(
     private fun buildRequest(): LlmMessageRequest {
         val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
         return llmMessageRequest {
-            model = "claude-3-7-sonnet-latest"
+            model = "claude-sonnet-4-20250514"
 //            model = "gemini-2.0-flash"
             system = systemText ?: ""
             maxOutputTokens = 2048
@@ -250,6 +250,7 @@ class AgentEngine(
 
     @AgentToolMethod(description = "Think to yourself.")
     fun think(thoughts: String) {
+        log.debug("Agent is thinking: $thoughts") // todo
         frames.addSimpleText("thought", thoughts)
     }
 

@@ -8,6 +8,7 @@ type Props = {
     spinnerSize?: 'small' | 'medium' | 'large';
     blur?: boolean;
     message?: string;
+    className?: string;
 };
 
 export default function LoadingOverlay(
@@ -16,11 +17,12 @@ export default function LoadingOverlay(
         loading,
         spinnerSize = 'medium',
         blur = false,
-        message
+        message,
+        className
     }: Props
 ) {
     return (
-        <div className={styles.container} data-active={loading}>
+        <div className={classnames(styles.root, className)} data-active={loading}>
             <div className={styles.children}>
                 {children}
             </div>

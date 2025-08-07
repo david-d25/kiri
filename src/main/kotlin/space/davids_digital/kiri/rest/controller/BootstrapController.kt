@@ -4,7 +4,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.rest.auth.UserAuthentication
 import space.davids_digital.kiri.rest.dto.BootstrapDto
 import space.davids_digital.kiri.service.AdminUserService
@@ -12,7 +12,7 @@ import space.davids_digital.kiri.service.AdminUserService
 @RestController
 @RequestMapping("/bootstrap")
 class BootstrapController(
-    private val settings: Settings,
+    private val appProperties: AppProperties,
     private val adminUserService: AdminUserService
 ) {
     @GetMapping
@@ -37,8 +37,8 @@ class BootstrapController(
             return BootstrapDto(
                 isAuthenticated = false,
                 login = BootstrapDto.LoginInfo(
-                    settings.auth.telegram.botUsername,
-                    settings.auth.telegram.callbackUrl,
+                    appProperties.auth.telegram.botUsername,
+                    appProperties.auth.telegram.callbackUrl,
                 )
             )
         }

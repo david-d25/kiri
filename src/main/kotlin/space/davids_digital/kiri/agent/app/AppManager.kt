@@ -3,8 +3,7 @@ package space.davids_digital.kiri.agent.app
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import space.davids_digital.kiri.Settings
-import space.davids_digital.kiri.agent.engine.EngineEventBus
+import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.DynamicDataFrame
 import space.davids_digital.kiri.agent.frame.FrameBuffer
@@ -19,7 +18,7 @@ import space.davids_digital.kiri.integration.telegram.TelegramService
 @Component
 @AgentToolNamespace("apps")
 class AppManager(
-    private val settings: Settings,
+    private val appProperties: AppProperties,
     private val frames: FrameBuffer,
     private val telegramService: TelegramService,
 ) : AgentToolProvider {

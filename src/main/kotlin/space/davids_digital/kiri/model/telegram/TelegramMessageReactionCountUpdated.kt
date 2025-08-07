@@ -14,7 +14,7 @@ data class TelegramMessageReactionCountUpdated(
     /**
      * Unique message identifier inside the chat
      */
-    val messageId: Long,
+    val messageId: Int,
 
     /**
      * Date of the change

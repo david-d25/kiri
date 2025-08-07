@@ -1,26 +1,54 @@
-import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
-
 plugins {
-    id("com.bmuschko.docker-remote-api") version "9.4.0"
+    id("base")
 }
 
-val buildBackend by tasks.registering {
-    dependsOn(":bootJar")
-}
-val buildFrontend by tasks.registering {
-    dependsOn(":admin-ui:npmBuild")
+tasks.register<Copy>("prepareDeployment") {
+    dependsOn(":admin-ui:build", ":build")
+
+    from(project(":admin-ui").projectDir) {
+        include("package*.json")
+        include("next.config.js")
+        include("tsconfig.json")
+        include("next-env.d.ts")
+        include("components/**")
+        include("fonts/**")
+        include("hooks/**")
+        include("icons/**")
+        include("lib/**")
+        include("pages/**")
+        include("services/**")
+        include("styles/**")
+        include("util/**")
+        into("frontend")
+    }
+
+    from(rootProject.file("build/libs")) {
+        include("${rootProject.name}-${project.version}.jar")
+        rename { "app.jar" }
+        into("backend")
+    }
+
+    from("src/overlay") {
+        include("**/*")
+        into(".")
+    }
+
+    from("src/scripts") {
+        include("**/*")
+        into("scripts")
+    }
+
+    into(layout.buildDirectory.dir("staging"))
 }
 
-tasks.register<DockerBuildImage>("dockerBuildBackend") {
-    dependsOn(buildBackend)
-    inputDir.set(rootDir)
-    dockerFile.set(file("deployment/Dockerfile.backend"))
-    images.set(listOf("kiri-backend:${project.version}"))
+tasks.register<Zip>("packageDeployment") {
+    dependsOn("prepareDeployment")
+
+    from(layout.buildDirectory.dir("staging"))
+    archiveFileName.set("docker-compose-${project.version}.zip")
+    destinationDirectory.set(file(layout.buildDirectory.dir("distributions")))
 }
 
-tasks.register<DockerBuildImage>("dockerBuildFrontend") {
-    dependsOn(buildFrontend)
-    inputDir.set(rootDir)
-    dockerFile.set(file("deployment/Dockerfile.frontend"))
-    images.set(listOf("kiri-frontend:${project.version}"))
+tasks.named("build") {
+    dependsOn("packageDeployment")
 }

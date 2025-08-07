@@ -10,8 +10,12 @@ app:
     telegram:
       callbackUrl: http://localhost:8080/auth/telegram/callback
       botUsername: dev_kirigatewaybot
+  backend:
+    host: http://localhost:8080
+    basePath: /
   integration:
     telegram:
+      botId: # Override in application-local.yml, see local/readme.md
       apiKey: # Override in application-local.yml, see local/readme.md
     anthropic:
       apiKey: # Override in application-local.yml, see local/readme.md
@@ -38,7 +42,9 @@ spring:
       max-lifetime: 1800000
       pool-name: KiriHikariPool
   config:
-    import: "optional:file:./local/application-local.yml"
+    import:
+      - "optional:file:./local/application-local.yml"
+      - "optional:file:./config/application.yml"
   jackson:
     serialization:
       write-dates-as-timestamps: false

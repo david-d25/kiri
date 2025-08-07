@@ -13,7 +13,7 @@ class MemoryKeyRepository(
 ) {
     fun save(memoryKey: MemoryKeyEntity): MemoryKeyEntity {
         val sql = """
-            insert into kiri.memory_keys(id, key_text, embedding_model_id, embedding)
+            insert into main.memory_keys(id, key_text, embedding_model_id, embedding)
             values (:id, :keyText, :embeddingModelId, :embedding)
             on conflict (key_text) do update 
                 set embedding_model_id = EXCLUDED.embedding_model_id,
@@ -38,7 +38,7 @@ class MemoryKeyRepository(
                 key_text, 
                 embedding_model_id,
                 embedding
-            FROM kiri.memory_keys
+            FROM main.memory_keys
             WHERE key_text = :keyText
         """.trimIndent()
         val params = mapOf("keyText" to keyText)
@@ -54,7 +54,7 @@ class MemoryKeyRepository(
                 key_text, 
                 embedding_model_id,
                 embedding
-            FROM kiri.memory_keys
+            FROM main.memory_keys
             WHERE id IN (:ids)
         """.trimIndent()
         val params = mapOf("ids" to ids)
@@ -67,8 +67,8 @@ class MemoryKeyRepository(
         val embeddingObject = floatArrayToString(embedding)
         val sql = """
             select id, key_text, embedding_model_id, embedding
-            from kiri.memory_keys
-            order by kiri.l2_distance(embedding, '$embeddingObject'::kiri.vector)
+            from main.memory_keys
+            order by main.l2_distance(embedding, '$embeddingObject'::main.vector)
             limit :limit
         """.trimIndent()
         val params = mapOf(

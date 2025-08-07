@@ -1,7 +1,7 @@
 package space.davids_digital.kiri.service
 
 import org.springframework.stereotype.Service
-import space.davids_digital.kiri.Settings
+import space.davids_digital.kiri.AppProperties
 import java.security.InvalidKeyException
 import java.security.NoSuchAlgorithmException
 import java.util.Base64
@@ -13,9 +13,9 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 
 @Service
-class CryptographyService(settings: Settings) {
+class CryptographyService(appProperties: AppProperties) {
     private var secretKey: SecretKey = SecretKeySpec(
-        Base64.getDecoder().decode(settings.security.encryptionKeyBase64),
+        Base64.getDecoder().decode(appProperties.security.encryptionKeyBase64),
         "AES"
     )
 

@@ -9,7 +9,7 @@ import jakarta.persistence.Table
  * Entity representing administrative users.
  */
 @Entity
-@Table(schema = "kiri", name = "admins")
+@Table(schema = "main", name = "admins")
 class AdminUserEntity(
     @Id
     @Column(name = "user_id")

@@ -1,6 +1,6 @@
-import {useBootstrap} from "../../hooks/bootstrap";
-import {withSSRQueries} from "../../lib/withSSRQueries";
-import {fetchBootstrap} from "../../lib/api/bootstrapApi";
+import {useBootstrap} from "@/hooks/bootstrap";
+import {withSSRQueries} from "@/lib/withSSRQueries";
+import {fetchBootstrap} from "@/lib/api/bootstrap";
 
 import styles from './login.module.scss'
 import Loading from "../../components/Loading/Loading";
@@ -10,7 +10,7 @@ import Button from "../../components/Button/Button";
 import UserAvatar from "../../components/UserAvatar/UserAvatar";
 import {useRouter} from "next/router";
 import LoadingOverlay from "../../components/LoadingOverlay/LoadingOverlay";
-import {useLogout} from "../../hooks/logout";
+import {useLogout} from "@/hooks/logout";
 import InfoPanel from "../../components/InfoPanel/InfoPanel";
 
 export default function LoginPage() {

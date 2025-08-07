@@ -1,0 +1,127 @@
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal {
+  background: rgba(40, 40, 40, 0.95);
+  border: 2px solid rgb(80, 80, 80);
+  border-radius: 10px;
+  color: white;
+  min-width: 400px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease-out;
+  position: relative;
+  outline: none;
+}
+
+.modalHeader {
+  padding: 10px 10px 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalTitle {
+  margin: 0;
+}
+
+.modalCloseButton {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.4);
+  }
+
+  &:focus {
+    outline: 1px aqua solid;
+    outline-offset: 2px;
+  }
+}
+
+.modalContent {
+  padding: 20px;
+  flex: 1;
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
+.modalFooter {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

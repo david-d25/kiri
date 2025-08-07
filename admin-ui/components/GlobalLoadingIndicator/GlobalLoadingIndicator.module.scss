@@ -1,0 +1,22 @@
+.root {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: rgb(80, 80, 80);
+  padding: 10px 15px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 4px #1e1e1e;
+  display: flex;
+}
+
+.icon {
+  display: inline;
+  line-height: 1em;
+  height: 20px;
+  color: rgb(180, 180, 180);
+  margin-right: 10px;
+}
+
+.text {
+  vertical-align: middle;
+}
