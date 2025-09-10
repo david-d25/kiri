@@ -1,0 +1,1 @@
+export type EngineStateDto = "PAUSED" | "RUNNING" | "STOPPING";

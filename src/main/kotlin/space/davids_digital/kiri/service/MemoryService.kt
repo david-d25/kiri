@@ -33,7 +33,7 @@ class MemoryService(
         val modelName = "text-embedding-3-large"
         val dimensionality = 2000
         val model = embeddingModelOrmService.getOrCreate(modelName, "openai", dimensionality)
-        val existingKeys = texts.associate { it to orm.getMemoryKeyByText(it) }.toMutableMap()
+        val existingKeys = texts.associateWith { orm.getMemoryKeyByText(it) }.toMutableMap()
         val missingTexts = texts.filter { existingKeys[it] == null }
         val newKeys = openAiEmbeddingService.createEmbeddings(modelName, missingTexts, dimensionality)
         missingTexts.forEachIndexed { index, memoryKey ->
@@ -88,7 +88,7 @@ class MemoryService(
             for (queryKey in keys) {
                 val distance = cosineDistance(queryKey.embedding, linkedKey.embedding)
                 val score = calculateScore(distance, link.weight)
-                scoredPoints.merge(point, score, Double::plus)
+                scoredPoints.merge(point, score) { old, new -> 2 * old * new / (old + new) }
             }
         }
 

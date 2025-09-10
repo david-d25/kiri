@@ -221,7 +221,7 @@ class AgentToolParameterMapperTest {
     }
 
     private fun functionWithAnnotatedParams(
-        @ToolParameter(name = "userId", description = "The unique identifier for the user")
+        @AgentToolParameter(name = "userId", description = "The unique identifier for the user")
         id: String
     ) {
         // Annotated parameter

@@ -10,13 +10,12 @@ import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
-import space.davids_digital.kiri.agent.tool.ToolParameter
+import space.davids_digital.kiri.agent.tool.AgentToolParameter
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
 import space.davids_digital.kiri.llm.dsl.llmMessageRequest
-import space.davids_digital.kiri.model.MemoryPoint
 import space.davids_digital.kiri.service.MemoryService
 import java.time.ZonedDateTime
 
@@ -61,7 +60,10 @@ class MemoryManager(
         cleanUp()
     }
 
-    private fun buildMemorizingRequest(fixedFrames: List<DataFrame>, rollingFrames: List<Frame>): LlmMessageRequest {
+    private suspend fun buildMemorizingRequest(
+        fixedFrames: List<DataFrame>,
+        rollingFrames: List<Frame>
+    ): LlmMessageRequest {
         val prompt = this::class.java.getResource("/prompts/memory/memory.txt")?.readText()
         val examples = this::class.java.getResource("/prompts/memory/examples.txt")?.readText()
         return llmMessageRequest {
@@ -120,14 +122,15 @@ class MemoryManager(
 
     @AgentToolMethod(description = "Remember facts, associations, behavior, etc. to general purpose memory.")
     suspend fun memorize(
-        @ToolParameter(
+        @AgentToolParameter(
             name = "keys",
-            description = "Address of the memory, or what the memory should be associated with (names, dates, " +
+            description = "What the memory should be associated with (AND logic)." +
+                    "It's recommended to include names, dates (incl. current), nicknames, " +
                     "aspects, circumstances, etc.). More keys = more specific memory."
         )
         keyStrings: List<String>,
 
-        @ToolParameter(description = "What to remember")
+        @AgentToolParameter(description = "What to remember")
         value: String
     ): String {
         if (keyStrings.isEmpty()) {
@@ -144,7 +147,7 @@ class MemoryManager(
 
     @AgentToolMethod(description = "Search in memory")
     suspend fun query(
-        @ToolParameter(
+        @AgentToolParameter(
             name = "keys",
             description = "What the desired memory piece is associated with (names, dates, aspects, circumstances, " +
                     "etc.). More keys = more specific memory."
@@ -157,6 +160,9 @@ class MemoryManager(
             appendLine("Most related memories:")
             for (memory in memories) {
                 append("- ")
+                append("(score:")
+                append(String.format("%.3f", memory.score))
+                append(") ")
                 appendLine(memory.point.value)
             }
         }

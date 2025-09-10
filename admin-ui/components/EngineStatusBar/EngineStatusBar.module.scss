@@ -1,5 +1,32 @@
 .root {
-  padding: 10px;
-  background: rgb(42, 42, 42);
-  border-radius: 5px;
+  width: fit-content;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.title {
+  color: var(--text-secondary)
+}
+
+.statusDot {
+  --color: var(--accent-yellow);
+
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--color);
+  box-shadow: 0 0 15px var(--color);
+
+  &[data-status='PAUSED'] {
+    --color: var(--accent-blue);
+  }
+
+  &[data-status='RUNNING'] {
+    --color: var(--accent-green);
+  }
+
+  &[data-status='STOPPING'] {
+    --color: var(--accent-yellow);
+  }
 }

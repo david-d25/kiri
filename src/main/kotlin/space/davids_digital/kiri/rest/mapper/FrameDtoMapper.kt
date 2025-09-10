@@ -14,13 +14,12 @@ import java.util.Base64
  */
 @Component
 class FrameDtoMapper {
-
-    fun map(frame: Frame): FrameDto = when (frame) {
+    suspend fun map(frame: Frame): FrameDto = when (frame) {
         is DataFrame -> mapDataFrame(frame)
         is ToolCallFrame -> mapToolCallFrame(frame)
     }
 
-    fun mapDataFrame(frame: DataFrame): DataFrameDto {
+    suspend fun mapDataFrame(frame: DataFrame): DataFrameDto {
         val parts = frame.renderContent().map { part ->
             when (part) {
                 is DataFrame.Text -> ContentPartDto.Text(part.text)

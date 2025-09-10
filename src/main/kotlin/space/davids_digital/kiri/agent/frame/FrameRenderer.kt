@@ -7,15 +7,15 @@ import space.davids_digital.kiri.llm.dsl.LlmMessageRequestUserMessageBuilder
 
 @Component
 class FrameRenderer {
-    fun render(frames: FrameBuffer, target: LlmMessageRequestBuilder) {
+    suspend fun render(frames: FrameBuffer, target: LlmMessageRequestBuilder) {
         render(frames.onlyFixed, frames.onlyRolling, target)
     }
 
-    fun render(fixedFrames: Iterable<DataFrame>, rollingFrames: Iterable<Frame>, target: LlmMessageRequestBuilder) {
+    suspend fun render(fixedFrames: Iterable<DataFrame>, rollingFrames: Iterable<Frame>, target: LlmMessageRequestBuilder) {
         render(fixedFrames.iterator(), rollingFrames.iterator(), target)
     }
 
-    fun render(fixedFrames: Iterator<DataFrame>, rollingFrames: Iterator<Frame>, target: LlmMessageRequestBuilder) {
+    suspend fun render(fixedFrames: Iterator<DataFrame>, rollingFrames: Iterator<Frame>, target: LlmMessageRequestBuilder) {
         target.userMessage {
             text("<fixed>\n")
             for (frame in fixedFrames) {
@@ -35,7 +35,7 @@ class FrameRenderer {
      * Renders a data frame to a LLM message request builder.
      * Consecutive text parts are concatenated into a single text message part.
      */
-    private fun LlmMessageRequestUserMessageBuilder.renderDataFrame(frame: DataFrame) {
+    private suspend fun LlmMessageRequestUserMessageBuilder.renderDataFrame(frame: DataFrame) {
         val builder = StringBuilder()
         val content = frame.renderContent()
         val attrString = frame.attributes.entries
@@ -58,7 +58,7 @@ class FrameRenderer {
         text(builder.toString())
     }
 
-    private fun LlmMessageRequestBuilder.renderToolCallFrame(frame: ToolCallFrame) {
+    private suspend fun LlmMessageRequestBuilder.renderToolCallFrame(frame: ToolCallFrame) {
         assistantMessage {
             toolUse {
                 id = frame.toolUse.id

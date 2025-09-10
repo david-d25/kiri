@@ -1,9 +1,14 @@
-import Header from "../components/Header/Header";
+import { GetServerSideProps } from 'next';
 
-export default function HomePage() {
-  return (
-    <div>
-      <Header/>
-    </div>
-  )
+export const getServerSideProps: GetServerSideProps = async () => {
+    return {
+        redirect: {
+            destination: '/engine',
+            permanent: false,
+        },
+    };
+};
+
+export default function Home() {
+    return null;
 }

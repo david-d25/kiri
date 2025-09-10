@@ -6,9 +6,9 @@ import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import space.davids_digital.kiri.AppProperties
-import space.davids_digital.kiri.rest.dto.ErrorResponseDto
+import space.davids_digital.kiri.rest.dto.ErrorResponse
 import space.davids_digital.kiri.rest.exception.InvalidSessionStateException
-import space.davids_digital.kiri.rest.exception.ResourceNotFoundException
+import space.davids_digital.kiri.service.exception.ResourceNotFoundException
 import space.davids_digital.kiri.service.exception.ValidationException
 
 @ControllerAdvice
@@ -16,29 +16,29 @@ class RestExceptionHandler(private val appProperties: AppProperties) {
     @ExceptionHandler(MissingServletRequestParameterException::class)
     fun handleMissingParameters(
         exception: MissingServletRequestParameterException
-    ): ResponseEntity<ErrorResponseDto> {
+    ): ResponseEntity<ErrorResponse> {
         return ResponseEntity
             .badRequest()
-            .body(ErrorResponseDto("bad_request", "Missing parameter '${exception.parameterName}'"))
+            .body(ErrorResponse("bad_request", "Missing parameter '${exception.parameterName}'"))
     }
 
     @ExceptionHandler(ValidationException::class)
-    fun handleValidationException(exception: ValidationException): ResponseEntity<ErrorResponseDto> {
+    fun handleValidationException(exception: ValidationException): ResponseEntity<ErrorResponse> {
         return ResponseEntity
             .badRequest()
-            .body(ErrorResponseDto("bad_request", "Validation failed: ${exception.message}"))
+            .body(ErrorResponse("bad_request", "Validation failed: ${exception.message}"))
     }
 
     @ExceptionHandler(ResourceNotFoundException::class)
-    fun handleResourceNotFoundException(): ResponseEntity<ErrorResponseDto> {
+    fun handleResourceNotFoundException(): ResponseEntity<ErrorResponse> {
         return ResponseEntity.notFound().build()
     }
 
     @ExceptionHandler(InvalidSessionStateException::class)
-    fun handleInvalidSessionStateException(exception: ValidationException): ResponseEntity<ErrorResponseDto> {
+    fun handleInvalidSessionStateException(exception: ValidationException): ResponseEntity<ErrorResponse> {
         return ResponseEntity
             .status(HttpStatus.FORBIDDEN)
             .removeAuthCookies(appProperties.frontend.cookiesDomain)
-            .body(ErrorResponseDto("forbidden", "Invalid session state: ${exception.message}"))
+            .body(ErrorResponse("forbidden", "Invalid session state: ${exception.message}"))
     }
 }

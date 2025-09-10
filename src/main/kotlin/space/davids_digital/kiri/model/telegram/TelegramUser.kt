@@ -58,4 +58,13 @@ data class TelegramUser (
      * True, if the bot has a main Web App. Returned only in [getMe](https://core.telegram.org/bots/api#getme).
      */
     val hasMainWebApp: Boolean = false,
-)
+
+    /**
+     * Additional data which is not part of Telegram API user object
+     */
+    val metadata: Metadata
+) {
+    data class Metadata (
+        val isBlocked: Boolean
+    )
+}

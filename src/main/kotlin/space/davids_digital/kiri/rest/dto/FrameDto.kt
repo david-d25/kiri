@@ -17,8 +17,14 @@ data class DataFrameDto(
 }
 
 sealed interface ContentPartDto {
-    data class Text(val text: String) : ContentPartDto
-    data class Image(val base64: String, val imageType: String) : ContentPartDto
+    val type: String
+
+    data class Text(val text: String) : ContentPartDto {
+        override val type = "text"
+    }
+    data class Image(val base64: String, val imageType: String) : ContentPartDto {
+        override val type = "image"
+    }
 }
 
 data class ToolCallFrameDto(
@@ -41,14 +47,32 @@ data class ToolResultDto(
 )
 
 sealed interface ToolInputDto {
-    data class Text(val text: String) : ToolInputDto
-    data class Number(val number: Double) : ToolInputDto
-    data class BooleanVal(val boolean: Boolean) : ToolInputDto
-    data class Array(val items: List<ToolInputDto>) : ToolInputDto
-    data class Object(val items: Map<String, ToolInputDto>) : ToolInputDto
+    val type: String
+
+    data class Text(val text: String) : ToolInputDto {
+        override val type = "text"
+    }
+    data class Number(val number: Double) : ToolInputDto {
+        override val type = "number"
+    }
+    data class BooleanVal(val boolean: Boolean) : ToolInputDto {
+        override val type = "boolean"
+    }
+    data class Array(val items: List<ToolInputDto>) : ToolInputDto {
+        override val type = "array"
+    }
+    data class Object(val items: Map<String, ToolInputDto>) : ToolInputDto {
+        override val type = "object"
+    }
 }
 
 sealed interface ToolOutputDto {
-    data class Text(val text: String) : ToolOutputDto
-    data class Image(val base64: String, val imageType: String) : ToolOutputDto
+    val type: String
+
+    data class Text(val text: String) : ToolOutputDto {
+        override val type = "text"
+    }
+    data class Image(val base64: String, val imageType: String) : ToolOutputDto {
+        override val type = "image"
+    }
 }

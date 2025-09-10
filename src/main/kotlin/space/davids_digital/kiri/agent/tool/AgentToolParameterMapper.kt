@@ -68,10 +68,10 @@ class AgentToolParameterMapper {
     }
 
     /**
-     * Gets the parameter name, either from the [ToolParameter] annotation or from the parameter itself.
+     * Gets the parameter name, either from the [AgentToolParameter] annotation or from the parameter itself.
      */
     private fun getParameterName(parameter: KParameter): String {
-        val annotation = parameter.findAnnotation<ToolParameter>()
+        val annotation = parameter.findAnnotation<AgentToolParameter>()
         return if (annotation != null && annotation.name.isNotBlank()) {
             annotation.name
         } else {
@@ -80,10 +80,10 @@ class AgentToolParameterMapper {
     }
 
     /**
-     * Gets the parameter description from the [ToolParameter] annotation if present.
+     * Gets the parameter description from the [AgentToolParameter] annotation if present.
      */
     private fun getParameterDescription(parameter: KParameter): String? {
-        val annotation = parameter.findAnnotation<ToolParameter>()
+        val annotation = parameter.findAnnotation<AgentToolParameter>()
         return if (annotation != null && annotation.description.isNotEmpty()) {
             annotation.description
         } else {
@@ -128,10 +128,10 @@ class AgentToolParameterMapper {
     }
 
     /**
-     * Gets the property name, either from the [ToolParameter] annotation or from the property itself.
+     * Gets the property name, either from the [AgentToolParameter] annotation or from the property itself.
      */
     private fun getPropertyName(property: kotlin.reflect.KProperty<*>): String {
-        val annotation = property.findAnnotation<ToolParameter>()
+        val annotation = property.findAnnotation<AgentToolParameter>()
         return if (annotation != null && annotation.name.isNotEmpty()) {
             annotation.name
         } else {
@@ -140,10 +140,10 @@ class AgentToolParameterMapper {
     }
 
     /**
-     * Gets the property description from the [ToolParameter] annotation if present.
+     * Gets the property description from the [AgentToolParameter] annotation if present.
      */
     private fun getPropertyDescription(property: kotlin.reflect.KProperty<*>): String? {
-        val annotation = property.findAnnotation<ToolParameter>()
+        val annotation = property.findAnnotation<AgentToolParameter>()
         return if (annotation != null && annotation.description.isNotEmpty()) {
             annotation.description
         } else {

@@ -10,12 +10,11 @@
 .infoPanel {
   display: block;
   border-radius: 5px;
-  margin: 5px;
-  border-width: 2px;
+  border-width: 1px;
   border-style: solid;
   padding: 10px;
   line-height: 25px;
-  color: white;
+  color: var(--text-primary);
   text-align: start;
 
   &[data-borderless='true'] {
@@ -55,6 +54,19 @@
 
     .icon {
         fill: rgba(52, 152, 219, 1);
+    }
+  }
+
+
+  &[data-minimalistic='true'] {
+    background: none;
+    padding: 0;
+    line-height: 20px;
+    font-size: .9em;
+
+    .icon {
+      width: 20px;
+      height: 20px;
     }
   }
 }

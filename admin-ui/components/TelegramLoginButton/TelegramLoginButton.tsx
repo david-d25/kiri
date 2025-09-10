@@ -1,6 +1,6 @@
 import {useEffect, useRef} from 'react';
 import Button from "../Button/Button";
-import {useFetchDevAuthHash} from "../../hooks/devAuth";
+import {useFetchDevAuthHash} from "@/hooks/devAuth";
 import InfoPanel from "../InfoPanel/InfoPanel";
 
 type Props = {
@@ -12,7 +12,13 @@ export default function TelegramLoginButton(props: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
 
     if (process.env.NODE_ENV === 'development') {
-        return TelegramDevLoginButton(props)
+        return (
+            <div style={{ display: 'flex', gap: '10px' }}>
+                <TelegramDevLoginButton botUsername={props.botUsername} callbackUrl={props.callbackUrl} userId={1} />
+                <TelegramDevLoginButton botUsername={props.botUsername} callbackUrl={props.callbackUrl} userId={2} />
+                <TelegramDevLoginButton botUsername={props.botUsername} callbackUrl={props.callbackUrl} userId={3} />
+            </div>
+        )
     }
 
     const { botUsername, callbackUrl } = props;
@@ -37,16 +43,15 @@ export default function TelegramLoginButton(props: Props) {
     );
 }
 
-function TelegramDevLoginButton(props: Props) {
-    const userId = 0;
-    const firstName = 'Arnold';
-    const lastName = 'Testovich';
-    const username = 'test_user';
+function TelegramDevLoginButton(props: Props & { userId: number }) {
+    const firstName = 'Test';
+    const lastName = 'ID' + props.userId;
+    const username = 'test_user' + props.userId;
     const photoUrl = '';
     const authDate = new Date();
 
     const { data, error, isLoading, isFetching } = useFetchDevAuthHash(
-        userId,
+        props.userId,
         firstName,
         lastName,
         username,
@@ -66,7 +71,7 @@ function TelegramDevLoginButton(props: Props) {
         }
         const authDateTimestamp = Math.floor(authDate.getTime() / 1000);
         const params = new URLSearchParams({
-            id: userId.toString(),
+            id: props.userId.toString(),
             first_name: encodeURIComponent(firstName),
             last_name: encodeURIComponent(lastName),
             username: encodeURIComponent(username),
@@ -79,7 +84,7 @@ function TelegramDevLoginButton(props: Props) {
 
     return (
         <>
-            <Button onClick={onClick} disabled={!buttonEnabled}>[DEV] Telegram Login</Button>
+            <Button onClick={onClick} disabled={!buttonEnabled}>DEV Telegram Login, id {props.userId}</Button>
             { error &&
                 <InfoPanel type='error'>Failed to fetch hash: {error.message}</InfoPanel>
             }

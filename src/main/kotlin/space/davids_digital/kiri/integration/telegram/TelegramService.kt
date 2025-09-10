@@ -11,6 +11,7 @@ import com.pengrad.telegrambot.model.request.ParseMode
 import com.pengrad.telegrambot.model.request.ReplyParameters
 import com.pengrad.telegrambot.request.*
 import com.pengrad.telegrambot.response.BaseResponse
+import com.pengrad.telegrambot.response.SendResponse
 import com.pengrad.telegrambot.utility.kotlin.extension.request.*
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.*
@@ -18,21 +19,16 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.AppProperties
-import space.davids_digital.kiri.agent.engine.EngineEventBus
-import space.davids_digital.kiri.agent.engine.WakeUpRequestEvent
-import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
-import space.davids_digital.kiri.agent.notification.Notification
-import space.davids_digital.kiri.agent.notification.NotificationManager
 import space.davids_digital.kiri.model.telegram.*
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramUserOrmService
 import space.davids_digital.kiri.service.exception.ServiceException
-import java.time.ZonedDateTime
 import kotlin.math.min
 
 @Service
@@ -41,20 +37,21 @@ class TelegramService(
     private val chatOrm: TelegramChatOrmService,
     private val userOrm: TelegramUserOrmService,
     private val appProperties: AppProperties,
-    private val engineEventBus: EngineEventBus,
-    private val notificationManager: NotificationManager,
-    @Lazy private val self: TelegramService
+    private val mapper: TelegramIntegrationMapper
 ) {
     companion object {
         private const val MAX_MESSAGE_LENGTH = 4_096
         private const val MAX_CAPTION_LENGTH = 1_024
         private const val MAX_MEDIA_GROUP_SIZE = 10
         private const val MAX_MESSAGES_PER_SECOND_FREE = 30
-        private const val MAX_MESSAGES_PER_SECOND_PAID = 1000
+        //private const val MAX_MESSAGES_PER_SECOND_PAID = 1000
     }
 
+    @Lazy
+    @Autowired
+    private lateinit var self: TelegramService
+
     private val log = LoggerFactory.getLogger(this::class.java)
-    private val openedChats = mutableSetOf<Long>()
 
     private lateinit var bot: TelegramBot
 
@@ -89,21 +86,16 @@ class TelegramService(
         updateSelfInfo()
     }
 
-    suspend fun sendText(chatId: Long, text: String, textEntities: List<TelegramMessageEntity> = emptyList()) {
-        bot.sendMessage(chatId, text) {
-            entities(*textEntities.map { it.toDto() }.toTypedArray())
-        }.checkNoErrors("Failed to send message to chat id $chatId").message()
-    }
-
     suspend fun forwardMessage(
         chatId: Long,
         fromChatId: Long,
         messageId: Int,
         disableNotification: Boolean = false
     ) {
-        bot.forwardMessage(chatId, fromChatId, messageId) {
+        val message = bot.forwardMessage(chatId, fromChatId, messageId) {
             disableNotification(disableNotification)
         }.checkNoErrors("Failed to forward message $messageId from chat $fromChatId to chat $chatId").message()
+        messageOrm.save(mapper.toModel(message)!!)
     }
 
     suspend fun sendMessage(
@@ -125,6 +117,17 @@ class TelegramService(
         messageThreadId,
         replyToMessageId
     )
+
+    suspend fun sendSticker(chatId: Long, fileId: String): TelegramMessage {
+        val file = getFile(fileId) ?: throw IllegalArgumentException("File ID $fileId not found")
+        return messageOrm.save(
+            mapper.toModel(bot.execute(SendSticker(chatId, file.fileUniqueId)).checkNoErrors().message())!!
+        )
+    }
+
+    suspend fun getStickerSet(name: String): TelegramStickerSet {
+        return mapper.toModel(bot.execute(GetStickerSet(name)).checkNoErrors().stickerSet())!!
+    }
 
     suspend fun sendMessage(
         chatIds: List<Long>,
@@ -156,11 +159,16 @@ class TelegramService(
                         val response = bot.execute(request)
                         if (response.isOk) {
                             sent = true
+                            when (response) {
+                                is SendResponse -> messageOrm.save(mapper.toModel(response.message())!!)
+                                else -> log.error("Unknown response type {}, could not save", response::class)
+                            }
                         } else if (response.errorCode() == 429) {
                             val retryAfter = min(response.parameters().retryAfter(), 1)
                             log.warn("429 received, backing off for {} s", retryAfter)
                             delay(retryAfter * 1_000L)
                         } else {
+                            // todo: resolve 'Failed to send message to 383453661 (400): Bad Request: file of size 14317506 bytes is too big for a photo; the maximum size is 10485760 bytes'
                             log.warn(
                                 "Failed to send message to {} ({}): {}",
                                 chatId,
@@ -214,11 +222,13 @@ class TelegramService(
         messageThreadId: Int? = null,
         replyToMessageId: Int? = null
     ): BaseRequest<*, *> {
-        require(images.size <= 10) { "Telegram allows up to 10 images per message" }
+        require(images.size <= MAX_MEDIA_GROUP_SIZE) { "Telegram allows up to 10 images per message" }
         return when (images.size) {
             0 -> SendMessage(chatId, text).apply {
-                if (textEntities.isNotEmpty()) entities(*textEntities.map { it.toDto() }.toTypedArray())
-                replyMarkup?.let { replyMarkup(it.toDto()) }
+                if (textEntities.isNotEmpty()) {
+                    entities(*textEntities.map { mapper.toDto(it)!! }.toTypedArray())
+                }
+                replyMarkup?.let { replyMarkup(mapper.toDto(it)!!) }
                 disableNotification(disableNotification)
                 messageThreadId?.let { messageThreadId(it) }
                 replyToMessageId?.let { replyParameters(ReplyParameters(it)) }
@@ -227,8 +237,10 @@ class TelegramService(
 
             1 -> SendPhoto(chatId, images.first()).apply {
                 caption(text)
-                if (textEntities.isNotEmpty()) captionEntities(*textEntities.map { it.toDto() }.toTypedArray())
-                replyMarkup?.let { replyMarkup(it.toDto()) }
+                if (textEntities.isNotEmpty()) {
+                    captionEntities(*textEntities.map { mapper.toDto(it)!! }.toTypedArray())
+                }
+                replyMarkup?.let { replyMarkup(mapper.toDto(it)!!) }
                 disableNotification(disableNotification)
                 messageThreadId?.let { messageThreadId(it) }
                 replyToMessageId?.let { replyParameters(ReplyParameters(it)) }
@@ -236,9 +248,9 @@ class TelegramService(
             }
 
             else -> {
-                val media = images.mapIndexed { index, bytes -> InputMediaPhoto(bytes) }.toMutableList()
+                val media = images.mapIndexed { _, bytes -> InputMediaPhoto(bytes) }.toMutableList()
                 media.first().caption(text)
-                media.first().captionEntities(*textEntities.map { it.toDto() }.toTypedArray())
+                media.first().captionEntities(*textEntities.map { mapper.toDto(it)!! }.toTypedArray())
                 media.first().parseMode(ParseMode.HTML)
 
                 SendMediaGroup(chatId, *media.toTypedArray()).apply {
@@ -257,7 +269,7 @@ class TelegramService(
         replyMarkup: TelegramInlineKeyboardMarkup? = null
     ) {
         val response = bot.execute(EditMessageText(chatId, messageId, text).apply {
-            replyMarkup?.let { replyMarkup(it.toDto()) }
+            replyMarkup?.let { replyMarkup(mapper.toDto(it)!!) }
         })
         if (response.errorCode() == 400 && response.description().contains("exactly the same")) {
             log.debug(
@@ -276,7 +288,7 @@ class TelegramService(
             return null
         }
         response.checkNoErrors("Failed to get chat id $chatId")
-        return chatOrm.save(response.chat().toModel())
+        return chatOrm.save(mapper.toModel(response.chat())!!)
     }
 
     @Cacheable(value = ["TelegramService#fetchAndSaveChatByUsername"], key = "#username")
@@ -286,25 +298,13 @@ class TelegramService(
             return null
         }
         response.checkNoErrors("Failed to get chat by username '$username'")
-        return chatOrm.save(response.chat().toModel())
+        return chatOrm.save(mapper.toModel(response.chat())!!)
     }
 
     suspend fun answerCallbackQuery(callbackQueryId: String, text: String? = null) {
         bot.execute(AnswerCallbackQuery(callbackQueryId).apply {
             text?.let { text(it) }
         }).checkNoErrors("Failed to answer callback query")
-    }
-
-    fun declareChatOpened(chatId: Long) {
-        openedChats.add(chatId)
-    }
-
-    fun declareChatClosed(chatId: Long) {
-        openedChats.remove(chatId)
-    }
-
-    suspend fun getChats(): List<TelegramChat> {
-        return chatOrm.getAllChats()
     }
 
     suspend fun getChat(username: String): TelegramChat? {
@@ -323,12 +323,34 @@ class TelegramService(
         return self.fetchAndSaveChatById(id)
     }
 
+    fun createMessageLink(chatId: Long, messageId: Int): String {
+        val internalChatId = chatId.toString().removePrefix("-100").removePrefix("-")
+        val defaultFallback = "https://t.me/c/$internalChatId/$messageId"
+        val message = messageOrm.find(chatId, messageId)
+        val chat = chatOrm.findById(chatId)
+        val threadId = message?.messageThreadId
+        val chatUsername = chat?.username?.removePrefix("@")
+        if (!chatUsername.isNullOrBlank()) {
+            return if (threadId != null) {
+                "https://t.me/${chatUsername}/$threadId/$messageId"
+            } else {
+                "https://t.me/${chatUsername}/$messageId"
+            }
+        }
+        return if (threadId != null) {
+            "https://t.me/c/$internalChatId/$threadId/$messageId"
+        } else {
+            defaultFallback
+        }
+    }
+
     suspend fun chatExists(id: Long): Boolean {
         if (chatOrm.existsById(id)) {
             return true
         }
         try {
-            bot.getChat(id).checkNoErrors().chat().toModel().let { chatOrm.save(it) }
+            val response = bot.getChat(id).checkNoErrors().chat()
+            chatOrm.save(mapper.toModel(response)!!)
             return true
         } catch (e: Exception) {
             log.info("Could not fetch chat with id $id (${e.message}), will assume it doesn't exist")
@@ -338,13 +360,13 @@ class TelegramService(
 
     fun getUser(id: Long) = userOrm.findById(id)
 
-    suspend fun getChatMessages(chatId: Long, limit: Long): List<TelegramMessage> {
-        return messageOrm.getChatMessages(chatId, limit)
-    }
-
     @Cacheable(value = ["TelegramService#getFileContent"], key = "#fileId")
     suspend fun getFileContent(fileId: String): ByteArray {
         return bot.getFileContent(bot.getFile(fileId).file())
+    }
+
+    suspend fun getFile(fileId: String): TelegramFile? {
+        return mapper.toModel(bot.getFile(fileId).checkNoErrors().file())
     }
 
     private suspend fun onMessageReceived(message: TelegramMessage) {
@@ -354,55 +376,10 @@ class TelegramService(
         } catch (e: Exception) {
             log.error("Failed to save Telegram message", e)
         }
-        if (needToSendNotification(message)) {
-            sendNewMessageNotification(message)
-        } else if (!openedChats.contains(message.chatId)) {
-            engineEventBus.tryPublish(WakeUpRequestEvent())
-        }
-    }
-
-    private suspend fun needToSendNotification(message: TelegramMessage): Boolean {
-        val chat = getChat(message.chatId)
-        if (chat == null) {
-            log.warn("Received message from unknown chat with id {}", message.chatId)
-            return false
-        }
-        return chat.type == TelegramChat.Type.PRIVATE
-    }
-
-    private suspend fun sendNewMessageNotification(message: TelegramMessage) {
-        val fromId = message.fromId
-        if (fromId == null) {
-            log.error("Received message without sender ID, cannot send notification")
-            return
-        }
-        val user = getUser(fromId)
-        if (user == null) {
-            log.error("Received message from unknown user with ID {}", fromId)
-        }
-        notificationManager.push(Notification(
-            sentAt = ZonedDateTime.now(),
-            metadata = mapOf(
-                "app" to "telegram",
-                "chat-id" to message.chatId.toString()
-            ),
-            content = dataFrameContent {
-                val from = user?.firstName ?: "(user)"
-                if (message.text.isNullOrBlank()) {
-                    text("New message from $from")
-                } else {
-                    var text = message.text.take(128)
-                    if (text.length > 128) {
-                        text = text.substring(0, 128) + "..."
-                    }
-                    text("New message from $from: $text")
-                }
-            }
-        ))
     }
 
     private fun refreshUser(user: User) {
-        userOrm.save(user.toModel())
+        userOrm.save(mapper.toModel(user))
     }
 
     private fun refreshChat(chat: Chat) {
@@ -413,7 +390,7 @@ class TelegramService(
                 val chat = bot.getChat(id)
                     .checkNoErrors("Failed to get Telegram chat with id $id")
                     .chat()
-                    .toModel()
+                    .let(mapper::toModel)!!
                 chatOrm.save(chat)
             }
         } catch (e: Exception) {
@@ -421,9 +398,13 @@ class TelegramService(
         }
     }
 
+    fun getSelf(): TelegramUser {
+        return requireNotNull(getUser(appProperties.integration.telegram.botId))
+    }
+
     private fun updateSelfInfo() {
         try {
-            userOrm.save(bot.getMe().user().toModel())
+            userOrm.save(bot.getMe().checkNoErrors().user().let(mapper::toModel))
         } catch (e: Exception) {
             log.error("Failed to get and save bot info", e)
         }
@@ -433,7 +414,7 @@ class TelegramService(
         serviceScope.launch {
             updates.forEach { update ->
                 val updateModel = try {
-                    update.toModel()
+                    mapper.toModel(update)!!
                 } catch (e: Exception) {
                     log.error("Failed to create update model, it will be skipped", e)
                     return@forEach
@@ -441,8 +422,12 @@ class TelegramService(
                 if (updateModel.message != null) {
                     onMessageReceived(updateModel.message)
                 }
+                if (update.message() != null) {
+                    if (update.message().from() != null) {
+                        refreshUser(update.message().from())
+                    }
+                }
                 updatesInternal.emit(updateModel)
-                // todo refresh users from here
             }
         }
         return CONFIRMED_UPDATES_ALL

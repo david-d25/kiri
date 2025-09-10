@@ -1,10 +1,12 @@
 package space.davids_digital.kiri.agent.engine
 
 import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppManager
@@ -15,13 +17,13 @@ import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
 import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
-import space.davids_digital.kiri.integration.google.GoogleGenAiMessagesService
 import space.davids_digital.kiri.llm.LlmMessageRequest
 import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.LlmMessageResponse
 import space.davids_digital.kiri.llm.LlmToolUseResult
 import space.davids_digital.kiri.llm.dsl.llmMessageRequest
 import space.davids_digital.kiri.llm.dsl.llmToolUseResult
+import space.davids_digital.kiri.model.EngineState
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -36,38 +38,45 @@ class AgentEngine(
     private val frameRenderer: FrameRenderer,
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
-    private val anthropicMessagesService: AnthropicMessagesService,
-    private val googleGenAiMessagesService: GoogleGenAiMessagesService
+    private val anthropicMessagesService: AnthropicMessagesService
 ) : AgentToolProvider {
     companion object {
-        private const val RECOVERY_TIMEOUT_MS = 5000L
+        private const val RECOVERY_TIMEOUT_MS = 10000L
     }
 
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    private val runContinuously = AtomicBoolean(false)
-    private val engineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var currentSleepJob: Job? = null
+    private val run = AtomicBoolean(false)
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var sleepJob: Job? = null
+    private val tickMutex = Mutex()
 
-    private val mutableState = MutableStateFlow(EngineState.STOPPED)
+    private val mutableState = MutableStateFlow(EngineState.PAUSED)
 
     val state: StateFlow<EngineState> = mutableState.asStateFlow()
 
     @PostConstruct
     private fun init() {
         resetFrames()
-        engineScope.launch {
-            eventBus.subscribe().collect(::handleEvent)
+        scope.launch {
+            eventBus.events.collect(::handleEvent)
         }
-        start()
     }
 
-    fun start() {
-        if (runContinuously.compareAndSet(false, true)) {
-            engineScope.launch {
+    suspend fun start() {
+        if (state.value == EngineState.RUNNING || state.value == EngineState.STOPPING) {
+            log.warn("Agent engine is already running or stopping, start request ignored")
+            return
+        }
+        if (sleepJob != null) {
+            log.debug("Interrupting agent sleep to start")
+            sleepJob?.cancelAndJoin()
+        }
+        if (run.compareAndSet(false, true)) {
+            scope.launch {
                 try {
-                    log.info("Starting Kiri engine")
-                    while (runContinuously.get()) {
+                    log.info("Starting agent engine")
+                    while (run.get()) {
                         tick()
                     }
                 } catch (e: Exception) {
@@ -77,38 +86,62 @@ class AgentEngine(
         }
     }
 
-    fun softStop() {
-        log.info("Soft stopping agent engine")
-        runContinuously.set(false)
+    // TODO Run in scope?
+    suspend fun tick(): Boolean {
+        if (!tickMutex.tryLock()) {
+            return false
+        }
+        try {
+            mutableState.emit(EngineState.RUNNING)
+            updateToolRegistry()
+            memoryManager.tick()
+            val request = buildRequest()
+            val response = anthropicMessagesService.request(request)
+            handleResponse(response)
+            eventBus.events.emit(TickEvent())
+            return true
+        } finally {
+            tickMutex.unlock()
+            mutableState.emit(EngineState.PAUSED)
+        }
     }
 
-    fun hardStop() {
+    suspend fun softStop() {
+        log.info("Soft stopping agent engine")
+        run.set(false)
+        if (mutableState.value == EngineState.RUNNING) {
+            mutableState.emit(EngineState.STOPPING)
+        } else {
+            mutableState.emit(EngineState.PAUSED)
+        }
+    }
+
+    suspend fun hardStop() {
         log.info("Hard stopping agent engine")
-        runContinuously.set(false)
-        engineScope.coroutineContext[Job]?.cancelChildren()
-        currentSleepJob?.cancel()
+        run.set(false)
+        scope.coroutineContext[Job]?.cancelChildren()
+        sleepJob?.cancel()
+        sleepJob = null
+        mutableState.emit(EngineState.PAUSED)
         log.info("Agent engine stopped")
+    }
+
+    @PreDestroy
+    private fun shutdown() {
+        runBlocking {
+            hardStop()
+        }
     }
 
     private fun resetFrames() {
         frames.clearOnlyRolling()
-        frames.addSimpleText("system", "System started.")
+        addSimpleText("system", "System started.")
     }
 
-    private suspend fun tick() {
-        updateToolRegistry()
-        memoryManager.tick()
-        val request = buildRequest()
-        val response = anthropicMessagesService.request(request)
-        handleResponse(response)
-        eventBus.publish(TickEvent())
-    }
-
-    private fun buildRequest(): LlmMessageRequest {
+    private suspend fun buildRequest(): LlmMessageRequest {
         val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
         return llmMessageRequest {
             model = "claude-sonnet-4-20250514"
-//            model = "gemini-2.0-flash"
             system = systemText ?: ""
             maxOutputTokens = 2048
             temperature = 1.0
@@ -198,16 +231,17 @@ class AgentEngine(
 
     private suspend fun handleError(e: Exception) {
         log.error("Engine error", e)
-        frames.addSimpleText("system", "Engine error: ${e.message}")
-        if (runContinuously.get()) {
+        addSimpleText("system", "Engine error: ${e.message}")
+        if (run.get()) {
             log.info("Will try to recover in $RECOVERY_TIMEOUT_MS ms")
         }
+        mutableState.emit(EngineState.PAUSED)
         // Try to recover
         delay(RECOVERY_TIMEOUT_MS)
-        if (runContinuously.get()) {
-            runContinuously.set(false)
+        if (run.get()) {
+            run.set(false)
             log.info("Recovering engine")
-            frames.addSimpleText("system", "Attempting to recover...")
+            addSimpleText("system", "Attempting to recover...")
             start()
         }
     }
@@ -217,13 +251,13 @@ class AgentEngine(
         toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
     }
 
-    /**
-     * Interrupt an ongoing sleep, if any.
-     */
-    private suspend fun interruptSleep() {
-        if (currentSleepJob != null) {
+    private suspend fun wakeUp() {
+        if (sleepJob != null) {
             log.debug("Interrupting agent sleep due to event")
-            currentSleepJob?.cancelAndJoin()
+            sleepJob?.cancelAndJoin()
+        }
+        if (state.value == EngineState.PAUSED) {
+            start()
         }
     }
 
@@ -232,11 +266,11 @@ class AgentEngine(
      */
     private suspend fun handleEvent(event: EngineEvent) {
         if (event is WakeUpRequestEvent) {
-            interruptSleep()
+            wakeUp()
         }
     }
 
-    private fun FrameBuffer.addSimpleText(tagName: String, text: String) {
+    private fun addSimpleText(tagName: String, text: String) {
         frames.addStatic {
             addCreatedAtNow()
             tag = tagName
@@ -250,12 +284,11 @@ class AgentEngine(
 
     @AgentToolMethod(description = "Think to yourself.")
     fun think(thoughts: String) {
-        log.debug("Agent is thinking: $thoughts") // todo
-        frames.addSimpleText("thought", thoughts)
+        addSimpleText("thought", thoughts)
     }
 
     @AgentToolMethod(
-        description = "Sleep for a specified amount of time. Pass 0 to sleep infinitely until something happens."
+        description = "Pause for a specified amount of time. Recommended max is 8 hours, but may be higher. "
     )
     suspend fun sleep(seconds: Long) {
         if (seconds == 0L) {
@@ -265,33 +298,34 @@ class AgentEngine(
         }
         val sleptAt = System.currentTimeMillis()
 
-        if (currentSleepJob != null) {
+        if (sleepJob != null) {
             log.debug("Agent is already sleeping, cancelling current sleep")
-            currentSleepJob?.cancelAndJoin()
+            sleepJob?.cancelAndJoin()
         }
 
-        val newSleepJob = engineScope.launch {
+        val newSleepJob = scope.launch {
             try {
+                mutableState.emit(EngineState.PAUSED)
                 if (seconds == 0L) {
                     delay(Long.MAX_VALUE)
                 } else {
                     delay(seconds * 1000)
                 }
                 log.debug("Agent woke up after sleeping for $seconds seconds")
-                frames.addSimpleText("system", "Slept for $seconds seconds.")
+                addSimpleText("system", "Slept for $seconds seconds.")
             } catch (_: CancellationException) {
                 log.debug("Agent was woken up from sleep")
                 val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
-                frames.addSimpleText("system", "Slept for $sleptFor seconds.")
+                addSimpleText("system", "Slept for $sleptFor seconds")
             }
         }
 
-        currentSleepJob = newSleepJob
+        sleepJob = newSleepJob
 
         try {
             newSleepJob.join()
         } finally {
-            currentSleepJob = null
+            sleepJob = null
         }
     }
 }

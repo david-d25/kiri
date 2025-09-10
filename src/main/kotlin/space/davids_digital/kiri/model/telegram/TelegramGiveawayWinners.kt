@@ -13,7 +13,7 @@ data class TelegramGiveawayWinners(
     /**
      * Identifier of the message with the giveaway in the chat.
      */
-    val giveawayMessageId: Long,
+    val giveawayMessageId: Int,
     /**
      * Point in time when winners of the giveaway were selected.
      */

@@ -1,0 +1,19 @@
+package space.davids_digital.kiri.orm.mapper.telegram
+
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
+import space.davids_digital.kiri.model.telegram.TelegramPassportData
+import space.davids_digital.kiri.orm.entity.telegram.*
+
+@Mapper(
+    componentModel = "spring",
+    uses = [
+        TelegramEncryptedPassportElementEntityMapper::class,
+        TelegramEncryptedCredentialsEntityMapper::class
+    ]
+)
+abstract class TelegramPassportDataEntityMapper {
+    @Mapping(target = "internalId", ignore = true)
+    abstract fun toEntity(model: TelegramPassportData?): TelegramPassportDataEntity?
+    abstract fun toModel(entity: TelegramPassportDataEntity?): TelegramPassportData?
+}

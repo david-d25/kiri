@@ -1,6 +1,7 @@
 .root {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  height: 100vh;
 }
 
 .header {
@@ -9,7 +10,5 @@
 
 .main {
   flex: 1;
-  max-height: 100vh;
-  overflow: auto;
-  scrollbar-gutter: stable;
+  overflow: hidden;
 }

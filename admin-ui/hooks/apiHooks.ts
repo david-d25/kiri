@@ -38,8 +38,11 @@ export function usePutMutate<TData, TVariables = any>(key: string | any[], url: 
     return useMutate<TData, TVariables>(key, url, 'put');
 }
 
-export function useDeleteMutate<TData>(key: string | any[], url: string | (() => string)) {
-    return useMutate<TData, undefined>(key, url, 'delete');
+export function useDeleteMutate<TData, TVariables = any>(
+    key: string | any[],
+    url: string | ((v: TVariables) => string)
+) {
+    return useMutate<TData, TVariables>(key, url, 'delete');
 }
 
 function useMutate<TData, TVariables = any>(

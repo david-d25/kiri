@@ -10,5 +10,5 @@ data class TelegramGiveawayWinnersEntityId(
     var chatId: Long = 0,
 
     @Column(name = "giveaway_message_id")
-    var giveawayMessageId: Long = 0
+    var giveawayMessageId: Int = 0
 ) : Serializable

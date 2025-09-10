@@ -5,7 +5,7 @@ package space.davids_digital.kiri.model.telegram
  * [KeyboardButtonRequestChat](https://core.telegram.org/bots/api#keyboardbuttonrequestchat) button.
  */
 data class TelegramChatShared(
-    val requestId: Long,
+    val requestId: Int,
     /**
      * Identifier of the shared chat. The bot may not have access to the chat and could be unable to use this
      * identifier, unless the chat is already known to the bot by some other means.

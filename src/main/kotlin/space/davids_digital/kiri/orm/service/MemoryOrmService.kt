@@ -10,9 +10,9 @@ import space.davids_digital.kiri.orm.entity.MemoryKeyEntity
 import space.davids_digital.kiri.orm.entity.MemoryLinkEntity
 import space.davids_digital.kiri.orm.entity.MemoryPointEntity
 import space.davids_digital.kiri.orm.entity.id.MemoryLinkEntityId
-import space.davids_digital.kiri.orm.mapping.MemoryKeyEntityMapper
-import space.davids_digital.kiri.orm.mapping.MemoryLinkEntityMapper
-import space.davids_digital.kiri.orm.mapping.MemoryPointEntityMapper
+import space.davids_digital.kiri.orm.mapper.MemoryKeyEntityMapper
+import space.davids_digital.kiri.orm.mapper.MemoryLinkEntityMapper
+import space.davids_digital.kiri.orm.mapper.MemoryPointEntityMapper
 import space.davids_digital.kiri.orm.repository.EmbeddingModelRepository
 import space.davids_digital.kiri.orm.repository.MemoryKeyRepository
 import space.davids_digital.kiri.orm.repository.MemoryLinkRepository

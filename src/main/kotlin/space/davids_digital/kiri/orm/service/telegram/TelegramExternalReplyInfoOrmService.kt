@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.service.telegram
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramExternalReplyInfo
-import space.davids_digital.kiri.orm.mapping.telegram.TelegramExternalReplyInfoEntityMapper
+import space.davids_digital.kiri.orm.mapper.telegram.TelegramExternalReplyInfoEntityMapper
 import space.davids_digital.kiri.orm.repository.telegram.TelegramExternalReplyInfoRepository
 
 @Service

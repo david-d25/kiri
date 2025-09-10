@@ -1,14 +1,18 @@
 .headerNavButton {
   gap: 10px;
-  color: white;
+  color: var(--text-primary);
   line-height: 50px;
   padding: 0 20px;
   display: inline-block;
   height: 50px;
 
+  &:hover {
+    background: oklch(25% 0 0);
+  }
+
   &.active {
-    background-color: #414141;
-    border-bottom: 4px solid white;
+    background: oklch(30% 0 0);
+    border-bottom: 4px solid var(--text-primary);
     box-sizing: border-box;
   }
 }

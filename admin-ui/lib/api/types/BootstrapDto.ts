@@ -1,8 +1,10 @@
+import {UserDto} from "@/lib/api/types/UserDto";
+
 export interface BootstrapDto {
     isAuthenticated: boolean
     user?: {
-        id: string
-        isAdmin: boolean
+        id: number
+        role: UserDto.Role
         firstName: string
         lastName?: string
         username?: string
@@ -11,5 +13,6 @@ export interface BootstrapDto {
     login?: {
         telegramBotUsername: string
         telegramAuthCallbackUrl: string
-    }
+    },
+    version: string
 }

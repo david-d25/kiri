@@ -13,10 +13,10 @@
 }
 
 .modal {
-  background: rgba(40, 40, 40, 0.95);
-  border: 2px solid rgb(80, 80, 80);
-  border-radius: 10px;
-  color: white;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-light);
+  border-radius: 5px;
+  color: var(--text-primary);
   min-width: 400px;
   max-width: 90vw;
   max-height: 90vh;
@@ -29,9 +29,9 @@
 
 .modalHeader {
   padding: 10px 10px 10px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  background: var(--bg-tertiary);
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
   font-size: 12px;
   font-weight: bold;
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
@@ -68,8 +68,7 @@
   }
 
   &:focus {
-    outline: 1px aqua solid;
-    outline-offset: 2px;
+    outline-style: solid;
   }
 }
 

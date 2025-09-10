@@ -4,6 +4,8 @@
   grid-template-rows: auto 1fr;
   grid-gap: 15px;
   padding: 15px;
+  height: 100%;
+  box-sizing: border-box;
 
   .statusBar {
     grid-row: 1;

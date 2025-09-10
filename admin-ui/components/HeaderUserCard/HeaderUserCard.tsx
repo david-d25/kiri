@@ -1,10 +1,10 @@
 import s from './HeaderUserCard.module.scss';
-import {useBootstrap} from "../../hooks/bootstrap";
+import {useBootstrap} from "@/hooks/bootstrap";
 import SkeletonLoader from "../SkeletonLoader/SkeletonLoader";
 import Button from "../Button/Button";
 import UserAvatar from "../UserAvatar/UserAvatar";
 import {useRouter} from "next/router";
-import {useLogout} from "../../hooks/logout";
+import {useLogout} from "@/hooks/logout";
 
 export default function HeaderUserCard() {
     const { data, error, isLoading } = useBootstrap();
@@ -12,6 +12,7 @@ export default function HeaderUserCard() {
     const logoutMutation = useLogout();
 
     if (error) {
+        console.error(error);
         return (
             <div className={s.userCard}>Network error</div>
         )
@@ -44,7 +45,7 @@ export default function HeaderUserCard() {
     if (!data.isAuthenticated) {
         return (
             <div className={s.userCard}>
-                <Button lightweight={true} onClick={onLoginClick}>
+                <Button onClick={onLoginClick}>
                     Log in
                 </Button>
             </div>
@@ -60,7 +61,7 @@ export default function HeaderUserCard() {
                 {name}
             </span>
             <span className={s.divider}></span>
-            <Button lightweight={true} onClick={onLogoutClick}>
+            <Button onClick={onLogoutClick}>
                 Log out
             </Button>
         </div>

@@ -19,7 +19,7 @@ class ToolCallExecutorTest {
 
     fun add(a: Int, b: Int): Int = a + b
 
-    fun greet(@ToolParameter(name = "username", description = "User's name") name: String): String =
+    fun greet(@AgentToolParameter(name = "username", description = "User's name") name: String): String =
         "Hello, $name"
 
     fun sumList(numbers: List<Int>): Int = numbers.sum()

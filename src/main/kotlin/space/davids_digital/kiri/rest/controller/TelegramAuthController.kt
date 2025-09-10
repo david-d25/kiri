@@ -48,7 +48,7 @@ class TelegramAuthController(
             hash
         )
         if (!authIsValid) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).also { it.body("Auth is invalid") } .build()
         }
 
         val session = userSessionService.createSession(id, firstName, hash, authDate, lastName, username, photoUrl)
@@ -71,7 +71,9 @@ class TelegramAuthController(
             authCookie.maxAge(maxAge)
         }
 
-        val redirectTo = appProperties.frontend.host.removeSuffix("/") + "/" + appProperties.frontend.basePath.removePrefix("/")
+        val redirectTo = appProperties.frontend.host.removeSuffix("/") +
+                "/" +
+                appProperties.frontend.basePath.removePrefix("/")
 
         return ResponseEntity.status(HttpStatus.FOUND)
             .header(HttpHeaders.SET_COOKIE, userIdCookie.build().toString())

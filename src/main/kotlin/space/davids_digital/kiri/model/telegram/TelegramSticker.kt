@@ -62,7 +62,6 @@ data class TelegramSticker (
     enum class Type {
         REGULAR,
         MASK,
-        CUSTOM_EMOJI,
-        UNKNOWN
+        CUSTOM_EMOJI
     }
 }

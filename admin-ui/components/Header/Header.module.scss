@@ -1,15 +1,17 @@
 .header {
   height: 50px;
-  background-color: #2a2a2a;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
+  margin: 2px 2px 0 2px;
 
   > .left {
     margin-left: 15px;
   }
 
   > .center {
-
+    scrollbar-color: var(--border-color) transparent;
   }
 
   > .right {

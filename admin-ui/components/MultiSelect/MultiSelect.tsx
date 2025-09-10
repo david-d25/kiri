@@ -31,8 +31,8 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
         && props.itemToLabel(item).toLowerCase().includes(searchTerm.toLowerCase())
     ).slice(0, 5); // Limit to 5 suggestions
 
-    const showSuggestions = isInputFocused && searchTerm.length > 0 && suggestions.length > 0;
     const maxItemsReached = props.maxItems && props.selectedItems.length >= props.maxItems;
+    const showSuggestions = !maxItemsReached && searchTerm.length > 0 && isInputFocused && suggestions.length > 0;
 
     const rootClassname = classnames({
         [styles.root]: true,
@@ -48,6 +48,7 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
         }
         props.onSelect(item);
         setSearchTerm(""); // Clear search term after selection
+        setIsInputFocused(false);
     }
 
     function onKeyPress(e: KeyboardEvent<HTMLInputElement>) {
@@ -137,7 +138,12 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
                             [styles.focused]: isSelected,
                         });
                         return (
-                            <div className={className} onMouseDown={() => onSelect(suggestion)} key={index}>
+                            <div
+                                className={className}
+                                onMouseDown={() => onSelect(suggestion)}
+                                onMouseOver={() => setSelectedIndex(index)}
+                                key={index}
+                            >
                                 {props.itemToLabel(suggestion)}
                             </div>
                         )

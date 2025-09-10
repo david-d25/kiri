@@ -19,5 +19,5 @@ export function useFetchDevAuthHash(
         authDate: authDateTimestamp.toString()
     });
 
-    return useFetch<string>('devAuthHash', `/auth/telegram/dev/hash?${params.toString()}`);
+    return useFetch<string>(['devAuthHash', userId], `/auth/telegram/dev/hash?${params.toString()}`);
 }

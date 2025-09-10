@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, {useState, useRef, useEffect, ReactNode} from "react";
 import styles from './Dropdown.module.scss';
 import ArrowDownIcon from './icons/arrow-down.svg';
 import {classnames} from "@/lib/classnames";
 
-type DropdownOption<T> = {
+export type DropdownOption<T> = {
     label: string;
     value: T;
 };
@@ -15,7 +15,7 @@ type Props<T> = {
     disabled?: boolean;
     onChange: (value: T) => void;
     className?: string;
-    label?: string;
+    label?: ReactNode;
 };
 
 export default function Dropdown<T>(
@@ -121,9 +121,9 @@ export default function Dropdown<T>(
                 <ArrowDownIcon className={styles.arrowIcon} data-open={isOpen} />
             </div>
 
-            {isOpen && (
+            { isOpen && (
                 <div className={styles.dropdownOptions}>
-                    {options.map((option, index) => (
+                    { options.map((option, index) => (
                         <div
                             key={index}
                             className={styles.dropdownOption}
@@ -132,9 +132,9 @@ export default function Dropdown<T>(
                         >
                             {option.label}
                         </div>
-                    ))}
+                    )) }
                 </div>
-            )}
+            ) }
         </div>
     );
 }

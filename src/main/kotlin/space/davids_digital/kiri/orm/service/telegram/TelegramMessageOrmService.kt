@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.orm.service.telegram
 
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -7,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramInaccessibleMessage
 import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageEntityId
-import space.davids_digital.kiri.orm.mapping.telegram.TelegramMessageEntityMapper
+import space.davids_digital.kiri.orm.mapper.telegram.TelegramMessageEntityMapper
 import space.davids_digital.kiri.orm.repository.telegram.TelegramInaccessibleMessageRepository
 import space.davids_digital.kiri.orm.repository.telegram.TelegramMessageRepository
 import kotlin.jvm.optionals.getOrNull
@@ -64,15 +65,56 @@ class TelegramMessageOrmService(
     }
 
     @Transactional(readOnly = true)
-    fun getChatMessages(chatId: Long, limit: Long): List<TelegramMessage> {
-        return repo.findAllByIdChatId(
-            chatId,
-            PageRequest.of(0, limit.toInt(), Sort.by(Sort.Direction.DESC, "date"))
-        ).mapNotNull(mapper::toModel)
+    fun find(chatId: Long, messageId: Int): TelegramMessage? {
+        return mapper.toModel(repo.findById(TelegramMessageEntityId(chatId, messageId)).getOrNull())
     }
 
     @Transactional(readOnly = true)
-    fun find(chatId: Long, messageId: Int): TelegramMessage? {
-        return mapper.toModel(repo.findById(TelegramMessageEntityId(chatId, messageId)).getOrNull())
+    fun findFirstOrderedByMessageId(chatId: Long, limit: Int): Page<TelegramMessage> {
+        return repo.findByIdChatId(chatId, PageRequest.of(0, limit, Sort.by("id.messageId"))).map(mapper::toModel)
+    }
+
+    @Transactional(readOnly = true)
+    fun findOldestMessage(chatId: Long): TelegramMessage? {
+        return repo.findFirstByIdChatId(chatId, Sort.by("date", "id.messageId"))?.let(mapper::toModel)
+    }
+
+    @Transactional(readOnly = true)
+    fun findMostRecentMessage(chatId: Long): TelegramMessage? {
+        return repo.findFirstByIdChatId(
+            chatId,
+            Sort.by(Sort.Direction.DESC, "date", "id.messageId")
+        )?.let(mapper::toModel)
+    }
+
+    @Transactional(readOnly = true)
+    fun findSinceMessageIdOrderedByMessageId(
+        chatId: Long,
+        sinceMessageId: Int,
+        limit: Int
+    ): Page<TelegramMessage> {
+        return repo.findByIdChatIdAndIdMessageIdGreaterThanEqual(
+            chatId,
+            sinceMessageId,
+            PageRequest.of(0, limit, Sort.by("date", "id.messageId"))
+        ).map(mapper::toModel)
+    }
+
+    @Transactional(readOnly = true)
+    fun findBeforeMessageIdOrderedByMessageIdDesc(
+        chatId: Long,
+        beforeMessageId: Int,
+        limit: Int
+    ): Page<TelegramMessage> {
+        return repo.findByIdChatIdAndIdMessageIdLessThan(
+            chatId,
+            beforeMessageId,
+            PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "date", "id.messageId"))
+        ).map(mapper::toModel)
+    }
+
+    @Transactional(readOnly = true)
+    fun countMessagesAfterId(chatId: Long, afterMessageId: Int): Long {
+        return repo.countByIdChatIdAndIdMessageIdGreaterThan(chatId, afterMessageId)
     }
 }

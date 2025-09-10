@@ -1,6 +1,5 @@
 .dropdownContainer {
   position: relative;
-  max-width: 300px;
   display: flex;
   flex-direction: column;
 
@@ -9,19 +8,13 @@
     pointer-events: none;
 
     .dropdownHeader {
-      border-color: #666;
-      color: #aaa;
       cursor: not-allowed;
-    }
-
-    .arrowIcon {
-      fill: #666;
     }
   }
 }
 
 .label {
-  color: white;
+  color: var(--text-secondary);
   font-size: 16px;
 }
 
@@ -30,26 +23,27 @@
   gap: 5px;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 15px;
+  padding: 5px 10px;
+  height: 40px;
+  box-sizing: border-box;
   font-size: 18px;
-  background: rgba(255, 255, 255, .1);
-  color: white;
-  border: 2px solid white;
-  border-radius: 10px;
+  background: var(--bg-interactive);
+  color: var(--text-primary);
+  border: 1px solid var(--border-interactive);
+  border-radius: 5px;
   cursor: pointer;
   user-select: none;
 
   &:hover:not([data-disabled="true"]) {
-    background: rgba(255, 255, 255, .2);
+    background: var(--bg-interactive-hover);
   }
 
   &:focus {
-    outline: 1px aqua solid;
-    outline-offset: 2px;
+    outline-style: solid;
   }
 
   &[data-open="true"] {
-    background: rgba(255, 255, 255, .2);
+    background: var(--bg-interactive-hover);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }
@@ -62,7 +56,7 @@
 }
 
 .arrowIcon {
-  fill: white;
+  fill: oklch(50% 0 0);
   width: 16px;
   height: 16px;
   transition: transform 0.2s ease;
@@ -77,11 +71,11 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: rgba(40, 40, 40, 0.95);
-  border: 2px solid white;
+  background: var(--bg-interactive);
+  border: 1px solid var(--border-color);
   border-top: none;
-  border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
   z-index: 10;
   max-height: 200px;
   overflow-y: auto;
@@ -109,7 +103,7 @@
 .dropdownOption {
   padding: 10px 15px;
   font-size: 18px;
-  color: white;
+  color: var(--text-primary);
   cursor: pointer;
 
   &:hover {
@@ -121,7 +115,7 @@
   }
 
   &:last-child {
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
   }
 }

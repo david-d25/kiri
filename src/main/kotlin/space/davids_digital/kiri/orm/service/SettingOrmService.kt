@@ -32,16 +32,19 @@ class SettingOrmService(
     private val flows: MutableMap<String, MutableSharedFlow<Setting>> = mutableMapOf()
 
     @Transactional(readOnly = true)
-    fun get(key: String): Setting {
-        val entity = repo.findById(key).getOrNull()
-        if (entity == null) {
-            return Setting(
-                key = key,
-                value = null,
-                updatedAt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(0), ZoneId.systemDefault())
-            )
-        }
+    fun get(key: String): Setting { // TODO make it return `Setting?`
+        val entity = repo.findById(key).getOrNull() ?: return Setting(
+            key = key,
+            value = null,
+            updatedAt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(0), ZoneId.systemDefault())
+        )
         return toModel(entity)
+    }
+
+    @Transactional(readOnly = true)
+    fun getValue(key: String): String? {
+        val entity = repo.findById(key).getOrNull() ?: return null
+        return entity.value
     }
 
     /**
@@ -92,17 +95,17 @@ class SettingOrmService(
     private fun toModel(entity: SettingEntity): Setting {
         val rawValue = entity.value
         if (entity.encrypted) {
-            val byteArray = Base64.getDecoder().decode(rawValue)
-            val decryptedValue = cryptography.decrypt(byteArray)
+            val byteArray = rawValue?.let { Base64.getDecoder().decode(it) }
+            val decryptedValue = byteArray?.let { cryptography.decrypt(it) }
             return Setting(
                 key = entity.key,
-                value = objectMapper.readValue(decryptedValue, String::class.java),
+                value = decryptedValue?.toString(Charsets.UTF_8),
                 updatedAt = entity.updatedAt.toZonedDateTime(),
             )
         } else {
             return Setting(
                 key = entity.key,
-                value = rawValue ?: "",
+                value = rawValue,
                 updatedAt = entity.updatedAt.toZonedDateTime(),
             )
         }

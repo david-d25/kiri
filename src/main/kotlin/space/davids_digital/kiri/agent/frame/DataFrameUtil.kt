@@ -4,9 +4,9 @@ import java.time.ZonedDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-private val DATETIME_PATTERN = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm 'UTC'")
+private val UTC_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm 'UTC'")
 
 fun StaticDataFrame.Builder.addCreatedAtNow() {
     attributes["created-at"] = ZonedDateTime.now(ZoneOffset.UTC).asPrettyString()
 }
-fun ZonedDateTime.asPrettyString(): String = format(DATETIME_PATTERN)
+fun ZonedDateTime.asPrettyString(): String = withZoneSameInstant(ZoneOffset.UTC).format(UTC_FORMATTER)

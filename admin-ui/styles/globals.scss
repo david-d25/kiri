@@ -1,19 +1,74 @@
+:root {
+  --bg-primary: oklch(15% 0.002 0);      // #0a0a0a - Almost black
+  --bg-secondary: oklch(20% 0.002 0);    // #141414 - Dark gray
+  --bg-tertiary: oklch(25% 0.003 0);     // #1f1f1f - Medium dark gray
+
+  // Border colors - slightly more chroma than backgrounds
+  --border-color: oklch(30% 0.004 0);    // #2a2a2a - Dark border
+  --border-light: oklch(35% 0.005 0);    // #333333 - Lighter border
+
+  // Background colors for interactive elements
+  --bg-interactive: oklch(26% 0.005 0);
+  --bg-interactive-hover: oklch(30% 0.006 0);
+  --bg-interactive-active: oklch(30% 0.006 0);
+  --border-interactive: oklch(35% 0.007 0);
+
+  // Text colors - low chroma for readability
+  --text-primary: oklch(92% 0.006 265);   // #e4e4e7 - Almost white
+  --text-secondary: oklch(70% 0.01 265);  // #a1a1aa - Light gray
+  --text-muted: oklch(55% 0.015 265);     // #71717a - Medium gray
+
+  // Accent colors - high chroma for vibrancy
+  --accent-blue: oklch(75% 0.18 230);     // #60a5fa - Bright blue
+  --accent-purple: oklch(70% 0.19 285);   // #a78bfa - Bright purple
+  --accent-green: oklch(75% 0.22 145);    // #4ade80 - Bright green
+  --accent-yellow: oklch(80% 0.17 90);    // #fbbf24 - Bright yellow
+  --accent-red: oklch(70% 0.18 25);       // #f87171 - Bright red
+  --accent-cyan: oklch(85% 0.15 200);     // #67e8f9 - Bright cyan
+
+  // Semantic variations
+  --success: var(--accent-green);
+  --warning: var(--accent-yellow);
+  --error: var(--accent-red);
+  --info: var(--accent-blue);
+
+  // Interactive states using OKLCH modifications
+  --hover-lightness-boost: 5%;
+  --active-lightness-reduce: 5%;
+  --disabled-chroma-reduce: 0.5;
+}
+
+// Generate color variations
+@mixin generate-color-variants($base-color, $name) {
+  --#{$name}-lighter: oklch(from #{$base-color} calc(l + 0.1) c h);
+  --#{$name}-darker: oklch(from #{$base-color} calc(l - 0.1) c h);
+  --#{$name}-muted: oklch(from #{$base-color} l calc(c * 0.5) h);
+  --#{$name}-vivid: oklch(from #{$base-color} l calc(c * 1.2) h);
+}
+
+// Generate variants for accent colors
+:root {
+  @include generate-color-variants(var(--accent-blue), 'blue');
+  @include generate-color-variants(var(--accent-purple), 'purple');
+  @include generate-color-variants(var(--accent-green), 'green');
+}
+
 * {
-  outline-color: aqua;
+  outline-color: oklch(from var(--accent-blue) l c h / 50%);
+  outline-width: 2px;
 }
 
 body {
   margin: 0;
-  background: #1e1e1e;
-  color: rgb(225, 225, 225);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
   font-size: 18px;
 }
 
 a {
-  color: #00d1d1;
+  color: var(--accent-blue);
   text-decoration: none;
-  font-weight: bold;
 }
 
 button,
