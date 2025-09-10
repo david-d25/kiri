@@ -9,15 +9,14 @@ import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.RetryStrategy
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.AppProperties
-import kotlin.collections.toFloatArray
-import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @Service
 class OpenAiEmbeddingService(appProperties: AppProperties) {
     private val openai = OpenAI(
         token = appProperties.integration.openai.apiKey,
         logging = LoggingConfig(logLevel = LogLevel.None),
-        timeout = Timeout(5.minutes),
+        timeout = Timeout(30.seconds),
         retry = RetryStrategy(maxRetries = 5)
     )
 

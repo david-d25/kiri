@@ -9,15 +9,24 @@ type Props = {
     onClick?: MouseEventHandler<HTMLButtonElement>,
     ref?: React.Ref<HTMLButtonElement>,
     className?: string
-    type?: 'button' | 'submit' | 'reset'
+    type?: 'button' | 'submit' | 'reset',
+    colorAccent?: 'primary' | 'default'
 };
 
 export default function Button(props: Props) {
+    const className = classnames(
+        {
+            [style.button]: true,
+            [style.lightweight]: props.lightweight,
+            [style.primary]: props.colorAccent === 'primary',
+        },
+        props.className
+    );
     return (
         <button
             type={props.type || 'button'}
             tabIndex={0}
-            className={classnames({[style.button]: true, [style.lightweight]: props.lightweight}, props.className)}
+            className={className}
             onClick={props.onClick}
             disabled={props.disabled}
             ref={props.ref}

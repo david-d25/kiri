@@ -16,7 +16,7 @@ data class TelegramExternalReplyInfo (
      * Unique message identifier inside the original chat.
      * Available only if the original chat is a supergroup or a channel.
      */
-    val messageId: Long? = null,
+    val messageId: Int? = null,
     /**
      * Options used for link preview generation for the original message, if it is a text message.
      */

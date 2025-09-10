@@ -1,6 +1,6 @@
 import React from "react";
 import styles from './LoadingOverlay.module.scss';
-import {classnames} from "../../lib/classnames";
+import {classnames} from "@/lib/classnames";
 
 type Props = {
     children: React.ReactNode;

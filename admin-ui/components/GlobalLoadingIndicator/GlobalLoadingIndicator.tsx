@@ -45,7 +45,7 @@ export default function GlobalLoadingIndicator() {
     return (
         <div className={styles.root}>
             <LoadingDotsIcon className={styles.icon}/>
-            <span className={styles.text}>Загрузка…</span>
+            <span className={styles.text}>Loading...</span>
         </div>
     );
 }

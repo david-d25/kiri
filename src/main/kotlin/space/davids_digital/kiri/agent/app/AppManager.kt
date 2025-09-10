@@ -3,14 +3,14 @@ package space.davids_digital.kiri.agent.app
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import space.davids_digital.kiri.AppProperties
+import space.davids_digital.kiri.agent.app.telegram.TelegramApp
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.DynamicDataFrame
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
-import space.davids_digital.kiri.integration.telegram.TelegramService
+import java.util.function.Supplier
 
 /**
  * This component manages apps and their lifecycle.
@@ -18,9 +18,8 @@ import space.davids_digital.kiri.integration.telegram.TelegramService
 @Component
 @AgentToolNamespace("apps")
 class AppManager(
-    private val appProperties: AppProperties,
     private val frames: FrameBuffer,
-    private val telegramService: TelegramService,
+    private val telegramAppProvider: Supplier<TelegramApp>
 ) : AgentToolProvider {
     private val log = LoggerFactory.getLogger(this::class.java)
 
@@ -30,7 +29,7 @@ class AppManager(
 
     @PostConstruct
     private fun init() {
-        availableApps["telegram"] = { TelegramApp(telegramService) }
+        availableApps["telegram"] = { telegramAppProvider.get() }
     }
 
     fun getOpenedApp(id: String): AgentApp? {
@@ -51,7 +50,7 @@ class AppManager(
     }
 
     @AgentToolMethod(name = "open", description = "Open app by ID")
-    fun open(id: String): String {
+    suspend fun open(id: String): String {
         val foundApp = openedApps.find { it.id == id }
         if (foundApp != null) {
             return "App '$id' is already opened"
@@ -72,7 +71,7 @@ class AppManager(
     }
 
     @AgentToolMethod(name = "close", description = "Close app by ID")
-    fun close(id: String): String {
+    suspend fun close(id: String): String {
         val app = openedApps.find { it.id == id } ?: return "App with ID '$id' not found"
         val frame = appFrames.remove(id)
         frame?.let(frames::removeFixed)

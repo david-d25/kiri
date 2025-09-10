@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './Modal.module.scss';
+import Button from "@/components/Button/Button";
 
 export type ModalProps = {
     isOpen: boolean;
@@ -22,6 +23,7 @@ export default function Modal({
   closeOnEscape = true,
 }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
+    const backdropMouseDown = useRef(false);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -50,14 +52,21 @@ export default function Modal({
 
     if (!isOpen) return null;
 
-    const handleBackdropClick = (e: React.MouseEvent) => {
+    const handleBackdropMouseUp = (e: React.MouseEvent) => {
         if (e.target === e.currentTarget && closeOnBackdropClick) {
-            onClose();
+            if (backdropMouseDown.current) {
+                onClose();
+            }
         }
+        backdropMouseDown.current = false;
     };
 
+    const handleBackdropMouseDown = (e: React.MouseEvent) => {
+        backdropMouseDown.current = !!(e.target === e.currentTarget && closeOnBackdropClick);
+    }
+
     return createPortal(
-        <div className={styles.modalBackdrop} onClick={handleBackdropClick}>
+        <div className={styles.modalBackdrop} onMouseUp={handleBackdropMouseUp} onMouseDown={handleBackdropMouseDown}>
             <div
                 className={styles.modal}
                 ref={modalRef}
@@ -67,13 +76,9 @@ export default function Modal({
                 {title && (
                     <div className={styles.modalHeader}>
                         <h2 className={styles.modalTitle}>{title}</h2>
-                        <button
-                            className={styles.modalCloseButton}
-                            onClick={onClose}
-                            aria-label="Close modal"
-                        >
+                        <Button className={styles.modalCloseButton} onClick={onClose} lightweight>
                             ×
-                        </button>
+                        </Button>
                     </div>
                 )}
                 <div className={styles.modalContent}>

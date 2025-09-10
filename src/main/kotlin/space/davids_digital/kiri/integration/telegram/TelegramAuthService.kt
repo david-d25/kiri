@@ -20,7 +20,7 @@ class TelegramAuthService(
         hash: String,
     ): Boolean {
         val computedHash = computeHash(userId, firstName, lastName, username, photoUrl, authDate)
-        return computedHash.lowercase() == hash.lowercase()
+        return computedHash.equals(hash, ignoreCase = true)
     }
 
     fun computeHash(

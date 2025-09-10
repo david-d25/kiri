@@ -24,7 +24,7 @@ data class TelegramEncryptedPassportElement(
      * [Type.BANK_STATEMENT], [Type.RENTAL_AGREEMENT], [Type.PASSPORT_REGISTRATION] and [Type.TEMPORARY_REGISTRATION]
      * types. Files can be decrypted and verified using the accompanying [TelegramEncryptedCredentials].
      */
-    val files: List<TelegramPassportFile>? = null,
+    val files: List<TelegramPassportFile> = emptyList(),
     /**
      * Encrypted file with the front side of the document, provided by the user; available only for [Type.PASSPORT],
      * [Type.DRIVER_LICENSE], [Type.IDENTITY_CARD] and [Type.INTERNAL_PASSPORT].
@@ -50,7 +50,7 @@ data class TelegramEncryptedPassportElement(
      * and [Type.TEMPORARY_REGISTRATION] types.
      * Files can be decrypted and verified using the accompanying [TelegramEncryptedCredentials].
      */
-    val translation: List<TelegramPassportFile>? = null,
+    val translation: List<TelegramPassportFile> = emptyList(),
     /**
      * Element hash for using in [TelegramPassportElementErrorUnspecified].
      */

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.rest.dto.SettingDto
-import space.davids_digital.kiri.rest.dto.SettingUpdateRequestDto
+import space.davids_digital.kiri.rest.dto.SettingUpdateRequest
 import kotlin.let
 
 @RestController
@@ -22,7 +22,7 @@ class SettingsController(
     }
 
     @PostMapping("{key}")
-    fun set(@PathVariable key: String, @RequestBody request: SettingUpdateRequestDto): SettingDto {
+    fun set(@PathVariable key: String, @RequestBody request: SettingUpdateRequest): SettingDto {
         val newSetting = settings.set(key, request.value, request.encrypt)
         return SettingDto(newSetting.key, newSetting.value, newSetting.updatedAt)
     }

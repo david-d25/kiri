@@ -5,27 +5,27 @@
 }
 
 .label {
-  color: white;
+  color: var(--text-secondary);
   font-size: 16px;
 }
 
 .input {
-  padding: 10px 15px;
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid white;
-  border-radius: 10px;
-  outline: none;
+  padding: 10px;
+  color: var(--text-primary);
+  background: var(--bg-interactive);
+  border: 1px solid var(--border-interactive);
+  border-radius: 5px;
   font-size: inherit;
+  height: 40px;
+  box-sizing: border-box;
 
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
   }
 
   &:focus {
-    background: rgba(255, 255, 255, 0.15);
-    outline: 1px aqua solid;
-    outline-offset: 2px;
+    background: var(--bg-interactive-active);
+    outline-style: solid;
   }
 
   &:disabled {
@@ -39,12 +39,12 @@
   }
 
   &[data-error="true"] {
-    border-color: rgba(231, 76, 60, 1);
+    border-color: var(--accent-red)
   }
 }
 
 .errorMessage {
-  color: rgba(231, 76, 60, 1);
+  color: var(--accent-red);
   font-size: 14px;
   margin-top: 5px;
 }

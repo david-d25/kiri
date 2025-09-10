@@ -7,8 +7,8 @@ import space.davids_digital.kiri.llm.LlmMessageRequest.Message.ContentItem.ToolR
 @DslMarker
 annotation class LlmMessageRequestDsl
 
-fun llmMessageRequest(block: LlmMessageRequestBuilder.() -> Unit) =
-    LlmMessageRequestBuilder().apply(block).build()
+suspend fun llmMessageRequest(block: suspend LlmMessageRequestBuilder.() -> Unit) =
+    LlmMessageRequestBuilder().apply { block() }.build()
 
 @LlmMessageRequestDsl
 class LlmMessageRequestBuilder {
@@ -23,16 +23,16 @@ class LlmMessageRequestBuilder {
         emptyList()
     )
 
-    fun userMessage(block: LlmMessageRequestUserMessageBuilder.() -> Unit) {
-        messages.add(LlmMessageRequestUserMessageBuilder().apply(block).build())
+    suspend fun userMessage(block: suspend LlmMessageRequestUserMessageBuilder.() -> Unit) {
+        messages.add(LlmMessageRequestUserMessageBuilder().apply { block() }.build())
     }
 
-    fun assistantMessage(block: LlmMessageRequestAssistantMessageBuilder.() -> Unit) {
-        messages.add(LlmMessageRequestAssistantMessageBuilder().apply(block).build())
+    suspend fun assistantMessage(block: suspend LlmMessageRequestAssistantMessageBuilder.() -> Unit) {
+        messages.add(LlmMessageRequestAssistantMessageBuilder().apply { block() }.build())
     }
 
-    fun tools(block: LlmMessageRequestToolsBuilder.() -> Unit) {
-        tools = LlmMessageRequestToolsBuilder().apply(block).build()
+    suspend fun tools(block: suspend LlmMessageRequestToolsBuilder.() -> Unit) {
+        tools = LlmMessageRequestToolsBuilder().apply { block() }.build()
     }
 
     fun build(): LlmMessageRequest {

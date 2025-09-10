@@ -1,11 +1,47 @@
 .frame {
-  .head {
-    .tag {
+  font-family: var(--jetbrains-mono-font), serif;
+  font-size: 14px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  padding: 5px;
 
+  .head {
+    display: flex;
+
+    .icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 5px;
+
+      &.data {
+        color: var(--accent-red);
+      }
+
+      &.function {
+        color: var(--accent-blue);
+      }
+    }
+
+    .tag {
+      color: var(--text-secondary);
+      margin-right: 10px;
     }
   }
 
   .content {
-
+    margin-top: 5px;
   }
+}
+
+.textContentPart:hover {
+  background: oklch(1 0 0 / 10%);
+}
+
+.toolCallInput {
+  color: var(--text-secondary);
+}
+
+.toolOutputImage,
+.textContentImage {
+  max-height: 100px;
 }

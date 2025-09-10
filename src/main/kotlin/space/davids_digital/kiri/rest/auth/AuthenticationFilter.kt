@@ -8,8 +8,8 @@ import jakarta.servlet.http.HttpServletRequest
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.GenericFilterBean
 import org.springframework.security.core.authority.SimpleGrantedAuthority
-import space.davids_digital.kiri.service.AdminUserService
 import space.davids_digital.kiri.model.UserSession
+import space.davids_digital.kiri.orm.service.UserOrmService
 import space.davids_digital.kiri.orm.service.UserSessionOrmService
 import space.davids_digital.kiri.orm.service.UserSessionOrmService.UserSessionDecryptException
 import space.davids_digital.kiri.rest.CookieName
@@ -18,22 +18,22 @@ import java.io.IOException
 
 class AuthenticationFilter(
     private val userSessionOrmService: UserSessionOrmService,
-    private val adminUserService: AdminUserService
+    private val users: UserOrmService,
 ) : GenericFilterBean() {
+    companion object {
+        private const val ROLE_PREFIX = "ROLE_"
+    }
+
     @Throws(IOException::class, ServletException::class)
-    override fun doFilter(
-        request: ServletRequest,
-        response: ServletResponse,
-        filterChain: FilterChain
-    ) {
+    override fun doFilter(request: ServletRequest, response: ServletResponse, filterChain: FilterChain) {
         val httpRequest = request as HttpServletRequest
         val userId = getCookie(httpRequest, CookieName.USER_ID)?.toLongOrNull()
         val sessionToken = getCookie(httpRequest, CookieName.AUTH_TOKEN)
         if (userId != null && sessionToken != null) {
             val session = getValidatedSession(userId, sessionToken)
-            if (session != null) {
-                val isAdmin = adminUserService.isAdmin(session.userId)
-                val authorities = if (isAdmin) listOf(SimpleGrantedAuthority("admin")) else emptyList()
+            val user = users.findById(userId)
+            if (session != null && user != null) {
+                val authorities = listOf(SimpleGrantedAuthority(ROLE_PREFIX + user.role.name))
                 SecurityContextHolder.getContext().authentication = UserAuthentication(session, authorities)
             }
         }

@@ -1,7 +1,7 @@
 import axios, {AxiosRequestConfig} from "axios";
 import Router from "next/router";
 
-const apiBase = process.env.NEXT_PUBLIC__API_BASE_URL!
+export const apiBase = process.env.NEXT_PUBLIC__API_BASE_URL!
 
 const instance = axios.create({
     baseURL: apiBase,

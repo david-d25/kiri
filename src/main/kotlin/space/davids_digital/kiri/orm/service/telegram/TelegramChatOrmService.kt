@@ -7,36 +7,42 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.orm.entity.telegram.TelegramChatEntity
-import space.davids_digital.kiri.orm.mapping.telegram.TelegramChatEntityMapper
+import space.davids_digital.kiri.orm.mapper.TelegramChatMetadataEntityMapper
+import space.davids_digital.kiri.orm.mapper.telegram.TelegramChatEntityMapper
+import space.davids_digital.kiri.orm.repository.TelegramChatMetadataRepository
 import space.davids_digital.kiri.orm.repository.telegram.TelegramChatRepository
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramChatSpecifications.titleContains
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramChatSpecifications.typeIn
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramChatSpecifications.usernameContains
+import space.davids_digital.kiri.service.TelegramChatMetadataService
 import space.davids_digital.kiri.service.exception.ServiceException
 
 @Service
 class TelegramChatOrmService(
     private val repo: TelegramChatRepository,
+    private val metadataRepo: TelegramChatMetadataRepository,
     private val mapper: TelegramChatEntityMapper,
+    private val metadataMapper: TelegramChatMetadataEntityMapper,
+    private val telegramChatMetadataService: TelegramChatMetadataService
 ) {
     @Transactional(readOnly = true)
-    fun getAllChats(): List<TelegramChat> {
-        return repo.findAll().mapNotNull(mapper::toModel)
+    fun findAll(pageable: Pageable): Page<TelegramChat> {
+        return repo.findAll(pageable).map(::toModel)
     }
 
     @Transactional(readOnly = true)
     fun findById(id: Long): TelegramChat? {
-        return repo.findById(id).map(mapper::toModel).orElse(null)
+        return repo.findById(id).map(::toModel).orElse(null)
     }
 
     @Transactional(readOnly = true)
     fun findByIds(ids: Collection<Long>): List<TelegramChat> {
-        return repo.findAllById(ids).mapNotNull(mapper::toModel)
+        return repo.findAllById(ids).mapNotNull(::toModel)
     }
 
     @Transactional(readOnly = true)
     fun findByUsername(username: String): TelegramChat? {
-        return mapper.toModel(repo.findByUsername(username))
+        return repo.findByUsername(username)?.let(::toModel)
     }
 
     @Transactional(readOnly = true)
@@ -65,7 +71,7 @@ class TelegramChatOrmService(
             spec = spec?.and(s) ?: s
         }
 
-        return repo.findAll(spec, pageable).map(mapper::toModel)
+        return repo.findAll(spec, pageable).map(::toModel)
     }
 
     @Transactional(readOnly = true)
@@ -75,18 +81,31 @@ class TelegramChatOrmService(
 
     @Transactional
     fun save(chat: TelegramChat): TelegramChat {
-        return mapper.toModel(repo.save(mapper.toEntity(chat)!!))!!
+        val chatEntity = mapper.toEntity(chat)!!
+        val metadataEntity = metadataMapper.toEntity(chat.metadata, chat.id)!!
+        val savedChatEntity = repo.save(chatEntity)
+        val savedMetadata = metadataMapper.toModel(metadataRepo.save(metadataEntity))!!
+        return toModel(savedChatEntity, savedMetadata)
     }
 
     @Transactional
     fun update(id: Long, block: TelegramChat.() -> TelegramChat): TelegramChat {
-        var model = repo.findById(id).map(mapper::toModel).orElseThrow { ServiceException("chat id $id not found") }!!
+        var model = repo.findById(id).map(::toModel).orElseThrow { ServiceException("chat id $id not found") }!!
         model = model.block()
-        return mapper.toModel(repo.save(mapper.toEntity(model)!!))!!
+        return save(model)
     }
 
     @Transactional
-    fun deleteChat(id: Long) {
+    fun delete(id: Long) {
         repo.deleteById(id)
+    }
+
+    private fun toModel(chatEntity: TelegramChatEntity, metadata: TelegramChat.Metadata): TelegramChat {
+        return mapper.toModel(chatEntity, metadata)!!
+    }
+
+    private fun toModel(chatEntity: TelegramChatEntity): TelegramChat {
+        val metadata = telegramChatMetadataService.getOrCreateDefault(chatEntity.id, mapper.toModel(chatEntity.type)!!)
+        return mapper.toModel(chatEntity, metadata)!!
     }
 }

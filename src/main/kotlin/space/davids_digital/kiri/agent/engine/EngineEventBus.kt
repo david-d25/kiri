@@ -8,20 +8,8 @@ import org.springframework.stereotype.Service
 
 @Service
 class EngineEventBus {
-    private val eventFlow = MutableSharedFlow<EngineEvent>(
+    val events = MutableSharedFlow<EngineEvent>(
         extraBufferCapacity = 64,
-        onBufferOverflow = BufferOverflow.SUSPEND
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
-
-    suspend fun publish(event: EngineEvent) {
-        eventFlow.emit(event)
-    }
-
-    fun tryPublish(event: EngineEvent): Boolean {
-        return eventFlow.tryEmit(event)
-    }
-
-    fun subscribe(): Flow<EngineEvent> {
-        return eventFlow.asSharedFlow()
-    }
 }

@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Primary
 import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.rest.dto.telegram.TelegramChatDto
 
-@Mapper(componentModel = "spring")
+@Mapper
 @AnnotateWith(Primary::class)
 interface TelegramChatDtoMapper {
     fun toDto(model: TelegramChat?): TelegramChatDto?

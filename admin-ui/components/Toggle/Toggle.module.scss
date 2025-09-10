@@ -8,8 +8,8 @@
   position: relative;
   width: 60px;
   height: 30px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid white;
+  background: var(--bg-interactive);
+  border: 1px solid var(--border-interactive);
   border-radius: 15px;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -25,7 +25,7 @@
   }
 
   &:hover:not([data-disabled="true"]) {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--bg-interactive-hover);
 
     &[data-checked="true"] {
       background: rgba(52, 152, 219, 0.8);
@@ -33,29 +33,28 @@
   }
 
   &:focus {
-    outline: 3px aqua solid;
-    outline-offset: 2px;
+    outline-style: solid;
   }
 
   &[data-disabled="true"] {
     opacity: 0.5;
     cursor: not-allowed;
-    border-color: #666;
   }
 }
 
 .toggleHandle {
   position: absolute;
-  left: 2px;
-  top: 2px;
+  left: 3px;
+  top: 3px;
   width: 22px;
   height: 22px;
-  background: white;
+  background: oklch(90% 0 0);
   border-radius: 50%;
   transition: transform 0.2s;
 
   .toggle[data-checked="true"] & {
     transform: translateX(30px);
+    background: oklch(100% 0 0);
   }
 
   .toggle[data-disabled="true"] & {

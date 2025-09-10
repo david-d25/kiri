@@ -31,7 +31,7 @@ data class TelegramMessage (
     /**
      * If the sender of the message boosted the chat, the number of boosts added by the user.
      */
-    val senderBoostCount: Long? = null,
+    val senderBoostCount: Int? = null,
     /**
      * The bot that actually sent the message on behalf of the business account.
      * Available only for outgoing messages sent on behalf of the connected business account.

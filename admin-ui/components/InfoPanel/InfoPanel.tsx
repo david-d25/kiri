@@ -12,6 +12,7 @@ type Props = {
     children: React.ReactNode;
     type?: InfoPanelType;
     borderless?: boolean;
+    minimalistic?: boolean;
     className?: string;
 };
 
@@ -20,11 +21,17 @@ export default function InfoPanel(
         children,
         type = 'info',
         borderless = false,
+        minimalistic = false,
         className
     }: Props
 ) {
     return (
-        <div className={classnames(styles.infoPanel, className)} data-type={type} data-borderless={borderless}>
+        <div
+            className={classnames(styles.infoPanel, className)}
+            data-type={type}
+            data-borderless={borderless}
+            data-minimalistic={minimalistic}
+        >
             {renderIcon(type)}
             {children}
         </div>

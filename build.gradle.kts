@@ -8,13 +8,14 @@ allprojects {
 }
 
 plugins {
-    id("org.springframework.boot") version "3.4.2"
+    id("org.springframework.boot") version "3.5.4"
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.1.10"
     kotlin("kapt") version "2.1.10"
     kotlin("plugin.allopen") version "2.1.10"
     kotlin("plugin.spring") version "2.1.10"
     kotlin("plugin.jpa") version "2.1.10"
+    kotlin("plugin.serialization") version "2.1.10"
 }
 
 allOpen {
@@ -26,6 +27,12 @@ allOpen {
     annotation("org.springframework.stereotype.Repository")
     annotation("org.springframework.web.bind.annotation.RestController")
     annotation("org.springframework.context.annotation.Configuration")
+}
+
+kapt {
+    arguments {
+        arg("mapstruct.defaultComponentModel", "spring")
+    }
 }
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -50,7 +57,7 @@ dependencies {
     kapt("org.mapstruct:mapstruct-processor:1.6.3")
 
     // Telegram
-    implementation("com.github.pengrad:java-telegram-bot-api:8.3.0")
+    implementation("com.github.pengrad:java-telegram-bot-api:9.2.0")
 
     // OpenAI
     implementation(platform("com.aallam.openai:openai-client-bom:4.0.1"))
@@ -62,11 +69,14 @@ dependencies {
     // Google GenAI
     implementation("com.google.genai:google-genai:0.3.0")
 
+    // Github
+    implementation("org.kohsuke:github-api:1.329")
+
     runtimeOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+    compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.10")
     implementation("com.google.code.gson:gson:2.12.1")
     implementation("org.apache.commons:commons-text:1.14.0")
-    implementation("jakarta.servlet:jakarta.servlet-api:6.1.0")
     implementation("org.postgresql:postgresql")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("org.slf4j:slf4j-api")
@@ -97,12 +107,15 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
 
     // Spring
-    implementation("org.springframework:spring-context:6.2.3")
-    implementation("org.springframework:spring-web:6.2.3")
-    implementation("org.springframework:spring-webmvc:6.2.3")
+    implementation("org.springframework:spring-context:6.2.10")
+    implementation("org.springframework:spring-web:6.2.10")
+    implementation("org.springframework:spring-webmvc:6.2.10")
 
     // To support controllers with suspend functions
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+
+    // To support Kotlin classes in Jackson
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.2")
 
     // PostgreSQL vectors support
     implementation("org.hibernate.orm:hibernate-vector:6.6.13.Final")

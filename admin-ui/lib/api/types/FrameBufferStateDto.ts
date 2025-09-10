@@ -5,3 +5,11 @@ export type FrameBufferStateDto = {
     rollingFrames: FrameDto[],
     hardLimit: number
 };
+
+export namespace FrameBufferStateDto {
+    export const NULL: FrameBufferStateDto = {
+        fixedFrames: [],
+        rollingFrames: [],
+        hardLimit: 0
+    };
+}

@@ -13,7 +13,8 @@ class TelegramStickerEntity {
     var fileDownloadId: String = ""
 
     @Column(name = "type")
-    var type: String = "unknown" // REGULAR, MASK, CUSTOM_EMOJI, UNKNOWN
+    @Enumerated(EnumType.STRING)
+    var type: Type = Type.REGULAR
 
     @Column(name = "width")
     var width: Int = 0
@@ -53,4 +54,8 @@ class TelegramStickerEntity {
 
     @Column(name = "file_size")
     var fileSize: Long? = null
+
+    enum class Type {
+        REGULAR, MASK, CUSTOM_EMOJI
+    }
 }

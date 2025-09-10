@@ -9,7 +9,28 @@ annotation class DataFrameDsl
 fun dataFrameContent(block: FrameContentBuilder.() -> Unit): List<DataFrame.ContentPart> {
     val builder = FrameContentBuilder()
     builder.block()
-    return builder.build()
+    return optimize(builder.build())
+}
+
+private fun optimize(list: List<DataFrame.ContentPart>): List<DataFrame.ContentPart> {
+    val result = ArrayList<DataFrame.ContentPart>(list.size)
+    val latestPartTextBuffer = StringBuilder()
+    for (part in list) {
+        when (part) {
+            is DataFrame.Text -> latestPartTextBuffer.append(part.text)
+            is DataFrame.Image -> {
+                if (latestPartTextBuffer.isNotEmpty()) {
+                    result.add(DataFrame.Text(latestPartTextBuffer.toString()))
+                    latestPartTextBuffer.clear()
+                }
+                result.add(part)
+            }
+        }
+    }
+    if (latestPartTextBuffer.isNotEmpty()) {
+        result.add(DataFrame.Text(latestPartTextBuffer.toString()))
+    }
+    return result
 }
 
 @DataFrameDsl

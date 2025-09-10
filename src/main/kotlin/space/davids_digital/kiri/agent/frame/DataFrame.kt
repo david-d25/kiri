@@ -5,7 +5,7 @@ import space.davids_digital.kiri.llm.LlmImageType
 abstract class DataFrame : Frame() {
     abstract val tag: String
     abstract val attributes: Map<String, String>
-    abstract fun renderContent(): List<ContentPart>
+    abstract suspend fun renderContent(): List<ContentPart>
 
     sealed class ContentPart
 

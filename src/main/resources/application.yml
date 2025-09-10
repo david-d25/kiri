@@ -31,8 +31,8 @@ server:
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/kiri
-    username: postgres
-    password: postgres
+    username: kiri
+    password: kiri
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -55,6 +55,7 @@ spring:
       ddl-auto: none # Disabled because of pgvector
     properties:
       hibernate.format_sql: true
+      hibernate.type.preferred_json_mapper: jackson
 
 logging:
   level:

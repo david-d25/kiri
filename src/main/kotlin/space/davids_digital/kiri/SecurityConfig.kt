@@ -6,20 +6,45 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.core.annotation.AnnotationTemplateExpressionDefaults
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import space.davids_digital.kiri.model.User
+import space.davids_digital.kiri.orm.service.UserOrmService
 import space.davids_digital.kiri.orm.service.UserSessionOrmService
 import space.davids_digital.kiri.rest.auth.AuthenticationFilter
 import space.davids_digital.kiri.rest.removeAuthCookies
-import space.davids_digital.kiri.service.AdminUserService
 
 @Configuration
 @EnableMethodSecurity
 class SecurityConfig {
+    @Bean
+    fun roleHierarchy(): RoleHierarchy {
+        return RoleHierarchyImpl.withDefaultRolePrefix()
+            .role(User.Role.OWNER.name).implies(User.Role.ADMIN.name)
+            .build()
+    }
+
+    @Bean
+    fun templateExpressionDefaults(): AnnotationTemplateExpressionDefaults {
+        return AnnotationTemplateExpressionDefaults()
+    }
+
+    @Bean
+    fun methodSecurityExpressionHandler(roleHierarchy: RoleHierarchy): MethodSecurityExpressionHandler {
+        val expressionHandler = DefaultMethodSecurityExpressionHandler()
+        expressionHandler.setRoleHierarchy(roleHierarchy)
+        return expressionHandler
+    }
+
     @Bean
     fun corsConfigurationSource(appProperties: AppProperties): CorsConfigurationSource {
         val corsConfiguration = CorsConfiguration()
@@ -39,7 +64,7 @@ class SecurityConfig {
     fun filterChain(
         security: HttpSecurity,
         userSessionOrmService: UserSessionOrmService,
-        adminUserService: AdminUserService,
+        userOrmService: UserOrmService,
         corsConfigurationSource: CorsConfigurationSource,
         appProperties: AppProperties,
     ): SecurityFilterChain {
@@ -50,10 +75,10 @@ class SecurityConfig {
                 it
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/auth/**", "/bootstrap", "/logout", "/ping").permitAll()
-                    .anyRequest().hasAuthority("admin")
+                    .anyRequest().hasRole(User.Role.ADMIN.name)
             }
             .addFilterBefore(
-                AuthenticationFilter(userSessionOrmService, adminUserService),
+                AuthenticationFilter(userSessionOrmService, userOrmService),
                 UsernamePasswordAuthenticationFilter::class.java
             )
             .exceptionHandling {

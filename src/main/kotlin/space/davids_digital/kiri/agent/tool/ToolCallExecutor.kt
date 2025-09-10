@@ -35,12 +35,20 @@ class ToolCallExecutor {
             if (valueParams.size == 1) {
                 val param = valueParams[0]
                 val effectiveName = effectiveParameterName(param)
-                val argInput = if (input is LlmToolUse.Input.Object && input.items.containsKey(effectiveName)) {
-                    input.items[effectiveName]!!
-                } else {
-                    input
+                when (input) {
+                    is LlmToolUse.Input.Object -> {
+                        if (input.items.containsKey(effectiveName)) {
+                            args[param] = inputToParameter(input.items[effectiveName]!!, param)
+                        } else {
+                            if (!param.isOptional && !param.type.isMarkedNullable) {
+                                throw IllegalArgumentException("Missing required parameter: $effectiveName")
+                            }
+                        }
+                    }
+                    else -> {
+                        args[param] = inputToParameter(input, param)
+                    }
                 }
-                args[param] = inputToParameter(argInput, param)
             } else if (valueParams.isNotEmpty()) {
                 if (input !is LlmToolUse.Input.Object) {
                     throw IllegalArgumentException("Function expects multiple parameters, but input is not an object")
@@ -70,7 +78,7 @@ class ToolCallExecutor {
 
 
     private fun effectiveParameterName(param: KParameter): String {
-        return param.findAnnotation<ToolParameter>()?.name?.takeIf { it.isNotBlank() } ?: param.name
+        return param.findAnnotation<AgentToolParameter>()?.name?.takeIf { it.isNotBlank() } ?: param.name
         ?: throw IllegalArgumentException("Parameter name is missing")
     }
 
@@ -90,7 +98,7 @@ class ToolCallExecutor {
         }
     }
 
-    private fun convertArray(input: LlmToolUse.Input.Array, expectedType: KType): Any? {
+    private fun convertArray(input: LlmToolUse.Input.Array, expectedType: KType): Any {
         val classifier = expectedType.classifier as? KClass<*>
             ?: throw IllegalArgumentException("Missing type classifier for array conversion")
         val elementType = expectedType.arguments.firstOrNull()?.type

@@ -1,48 +1,47 @@
 .button {
+  --bg: oklch(30% 0 0);
+
+  &.primary {
+    --bg: oklch(from var(--accent-blue) calc(l * 0.5) .1 h);
+  }
+
+  --border-color: oklch(from var(--bg) calc(l + 0.1) c h);
+
   font-size: 18px;
-  border: 2px solid white;
-  border-bottom-width: 4px;
-  background: rgba(255, 255, 255, .1);
-  color: white;
+  border: 1px solid var(--border-color);
+  background: var(--bg);
+  color: var(--text-primary);
   cursor: pointer;
-  padding: 6px 15px;
-  border-radius: 10px;
+  border-radius: 5px;
+
+  // To allow to edit outside of the button
+  &:not(.lightweight) {
+    padding: 5px 15px;
+  }
+
 
   &:hover {
-    background: rgba(255, 255, 255, .2);
+    background: oklch(from var(--bg) .35 c h);
   }
 
   &:active {
-    background: rgba(255, 255, 255, .4);
-    border-bottom-width: 2px;
-    margin-bottom: 2px;
-    transform: translateY(2px);
+    background: oklch(from var(--bg) .4 c h);
   }
 
   &:focus {
-    outline: 1px aqua solid;
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    pointer-events: none;
-    border-color: #666;
-    color: #aaa;
-    opacity: 0.5;
-    border-bottom-width: 2px;
-    transform: translateY(2px);
+    outline-style: solid;
+    outline-offset: 1px;
   }
 
   &.lightweight {
     border: none;
     font-size: 18px;
-    padding: 5px 15px;
-    outline-width: 1px;
-    border-radius: 8px;
+  }
 
-    &:active {
-      transform: none;
-      margin-bottom: 0px;
-    }
+  &:disabled {
+    pointer-events: none;
+    border-color: transparent;
+    color: var(--text-muted);
+    background: oklch(30% 0 0);
   }
 }

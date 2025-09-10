@@ -2,4 +2,7 @@
   font-size: 25px;
   display: inline-block;
   line-height: 50px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

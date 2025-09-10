@@ -8,5 +8,5 @@ data class TelegramStory (
     /**
      * Unique identifier for the story in the chat.
      */
-    val id: Long,
+    val id: Int,
 )

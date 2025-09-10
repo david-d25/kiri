@@ -1,53 +1,43 @@
 .checkbox {
   display: flex;
   align-items: center;
-  margin: 5px 0;
   cursor: pointer;
   user-select: none;
   outline: none;
 
   &:focus {
     .checkboxBox {
-      outline: 2px aqua solid;
-      outline-offset: 2px;
+      outline-style: solid;
     }
   }
 
   &[data-disabled="true"] {
     opacity: 0.5;
     cursor: not-allowed;
-
-    .checkboxBox {
-      border-color: #666;
-    }
-
-    .label {
-      color: #aaa;
-    }
   }
 }
 
 .checkboxBox {
   width: 24px;
   height: 24px;
-  border: 2px solid white;
+  border: 1px solid var(--border-interactive);
+  background: var(--bg-interactive);
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.1);
   margin-right: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 
   .checkbox[data-checked="true"] & {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--bg-interactive);
   }
 
   .checkbox:hover:not([data-disabled="true"]) & {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--bg-interactive-hover);
   }
 
   .checkbox:active:not([data-disabled="true"]) & {
-    background: rgba(255, 255, 255, 0.4);
+    background: var(--bg-interactive-active);
   }
 }
 
@@ -58,6 +48,6 @@
 }
 
 .label {
-  color: white;
+  color: var(--text-primary);
   font-size: 18px;
 }

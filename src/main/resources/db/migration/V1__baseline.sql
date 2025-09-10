@@ -357,7 +357,7 @@ create table telegram.giveaway_chat_ids (
 
 create table telegram.giveaway_winners (
     chat_id                             bigint not null,
-    giveaway_message_id                 bigint not null,
+    giveaway_message_id                 int not null,
     winners_selection_date              timestamp with time zone not null,
     winner_count                        integer not null,
     additional_chat_count               integer,
@@ -373,7 +373,7 @@ create index idx_telegram_giveaway_winners__chat_id on telegram.giveaway_winners
 
 create table telegram.giveaway_winner_user_ids (
     chat_id              bigint not null,
-    giveaway_message_id  bigint not null,
+    giveaway_message_id  int not null,
     user_id              bigint not null,
     primary key (chat_id, giveaway_message_id, user_id),
     foreign key (chat_id, giveaway_message_id)
@@ -968,8 +968,9 @@ create table main.user_sessions (
 create index idx_user_sessions__user_id on main.user_sessions (user_id);
 create index idx_user_sessions__valid_until on main.user_sessions (valid_until);
 
-create table if not exists main.admins (
-  user_id bigint primary key
+create table main.users (
+    id bigint not null primary key references telegram.users(id) on delete restrict on update cascade,
+    role text not null
 );
 
 create table main.embedding_models (
@@ -1007,3 +1008,21 @@ create index idx_memory_links__memory_key_id on main.memory_links(memory_key_id)
 create index idx_memory_links__memory_point_id on main.memory_links(memory_point_id);
 create index idx_memory_links__weight on main.memory_links(weight);
 create index idx_memory_links__last_updated_at on main.memory_links(last_updated_at);
+
+create table main.telegram_chat_metadata (
+    chat_id bigint primary key references telegram.chats(id) on delete cascade on update cascade,
+    last_read_message_id integer default null,
+    notification_mode text not null,
+    muted_until timestamp with time zone default null,
+    archived boolean not null default false,
+    pinned boolean not null default false,
+    foreign key (chat_id, last_read_message_id) references telegram.messages(chat_id, message_id)
+                                         on delete restrict on update cascade
+);
+create index idx_telegram_chat_metadata__archived on main.telegram_chat_metadata(archived);
+
+create table main.telegram_user_metadata (
+    user_id bigint primary key references telegram.users(id) on delete cascade on update cascade,
+    is_blocked boolean not null default false
+);
+create index idx_telegram_user_metadata__is_blocked on main.telegram_user_metadata (is_blocked);

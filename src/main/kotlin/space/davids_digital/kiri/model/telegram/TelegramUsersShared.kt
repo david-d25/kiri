@@ -5,7 +5,7 @@ package space.davids_digital.kiri.model.telegram
  * [KeyboardButtonRequestUsers](https://core.telegram.org/bots/api#keyboardbuttonrequestusers) button.
  */
 data class TelegramUsersShared(
-    val requestId: Long,
+    val requestId: Int,
     /**
      * Information about users shared with the bot.
      */

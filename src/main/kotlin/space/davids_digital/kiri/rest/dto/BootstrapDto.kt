@@ -4,6 +4,7 @@ data class BootstrapDto (
     val isAuthenticated: Boolean,
     val login: LoginInfo? = null,
     val user: UserInfo? = null,
+    val version: String
 ) {
     init {
         require(login != null || user != null) { "Either 'login' or 'user' must be present" }
@@ -15,7 +16,7 @@ data class BootstrapDto (
     )
     data class UserInfo(
         val id: Long,
-        val isAdmin: Boolean,
+        val role: UserDto.Role,
         val firstName: String,
         val lastName: String?,
         val username: String?,

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+     width="1em" height="1em" fill="none" stroke="currentColor"
+     stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+     role="img" aria-labelledby="title-review">
+    <circle cx="10.5" cy="10.5" r="6"/>
+    <line x1="15.5" y1="15.5" x2="21" y2="21"/>
+    <path d="M7.5 10.5l2 2 3.5-3.5"/>
+</svg>

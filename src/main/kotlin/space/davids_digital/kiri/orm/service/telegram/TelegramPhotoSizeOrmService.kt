@@ -3,7 +3,7 @@ package space.davids_digital.kiri.orm.service.telegram
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramPhotoSize
-import space.davids_digital.kiri.orm.mapping.telegram.TelegramPhotoSizeEntityMapper
+import space.davids_digital.kiri.orm.mapper.telegram.TelegramPhotoSizeEntityMapper
 import space.davids_digital.kiri.orm.repository.telegram.TelegramPhotoSizeRepository
 
 @Service

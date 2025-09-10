@@ -8,13 +8,17 @@
 }
 
 .label {
+  color: var(--text-secondary);
   font-size: 16px;
   margin-bottom: 5px;
-  transition: all 0.2s;
+}
+
+.disabled {
+  opacity: 0.5;
 }
 
 .disabled .label {
-  color: #808080;
+  color: var(--text-muted);
 }
 
 .textAreaWrapper {
@@ -24,14 +28,12 @@
 }
 
 .textArea {
-  padding: 10px 15px;
+  padding: 10px;
   font-size: 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid white;
+  background: var(--bg-interactive);
+  border: 1px solid var(--border-interactive);
   color: inherit;
-  border-radius: 10px;
-  outline: none;
-  transition: background-color .2s, color .2s, border .2s;
+  border-radius: 5px;
   font-family: inherit;
   min-width: 100px;
   max-width: 100%;
@@ -39,14 +41,26 @@
   min-height: 100px;
   box-sizing: border-box;
 
+  &::-webkit-resizer {
+    display: none;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--bg-interactive);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-interactive);
+    border-radius: 5px;
+  }
+
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
   }
 
   &:focus {
-    background: rgba(255, 255, 255, 0.15);
-    outline: 2px aqua solid;
-    outline-offset: 2px;
+    background: var(--bg-interactive-active);
+    outline-style: solid;
   }
 
   &:disabled {
@@ -60,7 +74,7 @@
   }
 
   &[data-error="true"] {
-    border-color: rgba(231, 76, 60, 1);
+    border-color: var(--accent-red);
   }
 
   &[data-resizable="false"] {
@@ -69,7 +83,7 @@
 }
 
 .errorMessage {
-  color: rgba(231, 76, 60, 1);
+  color: var(--accent-red);
   font-size: 14px;
   margin-top: 5px;
 }
@@ -79,6 +93,6 @@
   bottom: 10px;
   left: 10px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   pointer-events: none;
 }

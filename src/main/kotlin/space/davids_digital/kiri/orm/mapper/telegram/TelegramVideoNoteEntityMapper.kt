@@ -1,0 +1,15 @@
+package space.davids_digital.kiri.orm.mapper.telegram
+
+import org.mapstruct.Mapper
+import org.mapstruct.Mapping
+import space.davids_digital.kiri.model.telegram.TelegramVideoNote
+import space.davids_digital.kiri.orm.entity.telegram.TelegramVideoNoteEntity
+
+@Mapper(uses = [TelegramPhotoSizeEntityMapper::class])
+interface TelegramVideoNoteEntityMapper {
+    @Mapping(source = "fileId", target = "fileDownloadId")
+    fun toEntity(model: TelegramVideoNote?): TelegramVideoNoteEntity?
+
+    @Mapping(source = "fileDownloadId", target = "fileId")
+    fun toModel(entity: TelegramVideoNoteEntity?): TelegramVideoNote?
+}

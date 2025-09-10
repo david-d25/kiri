@@ -1,5 +1,7 @@
 package space.davids_digital.kiri.model.telegram
 
+import java.time.ZonedDateTime
+
 data class TelegramChat (
     val id: Long,
     val type: Type,
@@ -65,11 +67,28 @@ data class TelegramChat (
      * For supergroups, the location to which the supergroup is connected.
      */
     val location: TelegramChatLocation? = null,
+
+    /**
+     * Additional data which is not part of Telegram API chat object
+     */
+    val metadata: Metadata
 ) {
     enum class Type {
         PRIVATE,
         GROUP,
         SUPERGROUP,
         CHANNEL
+    }
+
+    data class Metadata (
+        val lastReadMessageId: Int?,
+        val notificationMode: NotificationMode,
+        val mutedUntil: ZonedDateTime?,
+        val archived: Boolean,
+        val pinned: Boolean,
+    )
+
+    enum class NotificationMode {
+        ALL, ONLY_MENTIONS, NONE
     }
 }

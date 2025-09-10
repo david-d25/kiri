@@ -21,7 +21,7 @@ class NotificationManager(
             attributes.putAll(notification.metadata)
         }
         runBlocking {
-            eventBus.publish(WakeUpRequestEvent()) // TODO
+            eventBus.events.emit(WakeUpRequestEvent()) // TODO
         }
     }
 }
