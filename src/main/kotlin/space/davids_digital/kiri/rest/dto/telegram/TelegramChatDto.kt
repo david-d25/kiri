@@ -1,5 +1,7 @@
 package space.davids_digital.kiri.rest.dto.telegram
 
+import space.davids_digital.kiri.rest.dto.TelegramChatMetadataDto
+
 data class TelegramChatDto (
     val id: Long,
     val type: Type,
@@ -7,13 +9,13 @@ data class TelegramChatDto (
     val username: String? = null,
     val firstName: String? = null,
     val lastName: String? = null,
-    // TODO
-    // val smallPhotoUrl: String? = null,
-    // val bigPhotoUrl: String? = null,
+    val smallPhotoUrl: String? = null,
+    val bigPhotoUrl: String? = null,
     val bio: String? = null,
     val description: String? = null,
     val inviteLink: String? = null,
     val linkedChatId: Long? = null,
+    val metadata: TelegramChatMetadataDto
 ) {
     enum class Type {
         PRIVATE,

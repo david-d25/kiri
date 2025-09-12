@@ -43,7 +43,9 @@ class FrameBuffer : Iterable<Frame> {
         )
     }
 
-    fun notifyChanged() = synchronized(lock) { bumpLocked() }
+    fun notifyChanged() = synchronized(lock) {
+        bumpLocked()
+    }
 
     fun clearAll() = synchronized(lock) {
         clearOnlyFixedLocked()
@@ -52,14 +54,21 @@ class FrameBuffer : Iterable<Frame> {
     }
 
     fun clearOnlyFixed() = synchronized(lock) {
-        clearOnlyFixedLocked(); bumpLocked()
+        clearOnlyFixedLocked()
+        bumpLocked()
     }
-    private fun clearOnlyFixedLocked() { fixedFrames.clear() }
+    private fun clearOnlyFixedLocked() {
+        fixedFrames.clear()
+    }
 
     fun clearOnlyRolling() = synchronized(lock) {
-        clearOnlyRollingLocked(); bumpLocked()
+        clearOnlyRollingLocked()
+        bumpLocked()
     }
-    private fun clearOnlyRollingLocked() { rollingFrames.clear() }
+
+    private fun clearOnlyRollingLocked() {
+        rollingFrames.clear()
+    }
 
     fun addRolling(frame: Frame) = synchronized(lock) {
         rollingFrames.add(frame)
@@ -68,7 +77,8 @@ class FrameBuffer : Iterable<Frame> {
     }
 
     fun removeRolling(frame: Frame) = synchronized(lock) {
-        rollingFrames.remove(frame); bumpLocked()
+        rollingFrames.remove(frame)
+        bumpLocked()
     }
 
     fun addFixed(frame: DataFrame) = synchronized(lock) {

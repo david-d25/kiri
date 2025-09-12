@@ -3,9 +3,11 @@ package space.davids_digital.kiri.orm.service.telegram
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.domain.Specification
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramChat
+import space.davids_digital.kiri.model.telegram.TelegramChat.NotificationMode
 import space.davids_digital.kiri.orm.entity.telegram.TelegramChatEntity
 import space.davids_digital.kiri.orm.mapper.TelegramChatMetadataEntityMapper
 import space.davids_digital.kiri.orm.mapper.telegram.TelegramChatEntityMapper
@@ -16,6 +18,9 @@ import space.davids_digital.kiri.orm.specifications.telegram.TelegramChatSpecifi
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramChatSpecifications.usernameContains
 import space.davids_digital.kiri.service.TelegramChatMetadataService
 import space.davids_digital.kiri.service.exception.ServiceException
+import java.time.ZonedDateTime
+import java.util.Optional
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class TelegramChatOrmService(
@@ -28,6 +33,11 @@ class TelegramChatOrmService(
     @Transactional(readOnly = true)
     fun findAll(pageable: Pageable): Page<TelegramChat> {
         return repo.findAll(pageable).map(::toModel)
+    }
+
+    @Transactional(readOnly = true)
+    fun findAllEnabled(pageable: Pageable): Page<TelegramChat> {
+        return repo.findAllEnabled(pageable).map(::toModel)
     }
 
     @Transactional(readOnly = true)
@@ -96,6 +106,27 @@ class TelegramChatOrmService(
     }
 
     @Transactional
+    fun updateMetadata(chatId: Long, requestBlock: MetadataUpdateRequest.() -> Unit) {
+        val chat = repo.findByIdOrNull(chatId)?.let(::toModel) ?: throw ServiceException("chat id $chatId not found")
+        var metadata = telegramChatMetadataService.getOrCreateDefault(chatId, chat.type)
+        val request = MetadataUpdateRequest()
+        request.requestBlock()
+        metadata = metadata.copy(
+            lastReadMessageId = if (request.lastReadMessageId == null) {
+                metadata.lastReadMessageId
+            } else {
+                request.lastReadMessageId?.getOrNull()
+            },
+            notificationMode = request.notificationMode ?: metadata.notificationMode,
+            mutedUntil = if (request.mutedUntil == null) metadata.mutedUntil else request.mutedUntil?.getOrNull(),
+            archived = request.archived ?: metadata.archived,
+            pinned = request.pinned ?: metadata.pinned,
+            enabled = request.enabled ?: metadata.enabled
+        )
+        metadataRepo.save(metadataMapper.toEntity(metadata, chatId)!!)
+    }
+
+    @Transactional
     fun delete(id: Long) {
         repo.deleteById(id)
     }
@@ -107,5 +138,14 @@ class TelegramChatOrmService(
     private fun toModel(chatEntity: TelegramChatEntity): TelegramChat {
         val metadata = telegramChatMetadataService.getOrCreateDefault(chatEntity.id, mapper.toModel(chatEntity.type)!!)
         return mapper.toModel(chatEntity, metadata)!!
+    }
+
+    class MetadataUpdateRequest {
+        var lastReadMessageId: Optional<Int>? = null
+        var notificationMode: NotificationMode? = null
+        var mutedUntil: Optional<ZonedDateTime>? = null
+        var archived: Boolean? = null
+        var pinned: Boolean? = null
+        var enabled: Boolean? = null
     }
 }

@@ -10,6 +10,8 @@ import {jetBrainsMono} from "@/lib/fonts";
 import {ModalProvider} from "@/components/Modal/ModalProvider";
 import {ModalServiceInitializer} from "@/components/Modal/ModalServiceInitializer";
 import GlobalLoadingIndicator from "@/components/GlobalLoadingIndicator/GlobalLoadingIndicator";
+import {ToastServiceInitializer} from "@/components/Toast/ToastServiceInitializer";
+import {ToastProvider} from "@/components/Toast/ToastProvider";
 
 const { publicRuntimeConfig } = getConfig()
 
@@ -23,11 +25,14 @@ export default function App({ Component, pageProps }: AppProps) {
             </Head>
             <QueryClientProvider client={queryClient}>
                 <HydrationBoundary state={pageProps.dehydratedState}>
-                    <ModalProvider>
-                        <ModalServiceInitializer/>
-                        <GlobalLoadingIndicator/>
-                        <Component {...pageProps}/>
-                    </ModalProvider>
+                    <ToastProvider>
+                        <ModalProvider>
+                            <ToastServiceInitializer/>
+                            <ModalServiceInitializer/>
+                            <GlobalLoadingIndicator/>
+                            <Component {...pageProps}/>
+                        </ModalProvider>
+                    </ToastProvider>
                 </HydrationBoundary>
             </QueryClientProvider>
         </div>

@@ -77,7 +77,7 @@ class AgentEngine(
                 try {
                     log.info("Starting agent engine")
                     while (run.get()) {
-                        tick()
+                        tickInternal()
                     }
                 } catch (e: Exception) {
                     handleError(e)
@@ -86,8 +86,13 @@ class AgentEngine(
         }
     }
 
-    // TODO Run in scope?
-    suspend fun tick(): Boolean {
+    suspend fun tick() {
+        scope.launch {
+            tickInternal()
+        }
+    }
+
+    private suspend fun tickInternal(): Boolean {
         if (!tickMutex.tryLock()) {
             return false
         }
@@ -100,6 +105,9 @@ class AgentEngine(
             handleResponse(response)
             eventBus.events.emit(TickEvent())
             return true
+        } catch (e: Exception) {
+            log.error("Tick error", e)
+            return false
         } finally {
             tickMutex.unlock()
             mutableState.emit(EngineState.PAUSED)

@@ -12,6 +12,7 @@ export default function Header() {
             <div className={s.center}>
                 <HeaderNavButton url="/engine">Engine</HeaderNavButton>
                 <HeaderNavButton url="/memory">Memory</HeaderNavButton>
+                <HeaderNavButton url="/tg-chats">Telegram Chats</HeaderNavButton>
             </div>
             <div className={s.right}>
                 <HeaderUserCard />

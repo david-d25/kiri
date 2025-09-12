@@ -1,11 +1,10 @@
 import s from './EngineControlPanel.module.scss';
 import EngineStatusBar from "../EngineStatusBar/EngineStatusBar";
 import FramesView from "../FramesView/FramesView";
-import Panel from "@/components/Panel/Panel";
 import {useSSEEvent} from "@/hooks/useSSEEvent";
 import {FrameBufferStateDto} from "@/lib/api/types/FrameBufferStateDto";
 
-export default function EngineControlPanel() {
+export default function EngineControl() {
     const stateSse = useSSEEvent("frameBufferState", FrameBufferStateDto.NULL);
 
     return (
