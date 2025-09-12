@@ -9,6 +9,7 @@ data class TelegramAppViewState (
     val chatsTotalPages: Int = 0,
     val openedChat: TelegramChat? = null,
     val messagesView: List<TelegramMessage> = emptyList(),
-    val newerMessagesRemaining: Long = 0,
+    val laterMessagesRemaining: Long = 0,
+    val laterNewMessagesRemaining: Long = 0,
     val oldLastReadMessageId: Int? = null
 )

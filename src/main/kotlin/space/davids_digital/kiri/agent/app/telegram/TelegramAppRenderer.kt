@@ -50,7 +50,7 @@ class TelegramAppRenderer (private val service: TelegramService) {
         val attrString = """id="${chat.id}" title="$title""""
         val tag = chatTypeToTag(chat.type)
         line("<$tag $attrString>")
-        renderChatMessages(state.oldLastReadMessageId, messages, state.newerMessagesRemaining)
+        renderChatMessages(state.oldLastReadMessageId, messages, state)
         line("</$tag>")
     }
 
@@ -139,7 +139,7 @@ class TelegramAppRenderer (private val service: TelegramService) {
     private fun FrameContentBuilder.renderChatMessages(
         lastReadMessageId: Int?,
         messages: List<TelegramMessage>,
-        newerMessagesRemaining: Long
+        state: TelegramAppViewState
     ) {
         var sentAt: ZonedDateTime? = null
         line("<messages>")
@@ -150,8 +150,16 @@ class TelegramAppRenderer (private val service: TelegramService) {
             }
             renderMessage(message, lastReadMessageId)
         }
-        if (newerMessagesRemaining > 0) {
-            line("<!-- ...$newerMessagesRemaining more messages -->")
+        val laterMessagesRemaining = state.laterMessagesRemaining
+        val laterNewMessagesRemaining = state.laterNewMessagesRemaining
+        if (laterMessagesRemaining > 0) {
+            line(buildString {
+                append("<!-- ...$laterMessagesRemaining more messages")
+                if (laterNewMessagesRemaining > 0) {
+                    append(", $laterNewMessagesRemaining new")
+                }
+                append(" -->")
+            })
         }
         if (messages.isEmpty()) {
             line("<empty/>")

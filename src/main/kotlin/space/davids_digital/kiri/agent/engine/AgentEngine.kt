@@ -6,6 +6,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -26,6 +28,7 @@ import space.davids_digital.kiri.llm.dsl.llmToolUseResult
 import space.davids_digital.kiri.model.EngineState
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.seconds
 
 @Service
 class AgentEngine(
@@ -57,7 +60,8 @@ class AgentEngine(
 
     @PostConstruct
     private fun init() {
-        resetFrames()
+        frames.clearOnlyRolling()
+        addSimpleText("system", "System started.")
         scope.launch {
             eventBus.events.collect(::handleEvent)
         }
@@ -141,11 +145,6 @@ class AgentEngine(
         }
     }
 
-    private fun resetFrames() {
-        frames.clearOnlyRolling()
-        addSimpleText("system", "System started.")
-    }
-
     private suspend fun buildRequest(): LlmMessageRequest {
         val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
         return llmMessageRequest {
@@ -214,7 +213,7 @@ class AgentEngine(
                 toolCallExecutor.execute(entry.callable, toolUse.input, entry.receiver)
             } catch (e: ServiceException) {
                 log.error("Tool '${toolUse.name}' threw a service exception", e)
-                toolResult("Tool threw an exception with message '${e.message}'")
+                toolResult("Tool failed with message '${e.message}'")
                 continue
             } catch (e: Exception) {
                 log.error("Tool '${toolUse.name}' threw an exception", e)
@@ -288,22 +287,20 @@ class AgentEngine(
         }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep)
+    override fun getAvailableAgentToolMethods() = listOf(::reflect, ::sleep)
 
-    @AgentToolMethod(description = "Think to yourself.")
-    fun think(thoughts: String) {
-        addSimpleText("thought", thoughts)
+    @AgentToolMethod(description = "Convenience function for reflection and planning")
+    fun reflect(thoughts: String) {
+        addSimpleText("reflection", thoughts)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @AgentToolMethod(
-        description = "Pause for a specified amount of time. Recommended max is 8 hours, but may be higher. "
+        description = "Sleep for a specified amount of time or until something happens"
     )
     suspend fun sleep(seconds: Long) {
-        if (seconds == 0L) {
-            log.debug("Agent is going to sleep")
-        } else {
-            log.debug("Agent is going to sleep for $seconds seconds")
-        }
+        val effectiveSeconds = if (seconds == 0L) 86400 * 7 else seconds
+        log.debug("Agent is going to sleep for $effectiveSeconds seconds")
         val sleptAt = System.currentTimeMillis()
 
         if (sleepJob != null) {
@@ -312,18 +309,30 @@ class AgentEngine(
         }
 
         val newSleepJob = scope.launch {
+            val wake = CompletableDeferred<Unit>()
             try {
                 mutableState.emit(EngineState.PAUSED)
-                if (seconds == 0L) {
-                    delay(Long.MAX_VALUE)
-                } else {
-                    delay(seconds * 1000)
+                eventBus.events.emit(SleepEvent(effectiveSeconds, wake))
+
+                // Wait either timeout or external sleep prevention
+                select {
+                    onTimeout(effectiveSeconds.seconds) {
+                        log.debug("Agent woke up after sleeping for $effectiveSeconds seconds")
+                        addSimpleText("system", "Slept for $effectiveSeconds seconds.")
+                    }
+                    wake.onAwait {
+                        val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
+                        log.debug("Agent was woken up from sleep")
+                        if (sleptFor == 0L) {
+                            addSimpleText("system", "Something prevents you from sleeping")
+                        } else {
+                            addSimpleText("system", "Slept for $sleptFor seconds")
+                        }
+                    }
                 }
-                log.debug("Agent woke up after sleeping for $seconds seconds")
-                addSimpleText("system", "Slept for $seconds seconds.")
             } catch (_: CancellationException) {
-                log.debug("Agent was woken up from sleep")
                 val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
+                log.debug("Agent was woken up from sleep (job cancelled)")
                 addSimpleText("system", "Slept for $sleptFor seconds")
             }
         }
