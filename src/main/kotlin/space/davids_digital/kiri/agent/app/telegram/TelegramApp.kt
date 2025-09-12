@@ -1,8 +1,16 @@
 package space.davids_digital.kiri.agent.app.telegram
 
+import jakarta.transaction.Transactional
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.filterIsInstance
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import space.davids_digital.kiri.agent.app.AgentApp
+import space.davids_digital.kiri.agent.engine.EngineEventBus
+import space.davids_digital.kiri.agent.engine.SleepEvent
 import space.davids_digital.kiri.agent.frame.DataFrame
+import space.davids_digital.kiri.agent.frame.FrameBuffer
+import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameter
@@ -12,14 +20,17 @@ import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.service.TelegramNotificationService
+import kotlin.math.max
 
 @AgentToolNamespace("telegram")
-class TelegramApp(
+open class TelegramApp(
     private val telegram: TelegramService,
     private val renderer: TelegramAppRenderer,
     private val telegramNotificationService: TelegramNotificationService,
     private val chatOrm: TelegramChatOrmService,
-    private val messageOrm: TelegramMessageOrmService
+    private val messageOrm: TelegramMessageOrmService,
+    private val engineEventBus: EngineEventBus,
+    private val frameBuffer: FrameBuffer
 ): AgentApp("telegram") {
 
     companion object {
@@ -27,12 +38,18 @@ class TelegramApp(
         private const val MAX_MESSAGES_PER_VIEW = 12
     }
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val log = LoggerFactory.getLogger(javaClass)
+
     private var viewState = TelegramAppViewState()
     private var autoscrollToEnd = false
 
+    @Transactional
     override suspend fun render(): List<DataFrame.ContentPart> {
         if (autoscrollToEnd) {
             scrollToBottom()
+        } else {
+            updateLaterMessagesRemaining()
         }
         return renderer.render(viewState)
     }
@@ -96,15 +113,16 @@ class TelegramApp(
         val newerMessagesRemaining = messageOrm.countMessagesAfterId(chatId, newViewLastMessage.messageId)
         viewState = viewState.copy(
             messagesView = newMessagesView,
-            newerMessagesRemaining = newerMessagesRemaining
+            laterMessagesRemaining = newerMessagesRemaining
         )
         setLastReadMessageId(newViewLastMessage.messageId)
         autoscrollToEnd = viewLastMessage.messageId == latestMessage.messageId
         return "ok"
     }
 
-    @AgentToolMethod
-    fun scrollToBottom(): String {
+    @Transactional
+    @AgentToolMethod(description = "Skip the whole chat and scroll to the very bottom")
+    open fun scrollToBottom(): String {
         val chatId = viewState.openedChat?.id ?: return "Chat not opened"
         val latestMessage = messageOrm.findMostRecentMessage(chatId) ?: return "No messages"
         val newMessagesView = messageOrm.findBeforeMessageIdOrderedByMessageIdDesc(
@@ -114,38 +132,54 @@ class TelegramApp(
         ).reversed()
         viewState = viewState.copy(
             messagesView = newMessagesView,
-            newerMessagesRemaining = 0
+            laterMessagesRemaining = 0
         )
         setLastReadMessageId(latestMessage.messageId)
         autoscrollToEnd = true
         return "ok"
     }
 
+    @Transactional
     @AgentToolMethod
-    suspend fun sendSticker(fileId: String): String {
+    open suspend fun sendSticker(fileId: String): String {
         val openedChat = viewState.openedChat ?: return "Chat not opened"
         telegram.sendSticker(openedChat.id, fileId)
         scrollToBottom()
         return "sent"
     }
 
+    @Transactional
     @AgentToolMethod(
         description = "Send message. " +
                 "Supported tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, blockquote, " +
                 "blockquote[expandable]. Markdown not supported."
     )
-    suspend fun send(
+    open suspend fun send(
         message: String,
         @AgentToolParameter(description = "id of message to reply to") replyTo: Int? = null
     ): String {
         val openedChat = viewState.openedChat ?: return "Chat not opened"
         telegram.sendMessage(openedChat.id, message, replyToMessageId = replyTo)
         scrollToBottom()
+        viewState = viewState.copy(oldLastReadMessageId = viewState.openedChat?.metadata?.lastReadMessageId)
         return "sent"
+    }
+
+    @AgentToolMethod(description = "Manually mark chat as read until selected message")
+    fun markAsRead(messageId: Int): String {
+        val chat = viewState.openedChat ?: return "Chat not opened"
+        if (!messageOrm.exists(chat.id, messageId)) {
+            return "message not found"
+        }
+        setLastReadMessageId(messageId)
+        return "ok"
     }
 
     override suspend fun onOpened() {
         showChats(0)
+        scope.launch {
+            engineEventBus.events.filterIsInstance<SleepEvent>().collect(::onAgentSleep)
+        }
     }
 
     override suspend fun onClose() {
@@ -153,6 +187,7 @@ class TelegramApp(
         if (openedChat != null) {
             telegramNotificationService.onChatClosedInAgentApp(openedChat.id)
         }
+        scope.cancel("App is closing")
     }
 
     override fun getAvailableAgentToolMethods(): List<Function<*>> {
@@ -162,11 +197,58 @@ class TelegramApp(
             result.add(::chatList)
             result.add(::sendSticker)
             result.add(::scroll)
+            if (viewContainsUnreadMessages()) {
+                result.add(::markAsRead)
+            }
             if (!autoscrollToEnd) {
                 result.add(::scrollToBottom)
             }
         }
         return result
+    }
+
+    private fun updateLaterMessagesRemaining() {
+        val openedChat = viewState.openedChat ?: return
+        val chatId = openedChat.id
+        val lastMessage = viewState.messagesView.lastOrNull() ?: return
+        viewState = viewState.copy(
+            laterMessagesRemaining = messageOrm.countMessagesAfterId(chatId, lastMessage.messageId),
+            laterNewMessagesRemaining = messageOrm.countMessagesAfterId(
+                chatId,
+                max(lastMessage.messageId, openedChat.metadata.lastReadMessageId ?: 0)
+            )
+        )
+    }
+
+    private fun onAgentSleep(event: SleepEvent) {
+        try {
+            if (chatContainsUnreadMessages()) {
+                event.preventSleeping()
+                frameBuffer.addStatic {
+                    tag = "telegram"
+                    content = dataFrameContent {
+                        text("You have unread messages, consider answering, marking as read, or closing the chat")
+                    }
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("Failed to handle sleep event", e)
+        }
+    }
+
+    private fun chatContainsUnreadMessages(): Boolean {
+        val openedChat = viewState.openedChat ?: return false
+        val lastReadMessageId = openedChat.metadata.lastReadMessageId
+        return messageOrm.countMessagesAfterId(openedChat.id, lastReadMessageId ?: 0) > 0
+    }
+
+    private fun viewContainsUnreadMessages(): Boolean {
+        val openedChat = viewState.openedChat ?: return false
+        val viewLastMessageId = viewState.messagesView.lastOrNull()?.messageId ?: return false
+        val lastReadMessageId = openedChat.metadata.lastReadMessageId ?: return true
+        return lastReadMessageId < viewLastMessageId
     }
 
     private fun showChats(page: Int) {
@@ -199,7 +281,7 @@ class TelegramApp(
         viewState = viewState.copy(
             openedChat = chat,
             messagesView = messages,
-            newerMessagesRemaining = newerMessagesRemaining
+            laterMessagesRemaining = newerMessagesRemaining
         )
 
         scroll(MAX_MESSAGES_PER_VIEW/2)

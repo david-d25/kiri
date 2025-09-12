@@ -124,13 +124,12 @@ class MemoryManager(
     suspend fun memorize(
         @AgentToolParameter(
             name = "keys",
-            description = "What the memory should be associated with (AND logic)." +
-                    "It's recommended to include names, dates (incl. current), nicknames, " +
-                    "aspects, circumstances, etc.). More keys = more specific memory."
+            description = "How to build: first items more generic (circumstances, app name, chat name, etc.), " +
+                    "later elements more specific (people tags, dates, etc.)"
         )
         keyStrings: List<String>,
 
-        @AgentToolParameter(description = "What to remember")
+        @AgentToolParameter(description = "What memory is associated with ALL these keys?")
         value: String
     ): String {
         if (keyStrings.isEmpty()) {
@@ -145,25 +144,24 @@ class MemoryManager(
         return "ok"
     }
 
-    @AgentToolMethod(description = "Search in memory")
+    @AgentToolMethod(description = "Search in memory. Recommended to use when context changes.")
     suspend fun query(
         @AgentToolParameter(
             name = "keys",
-            description = "What the desired memory piece is associated with (names, dates, aspects, circumstances, " +
-                    "etc.). More keys = more specific memory."
+            description = "All keys should relate to the same memory you want to find"
         )
         keyStrings: List<String>,
     ): String {
         val keys = memoryService.getOrCreateKeys(keyStrings)
-        val memories = memoryService.retrieve(keys, 5)
+        val memories = memoryService.retrieve(keys, 4)
         return buildString {
             appendLine("Most related memories:")
             for (memory in memories) {
                 append("- ")
-                append("(score:")
-                append(String.format("%.3f", memory.score))
-                append(") ")
-                appendLine(memory.point.value)
+                append(memory.point.value)
+                append(" (score:")
+                append(String.format("%.2f", memory.score))
+                appendLine(")")
             }
         }
     }

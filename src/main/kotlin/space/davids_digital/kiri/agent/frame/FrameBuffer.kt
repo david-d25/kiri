@@ -21,7 +21,7 @@ class FrameBuffer : Iterable<Frame> {
     )
     val updates = updatesInternal.asSharedFlow()
 
-    var hardLimit = 16
+    var hardLimit = 18
 
     val onlyFixed get() = fixedFrames.iterator()
     val onlyRolling get() = rollingFrames.iterator()

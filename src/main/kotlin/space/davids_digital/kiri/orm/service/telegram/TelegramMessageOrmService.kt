@@ -70,6 +70,11 @@ class TelegramMessageOrmService(
     }
 
     @Transactional(readOnly = true)
+    fun exists(chatId: Long, messageId: Int): Boolean {
+        return repo.existsById(TelegramMessageEntityId(chatId, messageId))
+    }
+
+    @Transactional(readOnly = true)
     fun findFirstOrderedByMessageId(chatId: Long, limit: Int): Page<TelegramMessage> {
         return repo.findByIdChatId(chatId, PageRequest.of(0, limit, Sort.by("id.messageId"))).map(mapper::toModel)
     }
