@@ -1,0 +1,40 @@
+.root {
+  padding: 20px;
+}
+
+.chatList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.noChats {
+  color: var(--text-secondary);
+}
+
+.chat {
+  height: 75px;
+  border-radius: 5px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 10px;
+  box-sizing: border-box;
+  gap: 10px;
+
+  .username {
+    color: var(--text-secondary);
+  }
+}
+
+.controls {
+  margin-left: auto;
+}

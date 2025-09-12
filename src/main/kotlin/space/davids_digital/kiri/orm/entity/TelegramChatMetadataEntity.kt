@@ -31,6 +31,9 @@ class TelegramChatMetadataEntity {
     @Column(name = "pinned")
     var pinned: Boolean = false
 
+    @Column(name = "enabled")
+    var enabled: Boolean = false
+
     enum class NotificationMode {
         ALL, ONLY_MENTIONS, NONE
     }

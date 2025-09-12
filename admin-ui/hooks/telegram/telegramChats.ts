@@ -1,8 +1,9 @@
-import {UseQueryResult} from "@tanstack/react-query";
-import {useFetch} from "@/hooks/apiHooks";
+import {UseMutationResult, UseQueryResult} from "@tanstack/react-query";
+import {useFetch, usePostMutate} from "@/hooks/apiHooks";
 import {useCallback, useState} from "react";
 import {TelegramChatDto, TelegramChatFetchResultDto} from "@/lib/api/types/telegram/TelegramChatDto";
 import {PageableDto} from "@/lib/api/types/spring/pagination";
+import {TelegramChatMetadataUpdateRequest} from "@/lib/api/types/TelegramChatMetadataUpdateRequest";
 
 export interface TelegramChatSearchParams {
     query?: string;
@@ -35,7 +36,7 @@ export function useSearchTelegramChats(): UseQueryResult<
     };
 
     const result = useFetch<PageableDto<TelegramChatDto[]>>(
-        ['telegram-chats-search', params],
+        ['telegram', 'chats-search', params],
         params ? buildUrl(params) : '',
         undefined,
         {
@@ -91,4 +92,8 @@ export function useFetchTelegramChat(): UseQueryResult<TelegramChatFetchResultDt
         setParams(null);
     }, []);
     return { ...result, fetchById, fetchByUsername, reset };
+}
+
+export function useUpdateTelegramChatMetadata(): UseMutationResult<unknown, Error, TelegramChatMetadataUpdateRequest> {
+    return usePostMutate(['telegram'], dto => `/telegram/chats/${dto.chatId}/metadata`);
 }

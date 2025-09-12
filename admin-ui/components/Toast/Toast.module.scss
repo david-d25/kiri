@@ -1,0 +1,183 @@
+.toastContainer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  color: var(--text-primary);
+  min-width: 300px;
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: slideInRight 0.3s ease-out;
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+
+  &.success {
+    border-color: var(--success);
+  }
+
+  &.error {
+    border-color: var(--error);
+  }
+
+  &.warning {
+    border-color: var(--warning);
+  }
+
+  &.info {
+    border-color: var(--info);
+  }
+
+  &.removing {
+    animation: slideOutRight 0.2s ease-in forwards;
+  }
+}
+
+.toastIcon {
+  font-size: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+
+  .success & {
+    color: var(--success);
+  }
+
+  .error & {
+    color: var(--error);
+  }
+
+  .warning & {
+    color: var(--warning);
+  }
+
+  .info & {
+    color: var(--info);
+  }
+}
+
+.toastContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.toastTitle {
+  font-weight: bold;
+  font-size: 14px;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.toastMessage {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.toastCloseButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-top: -2px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  &:focus {
+    outline-style: solid;
+  }
+}
+
+.progressBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  transition: width linear;
+  opacity: .5;
+
+  .success & {
+    background: var(--success);
+  }
+
+  .error & {
+    background: var(--error);
+  }
+
+  .warning & {
+    background: var(--warning);
+  }
+
+  .info & {
+    background: var(--info);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 640px) {
+  .toastContainer {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+
+  .toast {
+    min-width: auto;
+    max-width: none;
+  }
+}

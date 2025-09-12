@@ -37,7 +37,7 @@ class TelegramApp(
         return renderer.render(viewState)
     }
 
-    @AgentToolMethod(description = "See messages in chat. Messages you see will be marked as read.")
+    @AgentToolMethod
     suspend fun openChat(id: Long): String {
         val newChat = telegram.getChat(id)
         if (newChat != null) {
@@ -78,7 +78,7 @@ class TelegramApp(
         showChats(page ?: viewState.chatsPage)
     }
 
-    @AgentToolMethod(description = "Scroll for specified amount of messages. Positive = down, negative = up")
+    @AgentToolMethod(description = "Scroll messages; positive = down, negative = up")
     fun scroll(amount: Int): String {
         val chatId = viewState.openedChat?.id ?: return "Chat not opened"
         val viewLastMessage = viewState.messagesView.lastOrNull() ?: return "No messages"
@@ -103,7 +103,7 @@ class TelegramApp(
         return "ok"
     }
 
-    @AgentToolMethod(description = "Scroll to the latest messages. All messages will be marked as read.")
+    @AgentToolMethod
     fun scrollToBottom(): String {
         val chatId = viewState.openedChat?.id ?: return "Chat not opened"
         val latestMessage = messageOrm.findMostRecentMessage(chatId) ?: return "No messages"
@@ -130,9 +130,9 @@ class TelegramApp(
     }
 
     @AgentToolMethod(
-        description = "Send message and scroll to bottom. " +
+        description = "Send message. " +
                 "Supported tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, blockquote, " +
-                "blockquote[expandable]. "
+                "blockquote[expandable]. Markdown not supported."
     )
     suspend fun send(
         message: String,
@@ -162,13 +162,15 @@ class TelegramApp(
             result.add(::chatList)
             result.add(::sendSticker)
             result.add(::scroll)
-            result.add(::scrollToBottom)
+            if (!autoscrollToEnd) {
+                result.add(::scrollToBottom)
+            }
         }
         return result
     }
 
     private fun showChats(page: Int) {
-        val chats = chatOrm.findAll(PageRequest.of(page, CHATS_PAGE_SIZE))
+        val chats = chatOrm.findAllEnabled(PageRequest.of(page, CHATS_PAGE_SIZE))
         viewState = TelegramAppViewState(
             chatsView = chats.toList(),
             chatsPage = page,

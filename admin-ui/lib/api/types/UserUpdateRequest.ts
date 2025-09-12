@@ -1,6 +1,6 @@
 import {UserDto} from "@/lib/api/types/UserDto";
 
-export type UserUpdateRequestDto = {
+export type UserUpdateRequest = {
     id: number;
     role: UserDto.Role;
 };

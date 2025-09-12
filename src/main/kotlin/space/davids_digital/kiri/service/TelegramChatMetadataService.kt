@@ -23,7 +23,8 @@ class TelegramChatMetadataService (private val telegramChatMetadataOrmService: T
             notificationMode = notificationMode,
             mutedUntil = null,
             archived = false,
-            pinned = false
+            pinned = false,
+            enabled = false
         )
     }
 }

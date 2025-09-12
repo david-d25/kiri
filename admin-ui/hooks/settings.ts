@@ -1,12 +1,12 @@
 import {UseMutationResult, UseQueryResult} from "@tanstack/react-query";
 import {useFetch, usePostMutate} from "@/hooks/apiHooks";
 import {SettingDto} from "@/lib/api/types/SettingDto";
-import {SettingUpdateRequestDto} from "@/lib/api/types/SettingUpdateRequestDto";
+import {SettingUpdateRequest} from "@/lib/api/types/SettingUpdateRequest";
 
 export function useGetSetting(key: string): UseQueryResult<SettingDto, Error> {
     return useFetch<SettingDto>(['settings', key], `/settings/${key}`);
 }
 
-export function useUpdateSetting(): UseMutationResult<SettingDto, Error, SettingUpdateRequestDto> {
+export function useUpdateSetting(): UseMutationResult<SettingDto, Error, SettingUpdateRequest> {
     return usePostMutate(['settings'], dto => `/settings/${dto.key}`);
 }

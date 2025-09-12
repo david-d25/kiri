@@ -1016,6 +1016,7 @@ create table main.telegram_chat_metadata (
     muted_until timestamp with time zone default null,
     archived boolean not null default false,
     pinned boolean not null default false,
+    enabled boolean not null default false,
     foreign key (chat_id, last_read_message_id) references telegram.messages(chat_id, message_id)
                                          on delete restrict on update cascade
 );

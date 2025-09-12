@@ -1,3 +1,5 @@
+import {TelegramChatMetadataDto} from "@/lib/api/types/TelegramChatMetadataDto";
+
 export type TelegramChatDto = {
     id: number;
     type: TelegramChatDto.Type;
@@ -11,6 +13,7 @@ export type TelegramChatDto = {
     description: string | null;
     inviteLink: string | null;
     linkedChatId: string | null;
+    metadata: TelegramChatMetadataDto;
 };
 
 export namespace TelegramChatDto {

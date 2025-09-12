@@ -86,6 +86,7 @@ data class TelegramChat (
         val mutedUntil: ZonedDateTime?,
         val archived: Boolean,
         val pinned: Boolean,
+        val enabled: Boolean
     )
 
     enum class NotificationMode {
