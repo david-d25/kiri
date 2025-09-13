@@ -82,7 +82,7 @@ class TelegramNotificationService (
         if (chatIsOpenedInApp) {
             // Current chat is opened in the agent app, just wake up the agent
             if (isPrivateChat || isAgentMentioned || isAgentMessageRepliedTo) {
-                tryWakeUpAgent()
+                sentNotification("New message in current chat")
                 return
             }
         }
