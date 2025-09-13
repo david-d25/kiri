@@ -296,7 +296,7 @@ class AgentEngine(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @AgentToolMethod(
-        description = "Sleep for a specified amount of time or until something happens"
+        description = "Sleep for a specified amount of seconds. You will wake up on notifications"
     )
     suspend fun sleep(seconds: Long) {
         val effectiveSeconds = if (seconds == 0L) 86400 * 7 else seconds
