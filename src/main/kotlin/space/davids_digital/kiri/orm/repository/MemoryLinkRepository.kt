@@ -19,7 +19,7 @@ interface MemoryLinkRepository : JpaRepository<MemoryLinkEntity, MemoryLinkEntit
     @Modifying
     @Query(
         """
-            update kiri.memory_links
+            update main.memory_links
             set weight = :weight, last_updated_at = :lastUpdatedAt
             where memory_key_id = :memoryKeyId and memory_point_id = :memoryPointId 
         """,
