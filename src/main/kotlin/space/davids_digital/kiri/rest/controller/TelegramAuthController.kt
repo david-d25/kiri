@@ -28,9 +28,9 @@ class TelegramAuthController(
     fun callback(
         @RequestParam("id")         id: Long,
         @RequestParam("first_name") firstName: String,
-        @RequestParam("last_name")  lastName: String,
-        @RequestParam("username")   username: String,
-        @RequestParam("photo_url")  photoUrl: String,
+        @RequestParam("last_name")  lastName: String?,
+        @RequestParam("username")   username: String?,
+        @RequestParam("photo_url")  photoUrl: String?,
         @RequestParam("auth_date")  authDateEpochSeconds: Long,
         @RequestParam("hash")       hash: String
     ): ResponseEntity<Void> {
