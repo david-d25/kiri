@@ -46,7 +46,7 @@ open class TelegramApp(
 
     @Transactional
     override suspend fun render(): List<DataFrame.ContentPart> {
-        if (autoscrollToEnd) {
+        if (viewState.openedChat != null && autoscrollToEnd) {
             scrollToBottom()
         } else {
             updateLaterMessagesRemaining()
