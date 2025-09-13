@@ -124,8 +124,8 @@ class MemoryManager(
     suspend fun memorize(
         @AgentToolParameter(
             name = "keys",
-            description = "How to build: first items more generic (circumstances, app name, chat name, etc.), " +
-                    "later elements more specific (people tags, dates, etc.)"
+            description = "Keys are different aspects your memory piece should be associated with " +
+                    "(names, dates, terms, locations, conditions, etc.)"
         )
         keyStrings: List<String>,
 
@@ -144,7 +144,7 @@ class MemoryManager(
         return "ok"
     }
 
-    @AgentToolMethod(description = "Search in memory. Recommended to use when context changes.")
+    @AgentToolMethod(description = "Search memories")
     suspend fun query(
         @AgentToolParameter(
             name = "keys",
