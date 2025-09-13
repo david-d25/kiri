@@ -1,7 +1,7 @@
 services:
   nginx:
     image: nginx:alpine
-    container_name: nod3r-nginx
+    container_name: kiri-nginx
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-8080}:80"
