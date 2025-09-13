@@ -287,11 +287,11 @@ class AgentEngine(
         }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::reflect, ::sleep)
+    override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep)
 
-    @AgentToolMethod(description = "Convenience function for reflection and planning")
-    fun reflect(thoughts: String) {
-        addSimpleText("reflection", thoughts)
+    @AgentToolMethod(description = "Think to yourself and plan")
+    fun think(thoughts: String) {
+        addSimpleText("thought", thoughts)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
