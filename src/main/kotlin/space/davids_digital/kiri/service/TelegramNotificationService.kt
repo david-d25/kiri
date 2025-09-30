@@ -5,7 +5,6 @@ import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.engine.EngineEventBus
-import space.davids_digital.kiri.agent.engine.WakeUpRequestEvent
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.notification.Notification
 import space.davids_digital.kiri.agent.notification.NotificationManager
@@ -82,7 +81,7 @@ class TelegramNotificationService (
         if (chatIsOpenedInApp) {
             // Current chat is opened in the agent app, just wake up the agent
             if (isPrivateChat || isAgentMentioned || isAgentMessageRepliedTo) {
-                sentNotification("New message in current chat")
+                sendNotification("New message in current chat")
                 return
             }
         }
@@ -93,43 +92,31 @@ class TelegramNotificationService (
                 chat.firstName != null -> chat.firstName + " (${chat.id})"
                 else -> "(unknown user id ${chat.id})"
             }
-            sentNotification("New message from $userDisplayName")
+            sendNotification("New message in private chat with $userDisplayName")
             return
         }
+        val user = message.fromId?.let { telegram.getUser(it) }
+        val chatDisplayName = when {
+            chat.username != null -> "@" + chat.username
+            chat.title != null -> "'${chat.title}'"
+            else -> "(unknown chat id ${chat.id})"
+        }
+        val userDisplayName = when {
+            user == null -> "(unknown user)"
+            user.username != null -> "@" + user.username
+            else -> user.firstName + " (${user.id})"
+        }
         if (isAgentMentioned) {
-            val from = when {
-                chat.username != null -> "@" + chat.username
-                chat.title != null -> "'${chat.title}'"
-                else -> "(unknown chat id ${chat.id})"
-            }
-            sentNotification("You were mentioned in chat $from")
+            sendNotification("$userDisplayName mentioned you in chat $chatDisplayName")
             return
         }
         if (isAgentMessageRepliedTo) {
-            val user = message.fromId?.let { telegram.getUser(it) }
-            val chatDisplayName = when {
-                chat.username != null -> "@" + chat.username
-                chat.title != null -> "'${chat.title}'"
-                else -> "(unknown chat id ${chat.id})"
-            }
-            val userDisplayName = when {
-                user == null -> "(unknown user)"
-                user.username != null -> "@" + user.username
-                else -> user.firstName + " (${user.id})"
-            }
-            sentNotification("$userDisplayName replied to you in chat $chatDisplayName")
+            sendNotification("$userDisplayName replied to you in chat $chatDisplayName")
             return
         }
     }
 
-    private fun tryWakeUpAgent() {
-        val emitResult = engineEventBus.events.tryEmit(WakeUpRequestEvent())
-        if (!emitResult) {
-            log.error("Could not emit wake up event")
-        }
-    }
-
-    private suspend fun sentNotification(text: String) {
+    private suspend fun sendNotification(text: String) {
         notificationManager.push(Notification(
             sentAt = ZonedDateTime.now(),
             metadata = mapOf(

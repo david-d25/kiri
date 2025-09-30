@@ -8,7 +8,7 @@ import jakarta.persistence.Table
 import java.util.UUID
 
 @Entity
-@Table(schema = "main", name = "file_system_file_contents")
+@Table(schema = "filesystem", name = "file_contents")
 class FileSystemFileContentEntity {
     @Id
     @Column(name = "node_id")

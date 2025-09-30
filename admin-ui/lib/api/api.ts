@@ -1,7 +1,7 @@
 import axios, {AxiosRequestConfig} from "axios";
 import Router from "next/router";
 
-export const apiBase = process.env.NODE_ENV === 'production' ? '/kiri/api' : 'http://localhost:8080/api'
+export const apiBase = process.env.NODE_ENV === 'production' ? '/kiri/api' : 'http://localhost:8080'
 
 const instance = axios.create({
     baseURL: apiBase,

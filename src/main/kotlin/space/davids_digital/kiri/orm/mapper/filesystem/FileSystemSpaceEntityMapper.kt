@@ -5,8 +5,9 @@ import org.mapstruct.Mapper
 import org.springframework.context.annotation.Primary
 import space.davids_digital.kiri.model.filesystem.FileSystemSpace
 import space.davids_digital.kiri.orm.entity.filesystem.FileSystemSpaceEntity
+import space.davids_digital.kiri.orm.mapper.DateTimeMapper
 
-@Mapper
+@Mapper(uses = [DateTimeMapper::class])
 @AnnotateWith(Primary::class)
 interface FileSystemSpaceEntityMapper {
     fun toModel(entity: FileSystemSpaceEntity?): FileSystemSpace?

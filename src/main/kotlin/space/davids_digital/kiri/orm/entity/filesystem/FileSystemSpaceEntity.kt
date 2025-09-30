@@ -8,7 +8,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 @Entity
-@Table(schema = "main", name = "file_system_spaces")
+@Table(schema = "filesystem", name = "spaces")
 class FileSystemSpaceEntity {
     @Id
     @Column(name = "id")
