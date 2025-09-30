@@ -13,6 +13,7 @@ export default function Header() {
                 <HeaderNavButton url="/engine">Engine</HeaderNavButton>
                 <HeaderNavButton url="/memory">Memory</HeaderNavButton>
                 <HeaderNavButton url="/tg-chats">Telegram Chats</HeaderNavButton>
+                <HeaderNavButton url="/files">Files</HeaderNavButton>
             </div>
             <div className={s.right}>
                 <HeaderUserCard />

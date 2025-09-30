@@ -131,7 +131,7 @@ class AgentEngine(
     suspend fun hardStop() {
         log.info("Hard stopping agent engine")
         run.set(false)
-        scope.coroutineContext[Job]?.cancelChildren()
+        scope.coroutineContext[Job]?.cancelChildren() // TODO this cancels event handling
         sleepJob?.cancel()
         sleepJob = null
         mutableState.emit(EngineState.PAUSED)
@@ -148,9 +148,9 @@ class AgentEngine(
     private suspend fun buildRequest(): LlmMessageRequest {
         val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
         return llmMessageRequest {
-            model = "claude-sonnet-4-20250514"
+            model = "claude-sonnet-4-5-20250929"
             system = systemText ?: ""
-            maxOutputTokens = 2048
+            maxOutputTokens = 4096
             temperature = 1.0
             tools {
                 choice = REQUIRED
@@ -298,7 +298,7 @@ class AgentEngine(
     @AgentToolMethod(
         description = "Sleep for a specified amount of seconds. You will wake up on notifications"
     )
-    suspend fun sleep(seconds: Long) {
+    suspend fun sleep(seconds: Long = 0) {
         val effectiveSeconds = if (seconds == 0L) 86400 * 7 else seconds
         log.debug("Agent is going to sleep for $effectiveSeconds seconds")
         val sleptAt = System.currentTimeMillis()
@@ -318,22 +318,22 @@ class AgentEngine(
                 select {
                     onTimeout(effectiveSeconds.seconds) {
                         log.debug("Agent woke up after sleeping for $effectiveSeconds seconds")
-                        addSimpleText("system", "Slept for $effectiveSeconds seconds.")
+                        addSimpleText("sleep", "Slept for $effectiveSeconds seconds.")
                     }
                     wake.onAwait {
                         val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
                         log.debug("Agent was woken up from sleep")
                         if (sleptFor == 0L) {
-                            addSimpleText("system", "Something prevents you from sleeping")
+                            addSimpleText("sleep", "Something prevents you from sleeping")
                         } else {
-                            addSimpleText("system", "Slept for $sleptFor seconds")
+                            addSimpleText("sleep", "Slept for $sleptFor seconds")
                         }
                     }
                 }
             } catch (_: CancellationException) {
                 val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
                 log.debug("Agent was woken up from sleep (job cancelled)")
-                addSimpleText("system", "Slept for $sleptFor seconds")
+                addSimpleText("sleep", "Slept for $sleptFor seconds")
             }
         }
 

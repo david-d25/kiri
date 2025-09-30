@@ -45,8 +45,8 @@ class FileSystemService(
         val now = OffsetDateTime.now()
         val entity = FileSystemSpaceEntity().apply {
             id = UUID.randomUUID()
-            slug = trimmedSlug
-            displayName = trimmedName
+            this.slug = trimmedSlug
+            this.displayName = trimmedName
             this.description = description?.takeIf { it.isNotBlank() }
             this.ownerUserId = ownerUserId
             createdAt = now
@@ -252,7 +252,7 @@ class FileSystemService(
         }
         content?.let {
             val contentEntity = FileSystemFileContentEntity().apply {
-                nodeId = entity.id
+                this.nodeId = entity.id
                 this.content = it
             }
             contentOrm.save(contentEntity)

@@ -1,6 +1,6 @@
 package space.davids_digital.kiri.model.filesystem
 
-import java.time.OffsetDateTime
+import java.time.ZonedDateTime
 import java.util.UUID
 
 data class FileSystemNode(
@@ -12,8 +12,8 @@ data class FileSystemNode(
     val mimeType: String?,
     val size: Long,
     val attributes: Map<String, String>,
-    val createdAt: OffsetDateTime,
-    val updatedAt: OffsetDateTime,
+    val createdAt: ZonedDateTime,
+    val updatedAt: ZonedDateTime,
 ) {
     enum class Type {
         DIRECTORY,

@@ -1,7 +1,7 @@
 package space.davids_digital.kiri.model.filesystem
 
-import java.time.OffsetDateTime
-import java.util.UUID
+import java.time.ZonedDateTime
+import java.util.*
 
 data class FileSystemSpace(
     val id: UUID,
@@ -9,6 +9,6 @@ data class FileSystemSpace(
     val displayName: String,
     val description: String?,
     val ownerUserId: Long?,
-    val createdAt: OffsetDateTime,
-    val updatedAt: OffsetDateTime,
+    val createdAt: ZonedDateTime,
+    val updatedAt: ZonedDateTime,
 )

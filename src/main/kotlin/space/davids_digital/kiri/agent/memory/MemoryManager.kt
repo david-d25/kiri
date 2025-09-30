@@ -120,16 +120,16 @@ class MemoryManager(
 
     override fun getAvailableAgentToolMethods(): Collection<Function<*>> = listOf(::memorize, ::query)
 
-    @AgentToolMethod(description = "Remember facts, associations, behavior, etc. to general purpose memory.")
+    @AgentToolMethod(description = "Remember something to general purpose memory")
     suspend fun memorize(
         @AgentToolParameter(
             name = "keys",
-            description = "Keys are different aspects your memory piece should be associated with " +
-                    "(names, dates, terms, locations, conditions, etc.)"
+            description = "Keys to associate with memory (AND semantic): " +
+                    "names, dates, terms, locations, conditions, current date, etc."
         )
         keyStrings: List<String>,
 
-        @AgentToolParameter(description = "What memory is associated with ALL these keys?")
+        @AgentToolParameter(description = "Text to remember")
         value: String
     ): String {
         if (keyStrings.isEmpty()) {
@@ -144,11 +144,11 @@ class MemoryManager(
         return "ok"
     }
 
-    @AgentToolMethod(description = "Search memories")
+    @AgentToolMethod(description = "Returns memories closest to the provided keys")
     suspend fun query(
         @AgentToolParameter(
             name = "keys",
-            description = "All keys should relate to the same memory you want to find"
+            description = "Keys with AND semantic. Hint: add current date so more recent memories are returned"
         )
         keyStrings: List<String>,
     ): String {
@@ -159,7 +159,7 @@ class MemoryManager(
             for (memory in memories) {
                 append("- ")
                 append(memory.point.value)
-                append(" (score:")
+                append(" (score: ")
                 append(String.format("%.2f", memory.score))
                 appendLine(")")
             }

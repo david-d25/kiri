@@ -255,7 +255,7 @@ open class TelegramApp(
         val chats = chatOrm.findAllEnabled(PageRequest.of(page, CHATS_PAGE_SIZE))
         viewState = TelegramAppViewState(
             chatsView = chats.toList(),
-            chatsPage = page,
+            chatsPage = page.coerceIn(0, chats.totalPages - 1),
             chatsTotalPages = chats.totalPages
         )
     }

@@ -15,7 +15,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 @Entity
-@Table(schema = "main", name = "file_system_nodes")
+@Table(schema = "filesystem", name = "nodes")
 class FileSystemNodeEntity {
     @Id
     @Column(name = "id")

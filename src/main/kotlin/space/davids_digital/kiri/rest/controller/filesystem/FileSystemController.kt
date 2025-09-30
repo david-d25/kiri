@@ -153,8 +153,8 @@ class FileSystemController(
             displayName = displayName,
             description = description,
             ownerUserId = ownerUserId,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            createdAt = createdAt.toOffsetDateTime(),
+            updatedAt = updatedAt.toOffsetDateTime(),
         )
     }
 
@@ -164,12 +164,15 @@ class FileSystemController(
             spaceId = spaceId,
             parentId = parentId,
             name = name,
-            type = type,
+            type = when (type) {
+                FileSystemNode.Type.FILE -> FileSystemNodeDto.Type.FILE
+                FileSystemNode.Type.DIRECTORY -> FileSystemNodeDto.Type.DIRECTORY
+            },
             mimeType = mimeType,
             size = size,
             attributes = attributes,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            createdAt = createdAt.toOffsetDateTime(),
+            updatedAt = updatedAt.toOffsetDateTime(),
         )
     }
 }
