@@ -87,13 +87,12 @@ class AgentToolRegistry {
         var path: List<String> = emptyList()
         var name: String = ""
         var description: String? = null
+        var createFrame: Boolean = true
         lateinit var callable: Function<*>
         lateinit var receiver: AgentToolProvider
 
         fun build(): Entry {
-            requireNotNull(callable) { "'callable' is required" }
-            requireNotNull(receiver) { "'receiver' is required "}
-            return Entry(path, name, description, callable, receiver)
+            return Entry(path, name, description, createFrame, callable, receiver)
         }
     }
 
@@ -101,6 +100,7 @@ class AgentToolRegistry {
         val path: List<String>,
         val name: String,
         val description: String?,
+        val createFrame: Boolean,
         val callable: Function<*>,
         val receiver: AgentToolProvider,
     ) {

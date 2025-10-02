@@ -97,6 +97,9 @@ open class TelegramApp(
 
     @AgentToolMethod(description = "Scroll messages; positive = down, negative = up")
     fun scroll(amount: Int): String {
+        if (amount > 0 && autoscrollToEnd) {
+            return "already at bottom"
+        }
         val chatId = viewState.openedChat?.id ?: return "Chat not opened"
         val viewLastMessage = viewState.messagesView.lastOrNull() ?: return "No messages"
         val latestMessage = messageOrm.findMostRecentMessage(chatId) ?: return "No messages"
@@ -151,8 +154,8 @@ open class TelegramApp(
     @Transactional
     @AgentToolMethod(
         description = "Send message. " +
-                "Supported tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, blockquote, " +
-                "blockquote[expandable]. Markdown not supported."
+                "Supported HTML tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, blockquote, " +
+                "blockquote[expandable]. Message appears in chat immediately after sending."
     )
     open suspend fun send(
         message: String,
