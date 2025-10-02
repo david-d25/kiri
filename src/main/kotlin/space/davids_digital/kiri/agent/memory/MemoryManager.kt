@@ -125,7 +125,7 @@ class MemoryManager(
         @AgentToolParameter(
             name = "keys",
             description = "Keys to associate with memory (AND semantic): " +
-                    "names, dates, terms, locations, conditions, current date, etc."
+                    "names, dates, terms, locations, conditions, current date, etc. Longer is better."
         )
         keyStrings: List<String>,
 
@@ -148,7 +148,7 @@ class MemoryManager(
     suspend fun query(
         @AgentToolParameter(
             name = "keys",
-            description = "Keys with AND semantic. Hint: add current date so more recent memories are returned"
+            description = "Keys with AND semantic. Provide minimal set of keys needed for better results"
         )
         keyStrings: List<String>,
     ): String {

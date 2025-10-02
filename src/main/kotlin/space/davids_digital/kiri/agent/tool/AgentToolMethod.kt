@@ -20,4 +20,9 @@ annotation class AgentToolMethod(
      * Description for agent. Leave blank for no description.
      */
     val description: String = "",
+
+    /**
+     * Whether to create a [space.davids_digital.kiri.agent.frame.ToolCallFrame] when agent calls this method
+     */
+    val createFrame: Boolean = true,
 )

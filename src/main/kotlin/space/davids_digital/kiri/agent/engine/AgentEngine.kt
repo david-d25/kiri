@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppManager
+import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.FrameRenderer
 import space.davids_digital.kiri.agent.frame.addCreatedAtNow
@@ -194,13 +195,6 @@ class AgentEngine(
             }
             toolResult("<Tool is still running, result is not ready...>")
 
-            frames.addToolCall {
-                this.toolUse = item.toolUse
-                resultProvider = {
-                    proxy.provider()
-                }
-            }
-
             log.info("Agent called tool '${toolUse.name}'")
 
             val entry = toolRegistry.find(toolUse.name)
@@ -208,6 +202,14 @@ class AgentEngine(
                 log.warn("Tool '${toolUse.name}' not found in registry, which is weird")
                 toolResult("Unexpected error: tool '${toolUse.name}' was not found. This is certainly a system bug.")
                 continue
+            }
+            if (entry.createFrame) {
+                frames.addToolCall {
+                    this.toolUse = item.toolUse
+                    resultProvider = {
+                        proxy.provider()
+                    }
+                }
             }
             val toolResponse = try {
                 toolCallExecutor.execute(entry.callable, toolUse.input, entry.receiver)
@@ -287,16 +289,29 @@ class AgentEngine(
         }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep)
+    override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep, ::cleanRolling)
 
-    @AgentToolMethod(description = "Think to yourself and plan")
+    @AgentToolMethod(description = "Think to yourself and plan", createFrame = false)
     fun think(thoughts: String) {
-        addSimpleText("thought", thoughts)
+        val lastTwoFrames = frames.snapshot().rolling.takeLast(5)
+        addSimpleText("thoughts", thoughts)
+        if (lastTwoFrames.all { it is DataFrame && it.tag == "thoughts" }) {
+            addSimpleText("warning", "You called 'think' 5+ times in a row. Please consider acting or sleeping.")
+        }
+    }
+
+    @AgentToolMethod(name = "cleanup", description = "Cleanup your mind by deleting old frames")
+    fun cleanRolling(
+        @AgentToolParameter(description = "Text to keep after cleanup so you don't forget what you were planning to do")
+        summary: String
+    ) {
+        frames.clearOnlyRolling()
+        addSimpleText("cleanup", "Cleaned up. Context summary:\n$summary")
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @AgentToolMethod(
-        description = "Sleep for a specified amount of seconds. You will wake up on notifications"
+        description = "Sleep with automatic wake-up on events. Pass 0 to let system choose sleep duration"
     )
     suspend fun sleep(seconds: Long = 0) {
         val effectiveSeconds = if (seconds == 0L) 86400 * 7 else seconds

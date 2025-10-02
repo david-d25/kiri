@@ -66,6 +66,7 @@ class AgentToolScanner {
                 path = namespacePath
                 name = methodName
                 callable = method
+                createFrame = methodAnnotation.createFrame
                 description = methodDescription
                 receiver = toolProvider
             }
