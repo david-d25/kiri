@@ -459,11 +459,11 @@ abstract class TelegramIntegrationMapper {
 
     fun toModel(dto: LinkPreviewOptions?): TelegramLinkPreviewOptions? = dto?.let {
         TelegramLinkPreviewOptions(
-            it.isDisabled,
+            booleanOrFalse(it.isDisabled),
             it.url(),
-            it.preferSmallMedia(),
-            it.preferLargeMedia(),
-            it.showAboveText()
+            booleanOrFalse(it.preferSmallMedia()),
+            booleanOrFalse(it.preferLargeMedia()),
+            booleanOrFalse(it.showAboveText())
         )
     }
 
