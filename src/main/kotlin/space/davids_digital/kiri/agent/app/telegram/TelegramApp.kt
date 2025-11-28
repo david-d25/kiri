@@ -2,15 +2,10 @@ package space.davids_digital.kiri.agent.app.telegram
 
 import jakarta.transaction.Transactional
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.filterIsInstance
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import space.davids_digital.kiri.agent.app.AgentApp
-import space.davids_digital.kiri.agent.engine.EngineEventBus
-import space.davids_digital.kiri.agent.engine.SleepEvent
 import space.davids_digital.kiri.agent.frame.DataFrame
-import space.davids_digital.kiri.agent.frame.FrameBuffer
-import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameter
@@ -85,12 +80,12 @@ open class TelegramApp(
     }
 
     @AgentToolMethod(description = "Open list of chats. Will close current chat.")
-    fun chatList(page: Int? = null) {
+    fun chatList(pageNumber: Int? = null) {
         val openedChat = viewState.openedChat
         if (openedChat != null) {
             telegramNotificationService.onChatClosedInAgentApp(openedChat.id)
         }
-        showChats(page ?: viewState.chatsPageIndex)
+        showChats(pageNumber ?: (viewState.chatsPageIndex + 1))
     }
 
     @AgentToolMethod(description = "Scroll messages; positive = down, negative = up")
@@ -219,7 +214,7 @@ open class TelegramApp(
     }
 
     private fun showChats(pageNumber: Int) {
-        val pageIndex = pageNumber + 1
+        val pageIndex = pageNumber - 1
         val chats = chatOrm.findAllEnabled(PageRequest.of(pageNumber, CHATS_PAGE_SIZE))
         val safePageIndex = if (chats.totalPages == 0) 0 else pageIndex.coerceIn(0, chats.totalPages - 1)
         viewState = TelegramAppViewState(
