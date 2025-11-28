@@ -4,8 +4,8 @@ import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.Frame
 import space.davids_digital.kiri.agent.frame.ToolCallFrame
-import space.davids_digital.kiri.llm.LlmToolUse
-import space.davids_digital.kiri.llm.LlmToolUseResult
+import space.davids_digital.kiri.llm.ChatCompletionToolUse
+import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
 import space.davids_digital.kiri.rest.dto.*
 import java.util.Base64
 
@@ -38,23 +38,23 @@ class FrameDtoMapper {
         return ToolCallFrameDto(toolUseDto, resultDto)
     }
 
-    private fun mapToolUse(toolUse: LlmToolUse): ToolUseDto =
+    private fun mapToolUse(toolUse: ChatCompletionToolUse): ToolUseDto =
         ToolUseDto(toolUse.id, toolUse.name, mapToolInput(toolUse.input))
 
-    private fun mapToolResult(result: LlmToolUseResult): ToolResultDto =
+    private fun mapToolResult(result: ChatCompletionToolUseResult): ToolResultDto =
         ToolResultDto(result.toolUseId, result.name, mapToolOutput(result.output))
 
-    private fun mapToolInput(input: LlmToolUse.Input): ToolInputDto = when (input) {
-        is LlmToolUse.Input.Text -> ToolInputDto.Text(input.text)
-        is LlmToolUse.Input.Number -> ToolInputDto.Number(input.number)
-        is LlmToolUse.Input.Boolean -> ToolInputDto.BooleanVal(input.boolean)
-        is LlmToolUse.Input.Array -> ToolInputDto.Array(input.items.map { mapToolInput(it) })
-        is LlmToolUse.Input.Object -> ToolInputDto.Object(input.items.mapValues { mapToolInput(it.value) })
+    private fun mapToolInput(input: ChatCompletionToolUse.Input): ToolInputDto = when (input) {
+        is ChatCompletionToolUse.Input.Text -> ToolInputDto.Text(input.text)
+        is ChatCompletionToolUse.Input.Number -> ToolInputDto.Number(input.number)
+        is ChatCompletionToolUse.Input.Boolean -> ToolInputDto.BooleanVal(input.boolean)
+        is ChatCompletionToolUse.Input.Array -> ToolInputDto.Array(input.items.map { mapToolInput(it) })
+        is ChatCompletionToolUse.Input.Object -> ToolInputDto.Object(input.items.mapValues { mapToolInput(it.value) })
     }
 
-    private fun mapToolOutput(output: LlmToolUseResult.Output): ToolOutputDto = when (output) {
-        is LlmToolUseResult.Output.Text -> ToolOutputDto.Text(output.text)
-        is LlmToolUseResult.Output.Image -> ToolOutputDto.Image(
+    private fun mapToolOutput(output: ChatCompletionToolUseResult.Output): ToolOutputDto = when (output) {
+        is ChatCompletionToolUseResult.Output.Text -> ToolOutputDto.Text(output.text)
+        is ChatCompletionToolUseResult.Output.Image -> ToolOutputDto.Image(
             Base64.getEncoder().encodeToString(output.data),
             output.mediaType.name
         )

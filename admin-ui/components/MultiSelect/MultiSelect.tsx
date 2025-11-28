@@ -13,6 +13,7 @@ export interface MultiSelectProps<T> {
     itemToLabel: (item: T) => string;
     itemToIdentityKey: (item: T) => string | number;
     label?: string;
+    error?: string | null;
     placeholder?: string;
     className?: string;
     disabled?: boolean;
@@ -29,18 +30,10 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
     const suggestions = props.items.filter(item =>
         !props.selectedItems.map(props.itemToIdentityKey).includes(props.itemToIdentityKey(item))
         && props.itemToLabel(item).toLowerCase().includes(searchTerm.toLowerCase())
-    ).slice(0, 5); // Limit to 5 suggestions
+    ).slice(0, 100); // Limit to 100 suggestions
 
     const maxItemsReached = props.maxItems && props.selectedItems.length >= props.maxItems;
-    const showSuggestions = !maxItemsReached && searchTerm.length > 0 && isInputFocused && suggestions.length > 0;
-
-    const rootClassname = classnames({
-        [styles.root]: true,
-        [styles.focused]: isInputFocused,
-        [styles.disabled]: props.disabled,
-        [styles.showsSuggestions]: showSuggestions,
-        [props.className || ""]: !!props.className,
-    })
+    const showSuggestions = !maxItemsReached && isInputFocused && (suggestions.length > 0 || searchTerm.length == 0);
 
     function onSelect(item: T) {
         if (props.disabled || props.selectedItems.includes(item) || maxItemsReached) {
@@ -56,7 +49,7 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
             return;
         }
         setLastItemRemoveConfirmation(false);
-        if (e.key === "Enter" && searchTerm.trim() !== "") {
+        if (e.key === "Enter" && showSuggestions) {
             const selectedItem = suggestions[selectedIndex];
             if (selectedItem) {
                 onSelect(selectedItem);
@@ -94,10 +87,18 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
         }
     }
 
+    const rootClassname = classnames({
+        [styles.root]: true,
+        [styles.focused]: isInputFocused,
+        [styles.disabled]: props.disabled,
+        [styles.showsSuggestions]: showSuggestions,
+        [props.className || ""]: !!props.className,
+    })
+
     return (
         <div className={rootClassname}>
             { props.label && <label className={styles.label}>{props.label}</label> }
-            <div className={styles.body}>
+            <div className={styles.body} data-error={Boolean(props.error)}>
                 { props.selectedItems.map((item, index) => {
                     const lastItem = index === props.selectedItems.length - 1;
                     const removeConfirmation = lastItem && lastItemRemoveConfirmation;
@@ -128,28 +129,29 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
                         onKeyDown={onKeyPress}
                     />
                 ) }
+                { showSuggestions && (
+                    <div className={styles.suggestions}>
+                        { suggestions.map((suggestion, index) => {
+                            const isSelected = selectedIndex === index;
+                            const className = classnames({
+                                [styles.suggestionItem]: true,
+                                [styles.focused]: isSelected,
+                            });
+                            return (
+                                <div
+                                    className={className}
+                                    onMouseDown={() => onSelect(suggestion)}
+                                    onMouseOver={() => setSelectedIndex(index)}
+                                    key={index}
+                                >
+                                    {props.itemToLabel(suggestion)}
+                                </div>
+                            )
+                        }) }
+                    </div>
+                ) }
             </div>
-            { showSuggestions && (
-                <div className={styles.suggestions}>
-                    { suggestions.map((suggestion, index) => {
-                        const isSelected = selectedIndex === index;
-                        const className = classnames({
-                            [styles.suggestionItem]: true,
-                            [styles.focused]: isSelected,
-                        });
-                        return (
-                            <div
-                                className={className}
-                                onMouseDown={() => onSelect(suggestion)}
-                                onMouseOver={() => setSelectedIndex(index)}
-                                key={index}
-                            >
-                                {props.itemToLabel(suggestion)}
-                            </div>
-                        )
-                    }) }
-                </div>
-            ) }
+            { props.error && <div className={styles.errorMessage}>{props.error}</div> }
         </div>
     )
 }

@@ -28,9 +28,7 @@ open class TelegramApp(
     private val renderer: TelegramAppRenderer,
     private val telegramNotificationService: TelegramNotificationService,
     private val chatOrm: TelegramChatOrmService,
-    private val messageOrm: TelegramMessageOrmService,
-    private val engineEventBus: EngineEventBus,
-    private val frameBuffer: FrameBuffer
+    private val messageOrm: TelegramMessageOrmService
 ): AgentApp("telegram") {
 
     companion object {
@@ -45,7 +43,7 @@ open class TelegramApp(
     private var autoscrollToEnd = false
 
     @Transactional
-    override suspend fun render(): List<DataFrame.ContentPart> {
+    override fun render(): List<DataFrame.ContentPart> {
         if (viewState.openedChat != null && autoscrollToEnd) {
             scrollToBottom()
         } else {
@@ -92,7 +90,7 @@ open class TelegramApp(
         if (openedChat != null) {
             telegramNotificationService.onChatClosedInAgentApp(openedChat.id)
         }
-        showChats(page ?: viewState.chatsPage)
+        showChats(page ?: viewState.chatsPageIndex)
     }
 
     @AgentToolMethod(description = "Scroll messages; positive = down, negative = up")
@@ -168,21 +166,8 @@ open class TelegramApp(
         return "sent"
     }
 
-    @AgentToolMethod(description = "Manually mark chat as read until selected message")
-    fun markAsRead(messageId: Int): String {
-        val chat = viewState.openedChat ?: return "Chat not opened"
-        if (!messageOrm.exists(chat.id, messageId)) {
-            return "message not found"
-        }
-        setLastReadMessageId(messageId)
-        return "ok"
-    }
-
     override suspend fun onOpened() {
         showChats(0)
-        scope.launch {
-            engineEventBus.events.filterIsInstance<SleepEvent>().collect(::onAgentSleep)
-        }
     }
 
     override suspend fun onClose() {
@@ -200,9 +185,6 @@ open class TelegramApp(
             result.add(::chatList)
             result.add(::sendSticker)
             result.add(::scroll)
-            if (viewContainsUnreadMessages()) {
-                result.add(::markAsRead)
-            }
             if (!autoscrollToEnd) {
                 result.add(::scrollToBottom)
             }
@@ -223,24 +205,6 @@ open class TelegramApp(
         )
     }
 
-    private fun onAgentSleep(event: SleepEvent) {
-        try {
-            if (chatContainsUnreadMessages()) {
-                event.preventSleeping()
-                frameBuffer.addStatic {
-                    tag = "telegram"
-                    content = dataFrameContent {
-                        text("You have unread messages, consider answering, marking as read, or closing the chat")
-                    }
-                }
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.error("Failed to handle sleep event", e)
-        }
-    }
-
     private fun chatContainsUnreadMessages(): Boolean {
         val openedChat = viewState.openedChat ?: return false
         val lastReadMessageId = openedChat.metadata.lastReadMessageId
@@ -254,11 +218,13 @@ open class TelegramApp(
         return lastReadMessageId < viewLastMessageId
     }
 
-    private fun showChats(page: Int) {
-        val chats = chatOrm.findAllEnabled(PageRequest.of(page, CHATS_PAGE_SIZE))
+    private fun showChats(pageNumber: Int) {
+        val pageIndex = pageNumber + 1
+        val chats = chatOrm.findAllEnabled(PageRequest.of(pageNumber, CHATS_PAGE_SIZE))
+        val safePageIndex = if (chats.totalPages == 0) 0 else pageIndex.coerceIn(0, chats.totalPages - 1)
         viewState = TelegramAppViewState(
             chatsView = chats.toList(),
-            chatsPage = page.coerceIn(0, chats.totalPages - 1),
+            chatsPageIndex = safePageIndex,
             chatsTotalPages = chats.totalPages
         )
     }

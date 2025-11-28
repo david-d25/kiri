@@ -3,7 +3,7 @@ package space.davids_digital.kiri.agent.frame
 class DynamicDataFrame(
     val tagProvider: () -> String,
     val attributesProvider: () -> Map<String, String>,
-    val contentProvider: suspend () -> List<ContentPart>
+    val contentProvider: () -> List<ContentPart>
 ) : DataFrame() {
     override val tag: String
         get() = tagProvider()
@@ -11,5 +11,5 @@ class DynamicDataFrame(
     override val attributes: Map<String, String>
         get() = attributesProvider()
 
-    override suspend fun renderContent(): List<ContentPart> = contentProvider()
+    override fun renderContent(): List<ContentPart> = contentProvider()
 }

@@ -5,7 +5,7 @@ data class StaticDataFrame(
     override val attributes: Map<String, String>,
     private val content: List<ContentPart>
 ) : DataFrame() {
-    override suspend fun renderContent() = content
+    override fun renderContent() = content
 
     class Builder {
         var tag: String = ""

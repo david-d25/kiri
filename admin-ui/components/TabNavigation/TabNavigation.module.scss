@@ -1,0 +1,35 @@
+.tabButtons {
+  width: fit-content;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-interactive);
+  border-radius: 5px;
+  padding: 2px;
+}
+
+.tabButton {
+  padding: 5px 10px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 4px;
+  border: none;
+  background: none;
+
+  &:hover {
+    background: var(--bg-interactive-hover);
+  }
+
+  &.active {
+    background: var(--bg-interactive-active);
+  }
+
+  &:disabled {
+    color: var(--text-muted);
+    background: none;
+    pointer-events: none;
+    tab-index: -1;
+  }
+}

@@ -1,7 +1,7 @@
 package space.davids_digital.kiri.agent.tool
 
 import org.springframework.stereotype.Component
-import space.davids_digital.kiri.llm.LlmMessageRequest
+import space.davids_digital.kiri.llm.ChatCompletionRequest
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
@@ -12,14 +12,14 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 
 /**
- * Maps agent tool method parameters their respective [LlmMessageRequest.Tools.Function.ParameterValue].
+ * Maps agent tool method parameters their respective [ChatCompletionRequest.Tools.Function.ParameterValue].
  */
 @Component
 class AgentToolParameterMapper {
     /**
      * Maps a Kotlin function to a parameter value object for an LLM function schema.
      */
-    fun map(function: Function<*>): LlmMessageRequest.Tools.Function.ParameterValue.ObjectValue {
+    fun map(function: Function<*>): ChatCompletionRequest.Tools.Function.ParameterValue.ObjectValue {
         val kFunction = function as KFunction<*>
 
         // Get parameters excluding the 'this' parameter for instance methods
@@ -27,7 +27,7 @@ class AgentToolParameterMapper {
 
         if (parameters.isEmpty()) {
             // No parameters, return empty object
-            return LlmMessageRequest.Tools.Function.ParameterValue.ObjectValue(
+            return ChatCompletionRequest.Tools.Function.ParameterValue.ObjectValue(
                 description = null,
                 properties = emptyMap(),
                 required = emptyList()
@@ -45,7 +45,7 @@ class AgentToolParameterMapper {
         }
 
         // Process multiple parameters or a single non-data class parameter
-        val properties = mutableMapOf<String, LlmMessageRequest.Tools.Function.ParameterValue>()
+        val properties = mutableMapOf<String, ChatCompletionRequest.Tools.Function.ParameterValue>()
         val required = mutableListOf<String>()
 
         for (param in parameters) {
@@ -60,7 +60,7 @@ class AgentToolParameterMapper {
             }
         }
 
-        return LlmMessageRequest.Tools.Function.ParameterValue.ObjectValue(
+        return ChatCompletionRequest.Tools.Function.ParameterValue.ObjectValue(
             description = null,
             properties = properties,
             required = required
@@ -97,8 +97,8 @@ class AgentToolParameterMapper {
     private fun processDataClass(
         kClass: KClass<*>,
         description: String?
-    ): LlmMessageRequest.Tools.Function.ParameterValue.ObjectValue {
-        val properties = mutableMapOf<String, LlmMessageRequest.Tools.Function.ParameterValue>()
+    ): ChatCompletionRequest.Tools.Function.ParameterValue.ObjectValue {
+        val properties = mutableMapOf<String, ChatCompletionRequest.Tools.Function.ParameterValue>()
         val required = mutableListOf<String>()
 
         // Get primary constructor parameters to determine required properties
@@ -120,7 +120,7 @@ class AgentToolParameterMapper {
             }
         }
 
-        return LlmMessageRequest.Tools.Function.ParameterValue.ObjectValue(
+        return ChatCompletionRequest.Tools.Function.ParameterValue.ObjectValue(
             description = description,
             properties = properties,
             required = required
@@ -157,7 +157,7 @@ class AgentToolParameterMapper {
     private fun mapType(
         type: KType,
         description: String?
-    ): LlmMessageRequest.Tools.Function.ParameterValue {
+    ): ChatCompletionRequest.Tools.Function.ParameterValue {
         val classifier = type.classifier as? KClass<*> ?: error("Missing type classifier")
 
         if (classifier == Array::class || classifier.isSubclassOf(Collection::class)) {
@@ -167,7 +167,7 @@ class AgentToolParameterMapper {
             } else {
                 error("Missing element type for array or collection")
             }
-            return LlmMessageRequest.Tools.Function.ParameterValue.ArrayValue(description, itemSchema)
+            return ChatCompletionRequest.Tools.Function.ParameterValue.ArrayValue(description, itemSchema)
         }
 
         return when {
@@ -186,7 +186,7 @@ class AgentToolParameterMapper {
             // Handle enums - create a string value with valid options
             classifier.isSubclassOf(Enum::class) -> {
                 val enumValues = classifier.java.enumConstants?.map { it.toString() } ?: emptyList()
-                LlmMessageRequest.Tools.Function.ParameterValue.StringValue(
+                ChatCompletionRequest.Tools.Function.ParameterValue.StringValue(
                     description = description,
                     enum = enumValues
                 )
@@ -197,21 +197,21 @@ class AgentToolParameterMapper {
         }
     }
 
-    private fun createStringValue(description: String?): LlmMessageRequest.Tools.Function.ParameterValue.StringValue {
-        return LlmMessageRequest.Tools.Function.ParameterValue.StringValue(
+    private fun createStringValue(description: String?): ChatCompletionRequest.Tools.Function.ParameterValue.StringValue {
+        return ChatCompletionRequest.Tools.Function.ParameterValue.StringValue(
             description = description,
             enum = null
         )
     }
 
-    private fun createNumberValue(description: String?): LlmMessageRequest.Tools.Function.ParameterValue.NumberValue {
-        return LlmMessageRequest.Tools.Function.ParameterValue.NumberValue(
+    private fun createNumberValue(description: String?): ChatCompletionRequest.Tools.Function.ParameterValue.NumberValue {
+        return ChatCompletionRequest.Tools.Function.ParameterValue.NumberValue(
             description = description
         )
     }
 
-    private fun createBooleanValue(description: String?): LlmMessageRequest.Tools.Function.ParameterValue.BooleanValue {
-        return LlmMessageRequest.Tools.Function.ParameterValue.BooleanValue(
+    private fun createBooleanValue(description: String?): ChatCompletionRequest.Tools.Function.ParameterValue.BooleanValue {
+        return ChatCompletionRequest.Tools.Function.ParameterValue.BooleanValue(
             description = description
         )
     }

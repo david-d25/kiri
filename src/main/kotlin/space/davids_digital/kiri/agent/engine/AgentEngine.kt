@@ -19,14 +19,15 @@ import space.davids_digital.kiri.agent.frame.addCreatedAtNow
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
-import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
-import space.davids_digital.kiri.llm.LlmMessageRequest
-import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
-import space.davids_digital.kiri.llm.LlmMessageResponse
-import space.davids_digital.kiri.llm.LlmToolUseResult
-import space.davids_digital.kiri.llm.dsl.llmMessageRequest
-import space.davids_digital.kiri.llm.dsl.llmToolUseResult
+import space.davids_digital.kiri.llm.ChatCompletionResponse
+import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.REQUIRED
+import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
+import space.davids_digital.kiri.llm.dsl.chatCompletionRequest
+import space.davids_digital.kiri.llm.dsl.chatCompletionToolUseResult
 import space.davids_digital.kiri.model.EngineState
+import space.davids_digital.kiri.orm.service.SettingOrmService
+import space.davids_digital.kiri.service.ChatCompletionService
+import space.davids_digital.kiri.service.ChatCompletionServiceRegistry
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.seconds
@@ -42,10 +43,16 @@ class AgentEngine(
     private val frameRenderer: FrameRenderer,
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
-    private val anthropicMessagesService: AnthropicMessagesService
+    private val chatCompletionServiceRegistry: ChatCompletionServiceRegistry,
+    private val settingOrmService: SettingOrmService
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 10000L
+    }
+
+    private object SettingsKeys {
+        const val INSTRUCTIONS = "agent.engine.content.instructions"
+        const val MODEL_HANDLE = "agent.engine.modelHandle"
     }
 
     private val log = LoggerFactory.getLogger(this::class.java)
@@ -97,22 +104,33 @@ class AgentEngine(
         }
     }
 
-    private suspend fun tickInternal(): Boolean {
+    private suspend fun tickInternal() {
         if (!tickMutex.tryLock()) {
-            return false
+            return
         }
         try {
             mutableState.emit(EngineState.RUNNING)
+            val modelHandle = settingOrmService.getValue(SettingsKeys.MODEL_HANDLE)
+            if (modelHandle == null) {
+                log.error("No model handle configured")
+                softStop()
+                return
+            }
+            val chatCompletionService = chatCompletionServiceRegistry.findByModelHandle(modelHandle)
+            if (chatCompletionService == null) {
+                log.error("No chat completion service found for model handle '$modelHandle'")
+                softStop()
+                return
+            }
             updateToolRegistry()
             memoryManager.tick()
-            val request = buildRequest()
-            val response = anthropicMessagesService.request(request)
+            val response = generateResponse(modelHandle, chatCompletionService)
             handleResponse(response)
             eventBus.events.emit(TickEvent())
-            return true
+            return
         } catch (e: Exception) {
             log.error("Tick error", e)
-            return false
+            return
         } finally {
             tickMutex.unlock()
             mutableState.emit(EngineState.PAUSED)
@@ -146,13 +164,16 @@ class AgentEngine(
         }
     }
 
-    private suspend fun buildRequest(): LlmMessageRequest {
-        val systemText = this::class.java.getResource("/prompts/main.txt")?.readText()
-        return llmMessageRequest {
-            model = "claude-sonnet-4-5-20250929"
-            system = systemText ?: ""
-            maxOutputTokens = 4096
-            temperature = 1.0
+    private suspend fun generateResponse(
+        modelHandle: String,
+        chatCompletionService: ChatCompletionService
+    ): ChatCompletionResponse {
+        val instructions = settingOrmService.getValue(SettingsKeys.INSTRUCTIONS) ?: ""
+        val request = chatCompletionRequest {
+            this.modelHandle = modelHandle
+            this.instructions = instructions
+            maxOutputTokens = 2048
+            temperature = 0.8
             tools {
                 choice = REQUIRED
                 allowParallelUse = true
@@ -166,11 +187,12 @@ class AgentEngine(
             }
             frameRenderer.render(frames, this)
         }
+        return chatCompletionService.request(request)
     }
 
-    private suspend fun handleResponse(response: LlmMessageResponse) {
+    private suspend fun handleResponse(response: ChatCompletionResponse) {
         for (item in response.content) {
-            if (item !is LlmMessageResponse.ContentItem.ToolUse) {
+            if (item !is ChatCompletionResponse.ContentItem.ToolUse) {
                 log.warn("Unexpected agent response part '${item::class}', skipping")
                 continue
             }
@@ -180,11 +202,11 @@ class AgentEngine(
             val toolUse = item.toolUse
 
             val proxy = object {
-                lateinit var provider: () -> LlmToolUseResult
+                lateinit var provider: () -> ChatCompletionToolUseResult
             }
             val toolResult: (String) -> Unit = {
                 proxy.provider = {
-                    llmToolUseResult {
+                    chatCompletionToolUseResult {
                         id = toolUse.id
                         name = toolUse.name
                         output {
@@ -289,20 +311,16 @@ class AgentEngine(
         }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::think, ::sleep, ::cleanRolling)
+    override fun getAvailableAgentToolMethods() = listOf(::think, ::doNothing, ::cleanRolling)
 
-    @AgentToolMethod(description = "Think to yourself and plan", createFrame = false)
+    @AgentToolMethod(description = "Think to yourself and plan")
     fun think(thoughts: String) {
-        val lastTwoFrames = frames.snapshot().rolling.takeLast(5)
         addSimpleText("thoughts", thoughts)
-        if (lastTwoFrames.all { it is DataFrame && it.tag == "thoughts" }) {
-            addSimpleText("warning", "You called 'think' 5+ times in a row. Please consider acting or sleeping.")
-        }
     }
 
-    @AgentToolMethod(name = "cleanup", description = "Cleanup your mind by deleting old frames")
+    @AgentToolMethod(name = "cleanup", description = "Delete old frames")
     fun cleanRolling(
-        @AgentToolParameter(description = "Text to keep after cleanup so you don't forget what you were planning to do")
+        @AgentToolParameter(description = "Text to keep after cleanup")
         summary: String
     ) {
         frames.clearOnlyRolling()
@@ -311,10 +329,10 @@ class AgentEngine(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @AgentToolMethod(
-        description = "Sleep with automatic wake-up on events. Pass 0 to let system choose sleep duration"
+        description = "Wait for a specified amount of time. This can be interrupted by external events."
     )
-    suspend fun sleep(seconds: Long = 0) {
-        val effectiveSeconds = if (seconds == 0L) 86400 * 7 else seconds
+    suspend fun doNothing(hours: Long, minutes: Long, seconds: Long) {
+        val effectiveSeconds = hours * 3600 + minutes * 60 + seconds
         log.debug("Agent is going to sleep for $effectiveSeconds seconds")
         val sleptAt = System.currentTimeMillis()
 

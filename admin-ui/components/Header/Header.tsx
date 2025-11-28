@@ -10,10 +10,12 @@ export default function Header() {
                 <Logo/>
             </div>
             <div className={s.center}>
+                <HeaderNavButton url="/agent">Agent</HeaderNavButton>
                 <HeaderNavButton url="/engine">Engine</HeaderNavButton>
                 <HeaderNavButton url="/memory">Memory</HeaderNavButton>
                 <HeaderNavButton url="/tg-chats">Telegram Chats</HeaderNavButton>
                 <HeaderNavButton url="/files">Files</HeaderNavButton>
+                <HeaderNavButton url="/integrations">Integrations</HeaderNavButton>
             </div>
             <div className={s.right}>
                 <HeaderUserCard />

@@ -1,8 +1,8 @@
 package space.davids_digital.kiri.llm
 
-data class LlmMessageRequest (
-    val model: String,
-    val system: String,
+data class ChatCompletionRequest (
+    val modelHandle: String,
+    val instructions: String,
     val messages: List<Message>,
     val maxOutputTokens: Long,
     val temperature: Double,
@@ -12,9 +12,9 @@ data class LlmMessageRequest (
         enum class Role { USER, ASSISTANT }
         sealed class ContentItem {
             data class Text (val text: String) : ContentItem()
-            data class Image (val data: ByteArray, val mediaType: LlmImageType) : ContentItem()
-            data class ToolUse (val toolUse: LlmToolUse) : ContentItem()
-            data class ToolResult (val toolResult: LlmToolUseResult) : ContentItem()
+            data class Image (val data: ByteArray, val mediaType: ChatCompletionImageType) : ContentItem()
+            data class ToolUse (val toolUse: ChatCompletionToolUse) : ContentItem()
+            data class ToolResult (val toolResult: ChatCompletionToolUseResult) : ContentItem()
         }
     }
     data class Tools (val choice: ToolChoice, val allowParallelUse: Boolean, val functions: List<Function>) {

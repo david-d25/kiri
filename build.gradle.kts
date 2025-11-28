@@ -4,7 +4,7 @@ import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
 
 allprojects {
-    version = "0.1.1"
+    version = "1.0.0"
 }
 
 plugins {
@@ -60,14 +60,13 @@ dependencies {
     implementation("com.github.pengrad:java-telegram-bot-api:9.2.0")
 
     // OpenAI
-    implementation(platform("com.aallam.openai:openai-client-bom:4.0.1"))
-    implementation("com.aallam.openai:openai-client")
+    implementation("com.openai:openai-java:4.3.0")
 
     // Anthropic
     implementation("com.anthropic:anthropic-java:0.7.0")
 
     // Google GenAI
-    implementation("com.google.genai:google-genai:0.3.0")
+    implementation("com.google.genai:google-genai:1.25.0")
 
     // Github
     implementation("org.kohsuke:github-api:1.329")

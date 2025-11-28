@@ -155,30 +155,26 @@ class TelegramService(
                 var sent = false
                 while (!sent) {
                     rateLimiter.acquire()
-                    try {
-                        val response = bot.execute(request)
-                        if (response.isOk) {
-                            sent = true
-                            when (response) {
-                                is SendResponse -> messageOrm.save(mapper.toModel(response.message())!!)
-                                else -> log.error("Unknown response type {}, could not save", response::class)
-                            }
-                        } else if (response.errorCode() == 429) {
-                            val retryAfter = min(response.parameters().retryAfter(), 1)
-                            log.warn("429 received, backing off for {} s", retryAfter)
-                            delay(retryAfter * 1_000L)
-                        } else {
-                            // todo: resolve 'Failed to send message to 383453661 (400): Bad Request: file of size 14317506 bytes is too big for a photo; the maximum size is 10485760 bytes'
-                            log.warn(
-                                "Failed to send message to {} ({}): {}",
-                                chatId,
-                                response.errorCode(),
-                                response.description()
-                            )
-                            sent = true
+                    val response = bot.execute(request)
+                    if (response.isOk) {
+                        sent = true
+                        when (response) {
+                            is SendResponse -> messageOrm.save(mapper.toModel(response.message())!!)
+                            else -> log.error("Unknown response type {}, could not save", response::class)
                         }
-                    } catch (ex: Exception) {
-                        log.warn("Exception while sending message to chat {}", chatId, ex)
+                    } else if (response.errorCode() == 429) {
+                        val retryAfter = min(response.parameters().retryAfter(), 1)
+                        log.warn("429 received, backing off for {} s", retryAfter)
+                        delay(retryAfter * 1_000L)
+                    } else {
+                        // todo: resolve 'Failed to send message to 383453661 (400): Bad Request: file of size 14317506 bytes is too big for a photo; the maximum size is 10485760 bytes'
+                        log.error(
+                            "Failed to send message or message part to {} ({}): {}",
+                            chatId,
+                            response.errorCode(),
+                            response.description()
+                        )
+                        throw ServiceException("Failed to send message or message part to $chatId: ${response.description()}")
                     }
                 }
             }
@@ -369,7 +365,7 @@ class TelegramService(
         return mapper.toModel(bot.getFile(fileId).checkNoErrors().file())
     }
 
-    private suspend fun onMessageReceived(message: TelegramMessage) {
+    private suspend fun onMessage(message: TelegramMessage) {
         log.debug("Received Telegram message from chat {}", message.chatId)
         try {
             messageOrm.save(message)
@@ -420,7 +416,7 @@ class TelegramService(
                     return@forEach
                 }
                 if (updateModel.message != null) {
-                    onMessageReceived(updateModel.message)
+                    onMessage(updateModel.message)
                 }
                 if (update.message() != null) {
                     if (update.message().from() != null) {

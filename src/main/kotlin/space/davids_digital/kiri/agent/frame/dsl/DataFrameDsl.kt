@@ -1,7 +1,7 @@
 package space.davids_digital.kiri.agent.frame.dsl
 
 import space.davids_digital.kiri.agent.frame.DataFrame
-import space.davids_digital.kiri.llm.LlmImageType
+import space.davids_digital.kiri.llm.ChatCompletionImageType
 
 @DslMarker
 annotation class DataFrameDsl
@@ -45,7 +45,7 @@ class FrameContentBuilder {
         parts.add(DataFrame.Text(text + "\n"))
     }
 
-    fun image(data: ByteArray, type: LlmImageType) {
+    fun image(data: ByteArray, type: ChatCompletionImageType) {
         parts.add(DataFrame.Image(data, type))
     }
 

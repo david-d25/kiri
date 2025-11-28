@@ -11,11 +11,9 @@ import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
 import space.davids_digital.kiri.agent.tool.AgentToolParameter
-import space.davids_digital.kiri.integration.anthropic.AnthropicMessagesService
-import space.davids_digital.kiri.llm.LlmMessageRequest
-import space.davids_digital.kiri.llm.LlmMessageRequest.Tools.ToolChoice.REQUIRED
-import space.davids_digital.kiri.llm.LlmMessageResponse
-import space.davids_digital.kiri.llm.dsl.llmMessageRequest
+import space.davids_digital.kiri.llm.ChatCompletionRequest
+import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.REQUIRED
+import space.davids_digital.kiri.llm.ChatCompletionResponse
 import space.davids_digital.kiri.service.MemoryService
 import java.time.ZonedDateTime
 
@@ -27,7 +25,6 @@ import java.time.ZonedDateTime
 class MemoryManager(
     private val frames: FrameBuffer,
     private val frameRenderer: FrameRenderer,
-    private val anthropicMessagesService: AnthropicMessagesService,
     private val toolParameterMapper: AgentToolParameterMapper,
     private val memoryService: MemoryService,
 ) : AgentToolProvider {
@@ -52,47 +49,47 @@ class MemoryManager(
         val fixedFrames = getUnprocessedFixedFrames()
         val rollingFrames = getUnprocessedRollingFrames()
         log.debug("Memorizing ${fixedFrames.size} fixed and ${rollingFrames.size} rolling frames")
-        val request = buildMemorizingRequest(fixedFrames, rollingFrames)
-        val response = anthropicMessagesService.request(request)
-        handleMemorizingResponse(response)
+//        val request = buildMemorizingRequest(fixedFrames, rollingFrames)
+//        val response = anthropicMessagesService.request(request)
+//        handleMemorizingResponse(response)
         // TODO processedFixedFrames
         processedRollingFrames.addAll(rollingFrames)
         cleanUp()
     }
 
-    private suspend fun buildMemorizingRequest(
-        fixedFrames: List<DataFrame>,
-        rollingFrames: List<Frame>
-    ): LlmMessageRequest {
-        val prompt = this::class.java.getResource("/prompts/memory/memory.txt")?.readText()
-        val examples = this::class.java.getResource("/prompts/memory/examples.txt")?.readText()
-        return llmMessageRequest {
-            model = "claude-3-7-sonnet-latest"
-            maxOutputTokens = 1024
-            temperature = 0.0
-            tools {
-                choice = REQUIRED
-                allowParallelUse = false
-                function {
-                    name = "memorize"
-                    parameters = toolParameterMapper.map(::memorize)
-                }
-            }
-            examples?.let {
-                userMessage {
-                    text(it)
-                }
-            }
-            prompt?.let {
-                userMessage {
-                    text(it)
-                }
-            }
-            frameRenderer.render(fixedFrames, rollingFrames, this)
-        }
-    }
+//    private suspend fun buildMemorizingRequest(
+//        fixedFrames: List<DataFrame>,
+//        rollingFrames: List<Frame>
+//    ): ChatCompletionRequest {
+//        val prompt = this::class.java.getResource("/prompts/memory/memory.txt")?.readText()
+//        val examples = this::class.java.getResource("/prompts/memory/examples.txt")?.readText()
+//        return llmMessageRequest {
+//            model = "claude-3-7-sonnet-latest"
+//            maxOutputTokens = 1024
+//            temperature = 0.0
+//            tools {
+//                choice = REQUIRED
+//                allowParallelUse = false
+//                function {
+//                    name = "memorize"
+//                    parameters = toolParameterMapper.map(::memorize)
+//                }
+//            }
+//            examples?.let {
+//                userMessage {
+//                    text(it)
+//                }
+//            }
+//            prompt?.let {
+//                userMessage {
+//                    text(it)
+//                }
+//            }
+//            frameRenderer.render(fixedFrames, rollingFrames, this)
+//        }
+//    }
 
-    private fun handleMemorizingResponse(response: LlmMessageResponse) {
+    private fun handleMemorizingResponse(response: ChatCompletionResponse) {
         println(response) // TODO
     }
 

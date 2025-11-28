@@ -1,6 +1,6 @@
 package space.davids_digital.kiri.llm
 
-data class LlmToolUse(val id: String, val name: String, val input: Input) {
+data class ChatCompletionToolUse(val id: String, val name: String, val input: Input) {
     sealed class Input {
         data class Text(val text: String) : Input()
         data class Number(val number: Double) : Input()
