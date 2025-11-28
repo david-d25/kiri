@@ -150,7 +150,7 @@ class MemoryManager(
         keyStrings: List<String>,
     ): String {
         val keys = memoryService.getOrCreateKeys(keyStrings)
-        val memories = memoryService.retrieve(keys, 4)
+        val memories = memoryService.retrieve(keys, 6)
         return buildString {
             appendLine("Most related memories:")
             for (memory in memories) {
