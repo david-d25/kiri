@@ -15,9 +15,7 @@ class TelegramAppProvider(
     private val telegramAppRenderer: TelegramAppRenderer,
     private val telegramNotificationService: TelegramNotificationService,
     private val telegramChatOrmService: TelegramChatOrmService,
-    private val telegramMessageOrmService: TelegramMessageOrmService,
-    private val engineEventBus: EngineEventBus,
-    private val frameBuffer: FrameBuffer
+    private val telegramMessageOrmService: TelegramMessageOrmService
 ) : Supplier<TelegramApp> {
     override fun get(): TelegramApp {
         return TelegramApp(
@@ -25,9 +23,7 @@ class TelegramAppProvider(
             telegramAppRenderer,
             telegramNotificationService,
             telegramChatOrmService,
-            telegramMessageOrmService,
-            engineEventBus,
-            frameBuffer
+            telegramMessageOrmService
         )
     }
 }

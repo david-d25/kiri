@@ -2,32 +2,40 @@ package space.davids_digital.kiri.agent.frame
 
 import io.ktor.util.escapeHTML
 import org.springframework.stereotype.Component
-import space.davids_digital.kiri.llm.dsl.LlmMessageRequestBuilder
-import space.davids_digital.kiri.llm.dsl.LlmMessageRequestUserMessageBuilder
+import space.davids_digital.kiri.llm.dsl.ChatCompletionRequestBuilder
+import space.davids_digital.kiri.llm.dsl.ChatCompletionRequestUserMessageBuilder
 
 @Component
 class FrameRenderer {
-    suspend fun render(frames: FrameBuffer, target: LlmMessageRequestBuilder) {
+    fun render(frames: FrameBuffer, target: ChatCompletionRequestBuilder) {
         render(frames.onlyFixed, frames.onlyRolling, target)
     }
 
-    suspend fun render(fixedFrames: Iterable<DataFrame>, rollingFrames: Iterable<Frame>, target: LlmMessageRequestBuilder) {
+    fun render(
+        fixedFrames: Iterable<DataFrame>,
+        rollingFrames: Iterable<Frame>,
+        target: ChatCompletionRequestBuilder
+    ) {
         render(fixedFrames.iterator(), rollingFrames.iterator(), target)
     }
 
-    suspend fun render(fixedFrames: Iterator<DataFrame>, rollingFrames: Iterator<Frame>, target: LlmMessageRequestBuilder) {
-        target.userMessage {
-            text("<fixed>\n")
-            for (frame in fixedFrames) {
-                renderDataFrame(frame)
-            }
-            text("</fixed>\n")
-        }
+    fun render(
+        fixedFrames: Iterator<DataFrame>,
+        rollingFrames: Iterator<Frame>,
+        target: ChatCompletionRequestBuilder
+    ) {
         for (frame in rollingFrames) {
             when (frame) {
                 is DataFrame -> target.userMessage { renderDataFrame(frame) }
                 is ToolCallFrame -> target.renderToolCallFrame(frame)
             }
+        }
+        target.userMessage {
+            text("<realtime>\n")
+            for (frame in fixedFrames) {
+                renderDataFrame(frame)
+            }
+            text("</realtime>\n")
         }
     }
 
@@ -35,7 +43,7 @@ class FrameRenderer {
      * Renders a data frame to a LLM message request builder.
      * Consecutive text parts are concatenated into a single text message part.
      */
-    private suspend fun LlmMessageRequestUserMessageBuilder.renderDataFrame(frame: DataFrame) {
+    private fun ChatCompletionRequestUserMessageBuilder.renderDataFrame(frame: DataFrame) {
         val builder = StringBuilder()
         val content = frame.renderContent()
         val attrString = frame.attributes.entries
@@ -58,7 +66,7 @@ class FrameRenderer {
         text(builder.toString())
     }
 
-    private suspend fun LlmMessageRequestBuilder.renderToolCallFrame(frame: ToolCallFrame) {
+    private fun ChatCompletionRequestBuilder.renderToolCallFrame(frame: ToolCallFrame) {
         assistantMessage {
             toolUse {
                 id = frame.toolUse.id

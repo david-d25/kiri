@@ -68,7 +68,7 @@ class MemoryKeyRepository(
         val sql = """
             select id, key_text, embedding_model_id, embedding
             from main.memory_keys
-            order by main.l2_distance(embedding, '$embeddingObject'::main.vector)
+            order by l2_distance(embedding, '$embeddingObject'::vector)
             limit :limit
         """.trimIndent()
         val params = mapOf(
@@ -101,7 +101,7 @@ class MemoryKeyRepository(
         return array.joinToString(prefix = "[", postfix = "]", separator = ",")
     }
 
-    private fun floatArrayToPgVector(array: FloatArray): Any? {
+    private fun floatArrayToPgVector(array: FloatArray): Any {
         if (array.isEmpty()) {
             val pgObject = org.postgresql.util.PGobject()
             pgObject.type = "vector"

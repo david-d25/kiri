@@ -69,10 +69,8 @@ class TelegramNotificationService (
             log.warn("Received message from unknown chat with id {}", message.chatId)
             return
         }
-        if (!chat.metadata.enabled) {
-            log.debug("Chat ${chat.id} is disabled, skipping")
-            return // Chat is disabled
-        }
+        val chatDisabledMessage = "Agent is disabled in this chat. Please talk to the administrator to enable it."
+        val chatEnabled = chat.metadata.enabled
         val self = telegram.getSelf()
         val isAgentMentioned = message.text?.contains("@" + self.username) == true
         val isPrivateChat = chat.type == TelegramChat.Type.PRIVATE
@@ -92,7 +90,11 @@ class TelegramNotificationService (
                 chat.firstName != null -> chat.firstName + " (${chat.id})"
                 else -> "(unknown user id ${chat.id})"
             }
-            sendNotification("New message in private chat with $userDisplayName")
+            if (!chatEnabled) {
+                telegram.sendMessage(message.chatId, chatDisabledMessage)
+            } else {
+                sendNotification("New message in private chat with $userDisplayName")
+            }
             return
         }
         val user = message.fromId?.let { telegram.getUser(it) }
@@ -107,11 +109,19 @@ class TelegramNotificationService (
             else -> user.firstName + " (${user.id})"
         }
         if (isAgentMentioned) {
-            sendNotification("$userDisplayName mentioned you in chat $chatDisplayName")
+            if (!chatEnabled) {
+                telegram.sendMessage(message.chatId, chatDisabledMessage)
+            } else {
+                sendNotification("$userDisplayName mentioned you in chat $chatDisplayName")
+            }
             return
         }
         if (isAgentMessageRepliedTo) {
-            sendNotification("$userDisplayName replied to you in chat $chatDisplayName")
+            if (!chatEnabled) {
+                telegram.sendMessage(message.chatId, chatDisabledMessage)
+            } else {
+                sendNotification("$userDisplayName replied to you in chat $chatDisplayName")
+            }
             return
         }
     }

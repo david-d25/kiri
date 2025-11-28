@@ -24,15 +24,25 @@ import kotlin.text.toByteArray
 @Service
 class SettingOrmService(
     private val repo: SettingRepository,
-    private val cryptography: CryptographyService,
-    private val objectMapper: ObjectMapper
+    private val cryptography: CryptographyService
 ) {
     private val log = getLogger(this::class.java)
 
     private val flows: MutableMap<String, MutableSharedFlow<Setting>> = mutableMapOf()
 
+    class UpdateRequest(
+        val value: String?,
+        val encrypt: Boolean = false
+    )
+
     @Transactional(readOnly = true)
-    fun get(key: String): Setting { // TODO make it return `Setting?`
+    fun getByKeys(keys: List<String>): List<Setting> {
+        val entities = repo.findAllById(keys)
+        return entities.map { toModel(it) }
+    }
+
+    @Transactional(readOnly = true)
+    fun get(key: String): Setting { // TODO: Change return type to `Setting?`
         val entity = repo.findById(key).getOrNull() ?: return Setting(
             key = key,
             value = null,
@@ -60,6 +70,16 @@ class SettingOrmService(
             flow.tryEmit(get(key)) // Emit the current value immediately
             return flow.asSharedFlow()
         }
+    }
+
+    @Transactional
+    fun setMany(updates: Map<String, UpdateRequest>): Map<String, Setting> {
+        val results = mutableListOf<Setting>()
+        for ((key, update) in updates) {
+            val setting = set(key, update.value, update.encrypt)
+            results.add(setting)
+        }
+        return results.associateBy { it.key }
     }
 
     @Transactional

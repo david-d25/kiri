@@ -1,0 +1,46 @@
+.root {
+  padding: 20px;
+}
+
+.inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+
+  .row {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: end;
+  }
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setting {
+  width: fit-content;
+}
+
+.saveButton {
+  height: 40px;
+}
+
+.input {
+  min-width: 400px;
+}
+
+.warning {
+  width: fit-content;
+}
+
+.accountInfo {
+  width: fit-content;
+}
+
+.twitterAccountInfoLoading {
+  color: var(--text-secondary);
+}

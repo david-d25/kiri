@@ -21,12 +21,7 @@ data class AppProperties (
         data class Telegram(val callbackUrl: String, val botUsername: String)
     }
 
-    data class Integration(val telegram: Telegram, val anthropic: Anthropic, val openai: OpenAI, val google: Google) {
+    data class Integration(val telegram: Telegram) {
         data class Telegram(val botId: Long, val apiKey: String)
-        data class Anthropic(val apiKey: String)
-        data class OpenAI(val apiKey: String)
-        data class Google(val genAi: GenAi) {
-            data class GenAi(val apiKey: String)
-        }
     }
 }

@@ -8,7 +8,7 @@ import space.davids_digital.kiri.agent.frame.dsl.FrameContentBuilder
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.integration.telegram.TelegramHtmlMapper.toHtml
 import space.davids_digital.kiri.integration.telegram.TelegramService
-import space.davids_digital.kiri.llm.LlmImageType
+import space.davids_digital.kiri.llm.ChatCompletionImageType
 import space.davids_digital.kiri.model.telegram.*
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MINUTES
@@ -32,7 +32,7 @@ class TelegramAppRenderer (private val service: TelegramService) {
     }
 
     private fun FrameContentBuilder.renderChatList(state: TelegramAppViewState) {
-        line("""<chats page="${state.chatsPage}" total-pages="${state.chatsTotalPages}">""")
+        line("""<chats page="${state.chatsPageIndex + 1}" total-pages="${state.chatsTotalPages}">""")
         if (state.chatsView.isNotEmpty()) {
             for (chat in state.chatsView.take(MAX_LIST_ITEMS)) {
                 renderChatListItem(chat)
@@ -54,17 +54,17 @@ class TelegramAppRenderer (private val service: TelegramService) {
         line("</$tag>")
     }
 
-    private fun ByteArray.getImageType(): LlmImageType? {
+    private fun ByteArray.getImageType(): ChatCompletionImageType? {
         if (this.size < 12) return null
 
         return when {
-            this[0] == 0xFF.toByte() && this[1] == 0xD8.toByte() -> LlmImageType.JPEG
-            this[0] == 0x89.toByte() && this[1] == 0x50.toByte() -> LlmImageType.PNG
-            this[0] == 0x47.toByte() && this[1] == 0x49.toByte() -> LlmImageType.GIF
+            this[0] == 0xFF.toByte() && this[1] == 0xD8.toByte() -> ChatCompletionImageType.JPEG
+            this[0] == 0x89.toByte() && this[1] == 0x50.toByte() -> ChatCompletionImageType.PNG
+            this[0] == 0x47.toByte() && this[1] == 0x49.toByte() -> ChatCompletionImageType.GIF
             this[0] == 0x52.toByte() && this[1] == 0x49.toByte() && // 'RIFF'
                     this[2] == 0x46.toByte() && this[3] == 0x46.toByte() &&
                     this[8] == 0x57.toByte() && this[9] == 0x45.toByte() &&
-                    this[10] == 0x42.toByte() && this[11] == 0x50.toByte() -> LlmImageType.WEBP
+                    this[10] == 0x42.toByte() && this[11] == 0x50.toByte() -> ChatCompletionImageType.WEBP
             else -> null
         }
     }
@@ -866,7 +866,7 @@ class TelegramAppRenderer (private val service: TelegramService) {
             val imageType = file.getImageType()
             if (imageType == null) {
                 line("This image type is not supported by your Telegram App. " +
-                        "Supported types: ${LlmImageType.entries.joinToString(", ")}")
+                        "Supported types: ${ChatCompletionImageType.entries.joinToString(", ")}")
             } else {
                 image(file, imageType)
             }
