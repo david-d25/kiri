@@ -214,12 +214,11 @@ open class TelegramApp(
     }
 
     private fun showChats(pageNumber: Int) {
-        val pageIndex = pageNumber - 1
+        val pageIndex = (pageNumber - 1).coerceAtLeast(0)
         val chats = chatOrm.findAllEnabled(PageRequest.of(pageIndex, CHATS_PAGE_SIZE))
-        val safePageIndex = if (chats.totalPages == 0) 0 else pageIndex.coerceIn(0, chats.totalPages - 1)
         viewState = TelegramAppViewState(
             chatsView = chats.toList(),
-            chatsPageIndex = safePageIndex,
+            chatsPageIndex = chats.pageable.pageNumber,
             chatsTotalPages = chats.totalPages
         )
     }
