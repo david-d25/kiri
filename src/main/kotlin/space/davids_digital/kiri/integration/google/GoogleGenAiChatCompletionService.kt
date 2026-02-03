@@ -16,7 +16,7 @@ import space.davids_digital.kiri.llm.*
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Message
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.Function.ParameterValue
 import space.davids_digital.kiri.llm.dsl.GenericJsonInputBuilder
-import space.davids_digital.kiri.llm.dsl.LlmToolUseInputObjectBuilder
+import space.davids_digital.kiri.llm.dsl.ChatCompletionToolUseInputObjectBuilder
 import space.davids_digital.kiri.llm.dsl.chatCompletionResponse
 import space.davids_digital.kiri.model.ChatCompletionModel
 import space.davids_digital.kiri.model.ExternalServiceGatewayStatus
@@ -25,6 +25,8 @@ import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.service.ChatCompletionService
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.jvm.optionals.getOrNull
+import kotlin.text.toFloat
+import kotlin.text.toInt
 
 @Service
 class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) : ChatCompletionService {
@@ -54,9 +56,9 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
         }
     }
 
-    private fun onApiKeyChange(setting: Setting) {
+    private fun onApiKeyChange(newValue: String?) {
         log.info("Got new Google GenAI API key")
-        val apiKey = setting.value?.takeIf { it.isNotBlank() }
+        val apiKey = newValue?.takeIf { it.isNotBlank() }
         if (apiKey == null) {
             log.warn("Google GenAI API key is empty, client will be disabled")
             clientRef.set(null)
@@ -91,7 +93,7 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
 
     @Cacheable(
         value = ["GoogleGenAiChatCompletionService#getStatus"],
-        unless = "#result != T(space.davids_digital.kiri.model.ExternalServiceGatewayStatus).READY",
+        unless = "#result != T(space.davids_digital.nod3r.model.ExternalServiceGatewayStatus).READY",
         cacheManager = "oneHour"
     )
     override suspend fun getStatus(): ExternalServiceGatewayStatus {
@@ -114,7 +116,8 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
         val model = client.models.list(ListModelsConfig.builder().pageSize(100).build())
         return model.filter { it.name().isPresent && isSupportedModelId(it.name().get()) }.map {
             ChatCompletionModel(
-                handle = serviceHandle + "/" + it.name().get().removePrefix("models/")
+                handle = serviceHandle + "/" + it.name().get().removePrefix("models/"),
+                features = ChatCompletionModel.Features()
             )
         }
     }
@@ -130,7 +133,7 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
             Message.Role.ASSISTANT -> builder.role("model")
         }
         builder.parts(
-            message.content.map { contentItem ->
+            message.content.mapNotNull { contentItem ->
                 when (contentItem) {
                     is Message.ContentItem.Text -> Part.fromText(contentItem.text)
                     is Message.ContentItem.Image -> Part.fromBytes(contentItem.data, contentItem.mediaType.toMimeType())
@@ -148,6 +151,16 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
                             .response(buildContentToolResultOutput(contentItem.toolResult.output))
                             .build()
                     ).build()
+                    is Message.ContentItem.Reasoning -> {
+                        log.warn("Reasoning content item is not supported by current integration, skipping")
+                        null
+                    }
+                    is Message.ContentItem.RedactedReasoning -> {
+                        throw IllegalArgumentException(
+                            "RedactedReasoning content item is not supported by Google GenAI integration"
+                        )
+                    }
+                    else -> error("This content item type is not supported")
                 }
             }
         )
@@ -178,11 +191,20 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
         }
     }
 
-    private fun buildContentToolResultOutput(output: ChatCompletionToolUseResult.Output): Map<String, Any> {
-        return when (output) {
-            is ChatCompletionToolUseResult.Output.Text -> mapOf("output" to output.text)
-            is ChatCompletionToolUseResult.Output.Image -> mapOf("output" to output.data)
+    private fun buildContentToolResultOutput(output: List<ChatCompletionToolUseResult.Output>): Map<String, Any> {
+        val result = mutableMapOf<String, Any>()
+        val resultOutput = mutableListOf<Any>()
+        for (item in output) {
+            resultOutput += when (item) {
+                is ChatCompletionToolUseResult.Output.Text -> item.text
+                is ChatCompletionToolUseResult.Output.Image -> mapOf(
+                    "data" to item.data,
+                    "mediaType" to item.mediaType.toMimeType()
+                )
+            }
         }
+        result["output"] = resultOutput
+        return result
     }
 
     private fun buildConfig(request: ChatCompletionRequest): GenerateContentConfig {
@@ -335,7 +357,7 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
         }
     }
 
-    private fun LlmToolUseInputObjectBuilder.parseToolUseInput(key: Any?, value: Any?) {
+    private fun ChatCompletionToolUseInputObjectBuilder.parseToolUseInput(key: Any?, value: Any?) {
         if (key == null) {
             log.error("Key is null")
             return

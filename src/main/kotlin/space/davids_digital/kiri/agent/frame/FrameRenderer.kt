@@ -7,35 +7,13 @@ import space.davids_digital.kiri.llm.dsl.ChatCompletionRequestUserMessageBuilder
 
 @Component
 class FrameRenderer {
-    fun render(frames: FrameBuffer, target: ChatCompletionRequestBuilder) {
-        render(frames.onlyFixed, frames.onlyRolling, target)
-    }
-
-    fun render(
-        fixedFrames: Iterable<DataFrame>,
-        rollingFrames: Iterable<Frame>,
-        target: ChatCompletionRequestBuilder
-    ) {
-        render(fixedFrames.iterator(), rollingFrames.iterator(), target)
-    }
-
-    fun render(
-        fixedFrames: Iterator<DataFrame>,
-        rollingFrames: Iterator<Frame>,
-        target: ChatCompletionRequestBuilder
-    ) {
-        for (frame in rollingFrames) {
+    fun ChatCompletionRequestBuilder.render(frames: FrameBuffer) {
+        for (frame in frames) {
             when (frame) {
-                is DataFrame -> target.userMessage { renderDataFrame(frame) }
-                is ToolCallFrame -> target.renderToolCallFrame(frame)
+                is DataFrame -> userMessage { renderDataFrame(frame) }
+                is ToolCallFrame -> renderToolCallFrame(frame)
+                is NativeWebSearchFrame -> assistantMessage { webSearch(frame.webSearch) }
             }
-        }
-        target.userMessage {
-            text("<realtime>\n")
-            for (frame in fixedFrames) {
-                renderDataFrame(frame)
-            }
-            text("</realtime>\n")
         }
     }
 

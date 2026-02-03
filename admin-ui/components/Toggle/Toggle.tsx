@@ -1,9 +1,9 @@
 import React from "react";
 import styles from './Toggle.module.scss';
 
-type Props = {
+export type ToggleProps = {
     checked: boolean;
-    label?: string;
+    label?: React.ReactNode;
     disabled?: boolean;
     onChange: (checked: boolean) => void;
 };
@@ -14,7 +14,7 @@ export default function Toggle(
         label,
         disabled = false,
         onChange
-    }: Props
+    }: ToggleProps
 ) {
     const handleChange = () => {
         if (!disabled) {

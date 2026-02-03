@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import space.davids_digital.kiri.integration.telegram.TelegramService
+import space.davids_digital.kiri.service.exception.ResourceNotFoundException
 
 @RestController
 @RequestMapping("/telegram/files")

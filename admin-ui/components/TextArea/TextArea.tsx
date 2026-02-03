@@ -6,34 +6,43 @@ type Props = {
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
-    label?: string;
+    label?: React.ReactNode;
     disabled?: boolean;
+    muted?: boolean;
     maxLength?: number;
     rows?: number;
     error?: string | null;
     resizable?: boolean;
+    className?: string;
+    autocomplete?: string;
+    autocorrect?: string;
+    spellcheck?: boolean;
+    autocapitalize?: string;
 };
 
-export default function TextArea(
-    {
+export default function TextArea(props: Props) {
+    const {
         value,
         onChange,
         placeholder = '',
         label,
         disabled = false,
+        muted = false,
         maxLength,
         rows = 4,
         error,
-        resizable = true
-    }: Props
-) {
+        resizable = true,
+        className
+    } = props;
+
     const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
         onChange(e.target.value);
     };
 
-    const containerClassname = classnames({
+    const containerClassname = classnames(className, {
         [styles.root]: true,
-        [styles.disabled]: disabled
+        [styles.disabled]: disabled,
+        [styles.muted]: muted,
     });
     return (
         <div className={containerClassname}>
@@ -47,6 +56,10 @@ export default function TextArea(
                     disabled={disabled}
                     maxLength={maxLength}
                     rows={rows}
+                    autoComplete={props.autocomplete}
+                    autoCorrect={props.autocorrect}
+                    spellCheck={props.spellcheck}
+                    autoCapitalize={props.autocapitalize}
                     data-error={Boolean(error)}
                     data-resizable={resizable}
                 />

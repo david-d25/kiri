@@ -47,6 +47,7 @@ class AgentToolScanner {
         }
 
         val namespacePath = if (namespace.isNullOrBlank()) basePath else basePath + namespace
+        val allowedMethodNames = toolProvider.getAvailableAgentToolMethods().map { it.name }
         for (method in toolProvider::class.functions) {
             val methodAnnotation = method.findAnnotation<AgentToolMethod>() ?: continue
             var methodName = methodAnnotation.name
@@ -60,6 +61,14 @@ class AgentToolScanner {
             }
             if (registry.has(namespacePath, methodName)) {
                 log.warn("Method '$methodName' in namespace '$namespacePath' is already registered, skipping")
+                continue
+            }
+            if (method.name !in allowedMethodNames) {
+                log.debug(
+                    "Method '{}' is not in the allowed methods for provider {}, skipping",
+                    methodName,
+                    toolProvider
+                )
                 continue
             }
             registry.put {

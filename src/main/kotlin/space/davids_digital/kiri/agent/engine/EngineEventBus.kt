@@ -3,6 +3,7 @@ package space.davids_digital.kiri.agent.engine
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import org.springframework.stereotype.Service
+import space.davids_digital.kiri.agent.engine.event.EngineEvent
 
 @Service
 class EngineEventBus {

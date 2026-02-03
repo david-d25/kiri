@@ -10,8 +10,7 @@ export default function EngineControl() {
     return (
         <div className={s.root}>
             <EngineStatusBar className={s.statusBar} />
-            <FramesView className={s.fixedFramesView} title="Fixed frames" frames={stateSse.fixedFrames}/>
-            <FramesView className={s.rollingFramesView} title="Rolling frames" frames={stateSse.rollingFrames}/>
+            <FramesView className={s.framesView} title="Frames" frames={stateSse.frames}/>
         </div>
     )
 }

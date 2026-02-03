@@ -57,9 +57,18 @@
     }
   }
 
+  &[data-type='none'] {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+
+    .icon {
+      display: none;
+    }
+  }
 
   &[data-minimalistic='true'] {
     background: none;
+    border: none;
     padding: 0;
     line-height: 20px;
     font-size: .9em;

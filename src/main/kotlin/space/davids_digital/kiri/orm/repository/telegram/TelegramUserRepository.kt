@@ -5,4 +5,6 @@ import org.springframework.stereotype.Repository
 import space.davids_digital.kiri.orm.entity.telegram.TelegramUserEntity
 
 @Repository
-interface TelegramUserRepository: JpaRepository<TelegramUserEntity, Long>
+interface TelegramUserRepository: JpaRepository<TelegramUserEntity, Long> {
+    fun findByUsername(userName: String): TelegramUserEntity?
+}

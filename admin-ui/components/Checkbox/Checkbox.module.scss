@@ -1,6 +1,7 @@
 .checkbox {
   display: flex;
   align-items: center;
+  margin: 5px 0;
   cursor: pointer;
   user-select: none;
   outline: none;
@@ -13,7 +14,12 @@
 
   &[data-disabled="true"] {
     opacity: 0.5;
-    cursor: not-allowed;
+    cursor: default;
+  }
+
+  &[data-muted="true"] {
+    opacity: 0.5;
+    cursor: default;
   }
 }
 

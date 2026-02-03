@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import space.davids_digital.kiri.agent.engine.AgentEngine
 import space.davids_digital.kiri.agent.engine.EngineEventBus
-import space.davids_digital.kiri.agent.engine.TickEvent
+import space.davids_digital.kiri.agent.engine.event.TickEvent
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.rest.SseClients
 import space.davids_digital.kiri.rest.dto.FrameBufferStateDto
@@ -54,9 +54,8 @@ class AgentController(
     @GetMapping("/framebuffer")
     suspend fun getFrameBufferState(): FrameBufferStateDto {
         val snap = frameBuffer.snapshot()
-        val fixedFrames = snap.fixed.map { frameDtoMapper.mapDataFrame(it) }.toMutableList()
-        val rollingFrames = snap.rolling.map { frameDtoMapper.map(it) }.toMutableList()
-        return FrameBufferStateDto(fixedFrames, rollingFrames, snap.hardLimit)
+        val frames = snap.frames.map { frameDtoMapper.map(it) }.toMutableList()
+        return FrameBufferStateDto(frames, frameBuffer.hardLimit)
     }
 
     @GetMapping("/events/subscribe", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])

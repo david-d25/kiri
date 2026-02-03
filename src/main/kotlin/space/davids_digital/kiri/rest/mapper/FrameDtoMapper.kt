@@ -3,9 +3,11 @@ package space.davids_digital.kiri.rest.mapper
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.Frame
+import space.davids_digital.kiri.agent.frame.NativeWebSearchFrame
 import space.davids_digital.kiri.agent.frame.ToolCallFrame
 import space.davids_digital.kiri.llm.ChatCompletionToolUse
 import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
+import space.davids_digital.kiri.llm.ChatCompletionWebSearch
 import space.davids_digital.kiri.rest.dto.*
 import java.util.Base64
 
@@ -17,6 +19,27 @@ class FrameDtoMapper {
     suspend fun map(frame: Frame): FrameDto = when (frame) {
         is DataFrame -> mapDataFrame(frame)
         is ToolCallFrame -> mapToolCallFrame(frame)
+        is NativeWebSearchFrame -> mapNativeWebSearchFrame(frame)
+    }
+
+    private fun mapNativeWebSearchFrame(frame: NativeWebSearchFrame): FrameDto {
+        when (frame.webSearch) {
+            is ChatCompletionWebSearch.OpenPage -> {
+                return NativeWebSearchFrameDto(
+                    WebSearchDto.OpenPage(frame.webSearch.url)
+                )
+            }
+            is ChatCompletionWebSearch.Search -> {
+                return NativeWebSearchFrameDto(
+                    WebSearchDto.Search(frame.webSearch.query)
+                )
+            }
+            is ChatCompletionWebSearch.FindInPage -> {
+                return NativeWebSearchFrameDto(
+                    WebSearchDto.FindInPage(frame.webSearch.pattern, frame.webSearch.url)
+                )
+            }
+        }
     }
 
     suspend fun mapDataFrame(frame: DataFrame): DataFrameDto {
@@ -42,7 +65,7 @@ class FrameDtoMapper {
         ToolUseDto(toolUse.id, toolUse.name, mapToolInput(toolUse.input))
 
     private fun mapToolResult(result: ChatCompletionToolUseResult): ToolResultDto =
-        ToolResultDto(result.toolUseId, result.name, mapToolOutput(result.output))
+        ToolResultDto(result.toolUseId, result.name, result.output.map(::mapToolOutput))
 
     private fun mapToolInput(input: ChatCompletionToolUse.Input): ToolInputDto = when (input) {
         is ChatCompletionToolUse.Input.Text -> ToolInputDto.Text(input.text)

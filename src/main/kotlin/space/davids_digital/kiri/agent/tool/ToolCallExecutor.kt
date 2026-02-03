@@ -3,15 +3,12 @@ package space.davids_digital.kiri.agent.tool
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.llm.ChatCompletionToolUse
+import java.lang.reflect.InvocationTargetException
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.KType
-import kotlin.reflect.full.callSuspendBy
-import kotlin.reflect.full.extensionReceiverParameter
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.instanceParameter
-import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.*
 
 @Component
 class ToolCallExecutor {
@@ -21,7 +18,7 @@ class ToolCallExecutor {
      * Execute a function with the given input and receiver.
      */
     suspend fun execute(function: Function<*>, input: ChatCompletionToolUse.Input, receiver: Any): Any? {
-        return try {
+        try {
             if (function !is KFunction<*>) {
                 throw IllegalArgumentException("Function must be a KFunction")
             }
@@ -35,20 +32,12 @@ class ToolCallExecutor {
             if (valueParams.size == 1) {
                 val param = valueParams[0]
                 val effectiveName = effectiveParameterName(param)
-                when (input) {
-                    is ChatCompletionToolUse.Input.Object -> {
-                        if (input.items.containsKey(effectiveName)) {
-                            args[param] = inputToParameter(input.items[effectiveName]!!, param)
-                        } else {
-                            if (!param.isOptional && !param.type.isMarkedNullable) {
-                                throw IllegalArgumentException("Missing required parameter: $effectiveName")
-                            }
-                        }
-                    }
-                    else -> {
-                        args[param] = inputToParameter(input, param)
-                    }
+                val argInput = if (input is ChatCompletionToolUse.Input.Object && input.items.containsKey(effectiveName)) {
+                    input.items[effectiveName]!!
+                } else {
+                    input
                 }
+                args[param] = inputToParameter(argInput, param)
             } else if (valueParams.isNotEmpty()) {
                 if (input !is ChatCompletionToolUse.Input.Object) {
                     throw IllegalArgumentException("Function expects multiple parameters, but input is not an object")
@@ -63,29 +52,32 @@ class ToolCallExecutor {
                 }
             }
 
-            if (function.isSuspend) {
+            return if (function.isSuspend) {
                 function.callSuspendBy(args)
             } else {
                 function.callBy(args)
             }
         } catch (e: IllegalArgumentException) {
             throw e
+        } catch (e: InvocationTargetException) {
+            throw e.cause ?: e
         } catch (e: Exception) {
             log.error("Error calling function", e)
             throw IllegalArgumentException("Error calling function: ${e.message}", e)
         }
     }
 
+
     private fun effectiveParameterName(param: KParameter): String {
         return param.findAnnotation<AgentToolParameter>()?.name?.takeIf { it.isNotBlank() } ?: param.name
-        ?: throw IllegalArgumentException("Parameter name is missing")
+            ?: throw IllegalArgumentException("Parameter name is missing")
     }
 
-    private fun inputToParameter(input: ChatCompletionToolUse.Input, parameter: KParameter): Any? {
+    private fun inputToParameter(input: ChatCompletionToolUse.Input, parameter: KParameter): Any {
         return convertInput(input, parameter.type)
     }
 
-    private fun convertInput(input: ChatCompletionToolUse.Input, expectedType: KType): Any? {
+    private fun convertInput(input: ChatCompletionToolUse.Input, expectedType: KType): Any {
         val classifier = expectedType.classifier as? KClass<*>
             ?: throw IllegalArgumentException("Missing type classifier")
         return when (input) {
@@ -111,7 +103,7 @@ class ToolCallExecutor {
         }
     }
 
-    private fun convertObject(input: ChatCompletionToolUse.Input.Object, expectedType: KType): Any? {
+    private fun convertObject(input: ChatCompletionToolUse.Input.Object, expectedType: KType): Any {
         val classifier = expectedType.classifier as? KClass<*>
             ?: throw IllegalArgumentException("Missing type classifier for object conversion")
         return if (Map::class.java.isAssignableFrom(classifier.java)) {

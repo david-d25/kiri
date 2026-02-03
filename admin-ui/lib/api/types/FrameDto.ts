@@ -1,4 +1,27 @@
-export type FrameDto = DataFrameDto | ToolCallFrameDto;
+export type FrameDto = DataFrameDto | ToolCallFrameDto | NativeWebSearchFrameDto;
+
+export type NativeWebSearchFrameDto = {
+    type: "nativeWebSearch";
+    webSearch: WebSearchDto;
+};
+
+export type WebSearchDto = OpenPageDto | SearchDto | FindInPageDto;
+
+export type OpenPageDto = {
+    type: "openPage";
+    url: string;
+}
+
+export type SearchDto = {
+    type: "search";
+    query: string;
+}
+
+export type FindInPageDto = {
+    type: "findInPage";
+    url: string;
+    pattern: string;
+}
 
 export type DataFrameDto = {
     type: "data";
@@ -52,7 +75,7 @@ export namespace ToolInputDto {
 export type ToolResultDto = {
     toolUseId: string;
     name: string;
-    output: ToolOutputDto;
+    output: ToolOutputDto[];
 }
 
 export namespace ToolOutputDto {

@@ -5,7 +5,7 @@ import {classnames} from "@/lib/classnames";
 type Props = {
     children?: React.ReactNode,
     disabled?: boolean,
-    lightweight?: boolean,
+    noStyle?: boolean,
     onClick?: MouseEventHandler<HTMLButtonElement>,
     ref?: React.Ref<HTMLButtonElement>,
     className?: string
@@ -17,11 +17,13 @@ export default function Button(props: Props) {
     const className = classnames(
         {
             [style.button]: true,
-            [style.lightweight]: props.lightweight,
+            [style.lightweight]: props.noStyle,
             [style.primary]: props.colorAccent === 'primary',
+            [style.noStyle]: props.noStyle,
         },
         props.className
     );
+    const colorAccent = props.colorAccent || 'default';
     return (
         <button
             type={props.type || 'button'}
@@ -30,6 +32,7 @@ export default function Button(props: Props) {
             onClick={props.onClick}
             disabled={props.disabled}
             ref={props.ref}
+            data-color-accent={colorAccent}
         >
             {props.children}
         </button>

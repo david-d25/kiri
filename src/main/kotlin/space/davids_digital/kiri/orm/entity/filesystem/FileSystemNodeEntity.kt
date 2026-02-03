@@ -21,9 +21,6 @@ class FileSystemNodeEntity {
     @Column(name = "id")
     var id: UUID = UUID.randomUUID()
 
-    @Column(name = "space_id", nullable = false)
-    var spaceId: UUID = UUID.randomUUID()
-
     @Column(name = "parent_id")
     var parentId: UUID? = null
 
@@ -33,9 +30,6 @@ class FileSystemNodeEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
     var type: NodeType = NodeType.DIRECTORY
-
-    @Column(name = "mime_type")
-    var mimeType: String? = null
 
     @Column(name = "size", nullable = false)
     var size: Long = 0

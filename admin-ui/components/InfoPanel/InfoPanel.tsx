@@ -6,7 +6,7 @@ import ErrorIcon from './icons/error.svg';
 import WarningIcon from './icons/warning.svg';
 import {classnames} from "@/lib/classnames";
 
-type InfoPanelType = 'info' | 'error' | 'warning';
+type InfoPanelType = 'info' | 'error' | 'warning' | 'none';
 
 type Props = {
     children: React.ReactNode;

@@ -3,6 +3,7 @@ package space.davids_digital.kiri.llm.dsl
 import space.davids_digital.kiri.llm.ChatCompletionImageType
 import space.davids_digital.kiri.llm.ChatCompletionRequest
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Message.ContentItem.ToolResult
+import space.davids_digital.kiri.llm.ChatCompletionWebSearch
 
 @DslMarker
 annotation class ChatCompletionRequestDsl
@@ -20,7 +21,17 @@ class ChatCompletionRequestBuilder {
     var tools: ChatCompletionRequest.Tools = ChatCompletionRequest.Tools(
         ChatCompletionRequest.Tools.ToolChoice.AUTO,
         false,
-        emptyList()
+        emptyList(),
+        ChatCompletionRequest.Tools.External(
+            webSearch = ChatCompletionRequest.Tools.External.WebSearch(
+                enabled = false
+            )
+        )
+    )
+    var reasoning: ChatCompletionRequest.Reasoning = ChatCompletionRequest.Reasoning(
+        enabled = false,
+        maxTokens = 0,
+        effort = ChatCompletionRequest.Reasoning.Effort.AUTO
     )
 
     fun message(block: ChatCompletionRequestMessageBuilder.() -> Unit) {
@@ -39,9 +50,21 @@ class ChatCompletionRequestBuilder {
         tools = ChatCompletionRequestToolsBuilder().apply(block).build()
     }
 
+    fun reasoning(block: ChatCompletionRequestReasoningBuilder.() -> Unit) {
+        reasoning = ChatCompletionRequestReasoningBuilder().apply(block).build()
+    }
+
     fun build(): ChatCompletionRequest {
         requireNotNull(modelHandle) { "modelHandle must be set" }
-        return ChatCompletionRequest(modelHandle!!, instructions, messages, maxOutputTokens, temperature, tools)
+        return ChatCompletionRequest(
+            modelHandle!!,
+            instructions,
+            messages,
+            maxOutputTokens,
+            temperature,
+            tools,
+            reasoning
+        )
     }
 }
 
@@ -62,12 +85,16 @@ open class ChatCompletionRequestMessageBuilder {
         content.add(ChatCompletionRequest.Message.ContentItem.Image(data, type))
     }
 
-    fun toolUse(block: LlmToolUseBuilder.() -> Unit) {
-        content.add(ChatCompletionRequest.Message.ContentItem.ToolUse(LlmToolUseBuilder().apply(block).build()))
+    fun toolUse(block: ChatCompletionToolUseBuilder.() -> Unit) {
+        content.add(ChatCompletionRequest.Message.ContentItem.ToolUse(ChatCompletionToolUseBuilder().apply(block).build()))
     }
 
     fun toolResult(block: ChatCompletionToolUseResultBuilder.() -> Unit) {
         content.add(ToolResult(ChatCompletionToolUseResultBuilder().apply(block).build()))
+    }
+
+    fun webSearch(webSearch: ChatCompletionWebSearch) {
+        content.add(webSearch)
     }
 
     fun build(): ChatCompletionRequest.Message {
@@ -78,15 +105,35 @@ open class ChatCompletionRequestMessageBuilder {
 @ChatCompletionRequestDsl
 class ChatCompletionRequestToolsBuilder {
     var choice: ChatCompletionRequest.Tools.ToolChoice = ChatCompletionRequest.Tools.ToolChoice.AUTO
-    var allowParallelUse: Boolean = false
+    var allowParallelUse: Boolean = true
     var functions: MutableList<ChatCompletionRequest.Tools.Function> = mutableListOf()
+    var external: ChatCompletionRequest.Tools.External = ChatCompletionRequest.Tools.External(
+        webSearch = ChatCompletionRequest.Tools.External.WebSearch(
+            enabled = false
+        )
+    )
 
     fun function(block: ChatCompletionRequestToolsFunctionBuilder.() -> Unit) {
         functions.add(ChatCompletionRequestToolsFunctionBuilder().apply(block).build())
     }
 
+    fun external(block: ChatCompletionRequestToolsExternalBuilder.() -> Unit) {
+        external = ChatCompletionRequestToolsExternalBuilder().apply(block).build()
+    }
+
     fun build(): ChatCompletionRequest.Tools {
-        return ChatCompletionRequest.Tools(choice, allowParallelUse, functions)
+        return ChatCompletionRequest.Tools(choice, allowParallelUse, functions, external)
+    }
+}
+
+@ChatCompletionRequestDsl
+class ChatCompletionRequestReasoningBuilder {
+    var enabled: Boolean = false
+    var maxTokens: Long = 0
+    var effort = ChatCompletionRequest.Reasoning.Effort.AUTO
+
+    fun build(): ChatCompletionRequest.Reasoning {
+        return ChatCompletionRequest.Reasoning(enabled, maxTokens, effort)
     }
 }
 
@@ -103,6 +150,29 @@ class ChatCompletionRequestToolsFunctionBuilder {
 
     fun build(): ChatCompletionRequest.Tools.Function {
         return ChatCompletionRequest.Tools.Function(name, description, parameters)
+    }
+}
+
+@ChatCompletionRequestDsl
+class ChatCompletionRequestToolsExternalBuilder {
+    var webSearch: ChatCompletionRequest.Tools.External.WebSearch =
+        ChatCompletionRequest.Tools.External.WebSearch(enabled = false)
+
+    fun webSearch(block: ChatCompletionRequestToolsExternalWebSearchBuilder.() -> Unit) {
+        webSearch = ChatCompletionRequestToolsExternalWebSearchBuilder().apply(block).build()
+    }
+
+    fun build(): ChatCompletionRequest.Tools.External {
+        return ChatCompletionRequest.Tools.External(webSearch)
+    }
+}
+
+@ChatCompletionRequestDsl
+class ChatCompletionRequestToolsExternalWebSearchBuilder {
+    var enabled: Boolean = false
+
+    fun build(): ChatCompletionRequest.Tools.External.WebSearch {
+        return ChatCompletionRequest.Tools.External.WebSearch(enabled)
     }
 }
 

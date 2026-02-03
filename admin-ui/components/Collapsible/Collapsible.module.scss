@@ -1,0 +1,27 @@
+.root {}
+
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.headerContent {
+  display: inline-block;
+  font-size: 18px;
+}
+
+.icon {
+  display: inline;
+  width: 20px;
+  margin-right: 5px;
+  transition: transform 0.2s ease-out;
+
+  [data-opened="true"] & {
+    transform: rotate(90deg);
+  }
+}
+
+.children {
+  padding: 10px 10px 10px 25px;
+}

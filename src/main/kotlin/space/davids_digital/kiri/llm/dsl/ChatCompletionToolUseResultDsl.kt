@@ -13,10 +13,10 @@ fun chatCompletionToolUseResult(block: ChatCompletionToolUseResultBuilder.() -> 
 class ChatCompletionToolUseResultBuilder {
     var id: String = ""
     var name: String = ""
-    var output: ChatCompletionToolUseResult.Output = ChatCompletionToolUseResult.Output.Text("")
+    var output: List<ChatCompletionToolUseResult.Output> = listOf(ChatCompletionToolUseResult.Output.Text(""))
 
     fun output(block: ChatCompletionToolUseResultOutputBuilder.() -> Unit) {
-        output = ChatCompletionToolUseResultOutputBuilder().apply(block).build()
+        output += ChatCompletionToolUseResultOutputBuilder().apply(block).build()
     }
 
     fun build(): ChatCompletionToolUseResult {

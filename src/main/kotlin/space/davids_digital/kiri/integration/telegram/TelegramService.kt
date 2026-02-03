@@ -45,6 +45,19 @@ class TelegramService(
         private const val MAX_MEDIA_GROUP_SIZE = 10
         private const val MAX_MESSAGES_PER_SECOND_FREE = 30
         //private const val MAX_MESSAGES_PER_SECOND_PAID = 1000
+
+        private val SUPPORTED_TAGS = setOf(
+            "b",
+            "i",
+            "u",
+            "s",
+            "tg-spoiler",
+            "a",
+            "tg-emoji",
+            "code",
+            "pre",
+            "blockquote"
+        )
     }
 
     @Lazy
@@ -101,7 +114,6 @@ class TelegramService(
     suspend fun sendMessage(
         chatId: Long,
         text: String,
-        textEntities: List<TelegramMessageEntity> = emptyList(),
         images: List<ByteArray> = emptyList(),
         replyMarkup: TelegramInlineKeyboardMarkup? = null,
         disableNotification: Boolean = false,
@@ -110,7 +122,6 @@ class TelegramService(
     ) = sendMessage(
         listOf(chatId),
         text,
-        textEntities,
         images,
         replyMarkup,
         disableNotification,
@@ -132,7 +143,6 @@ class TelegramService(
     suspend fun sendMessage(
         chatIds: List<Long>,
         text: String,
-        textEntities: List<TelegramMessageEntity> = emptyList(),
         images: List<ByteArray> = emptyList(),
         replyMarkup: TelegramInlineKeyboardMarkup? = null,
         disableNotification: Boolean = false,
@@ -140,9 +150,10 @@ class TelegramService(
         replyToMessageId: Int? = null
     ) {
         for (chatId in chatIds) {
+            val (rawText, textEntities) = TelegramHtmlMapper.fromHtml(text)
             val requests = buildSendMessageRequests(
                 chatId,
-                text,
+                rawText,
                 textEntities,
                 images,
                 replyMarkup,
@@ -228,7 +239,6 @@ class TelegramService(
                 disableNotification(disableNotification)
                 messageThreadId?.let { messageThreadId(it) }
                 replyToMessageId?.let { replyParameters(ReplyParameters(it)) }
-                parseMode(ParseMode.HTML)
             }
 
             1 -> SendPhoto(chatId, images.first()).apply {
@@ -240,14 +250,12 @@ class TelegramService(
                 disableNotification(disableNotification)
                 messageThreadId?.let { messageThreadId(it) }
                 replyToMessageId?.let { replyParameters(ReplyParameters(it)) }
-                parseMode(ParseMode.HTML)
             }
 
             else -> {
                 val media = images.mapIndexed { _, bytes -> InputMediaPhoto(bytes) }.toMutableList()
                 media.first().caption(text)
                 media.first().captionEntities(*textEntities.map { mapper.toDto(it)!! }.toTypedArray())
-                media.first().parseMode(ParseMode.HTML)
 
                 SendMediaGroup(chatId, *media.toTypedArray()).apply {
                     disableNotification(disableNotification)
@@ -340,6 +348,10 @@ class TelegramService(
         }
     }
 
+    fun createMessageLink(message: TelegramMessage): String {
+        return createMessageLink(message.chatId, message.messageId)
+    }
+
     suspend fun chatExists(id: Long): Boolean {
         if (chatOrm.existsById(id)) {
             return true
@@ -355,10 +367,13 @@ class TelegramService(
     }
 
     fun getUser(id: Long) = userOrm.findById(id)
+    fun getUserByUsername(username: String) = userOrm.findByUsername(username)
 
     @Cacheable(value = ["TelegramService#getFileContent"], key = "#fileId")
     suspend fun getFileContent(fileId: String): ByteArray {
-        return bot.getFileContent(bot.getFile(fileId).file())
+        return bot.getFileContent(
+            bot.getFile(fileId).checkNoErrors().file()
+        )
     }
 
     suspend fun getFile(fileId: String): TelegramFile? {

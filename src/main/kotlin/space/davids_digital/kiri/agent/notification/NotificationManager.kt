@@ -2,11 +2,10 @@ package space.davids_digital.kiri.agent.notification
 
 import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Service
-import space.davids_digital.kiri.agent.engine.EngineEvent
 import space.davids_digital.kiri.agent.engine.EngineEventBus
-import space.davids_digital.kiri.agent.engine.WakeUpRequestEvent
+import space.davids_digital.kiri.agent.engine.event.WakeUpRequestEvent
+import space.davids_digital.kiri.agent.frame.DataFrameUtils.asPrettyString
 import space.davids_digital.kiri.agent.frame.FrameBuffer
-import space.davids_digital.kiri.agent.frame.asPrettyString
 
 @Service
 class NotificationManager(

@@ -91,9 +91,10 @@ class TelegramMessageEntity {
         mappedBy = "parentMessageText",
         cascade = [CascadeType.ALL],
         orphanRemoval = true,
-        targetEntity = TelegramMessageEntityEntity::class
+        targetEntity = TelegramMessageEntityEntity::class,
+        fetch = FetchType.EAGER
     )
-    var entities: List<TelegramMessageEntityEntity> = mutableListOf()
+    var entities: MutableList<TelegramMessageEntityEntity> = mutableListOf()
 
     @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     @JoinColumn(name = "link_preview_options_id", referencedColumnName = "internal_id")

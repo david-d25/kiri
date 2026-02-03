@@ -33,6 +33,11 @@ class TelegramUserOrmService(
     }
 
     @Transactional(readOnly = true)
+    fun findByUsername(username: String): TelegramUser? {
+        return repo.findByUsername(username)?.let(::toModel)
+    }
+
+    @Transactional(readOnly = true)
     fun findAllById(ids: Collection<Long>): List<TelegramUser> {
         return repo.findAllById(ids).map(::toModel)
     }

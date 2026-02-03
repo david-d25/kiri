@@ -1,7 +1,7 @@
 import {
     ContentPartDto,
-    DataFrameDto,
-    FrameDto,
+    DataFrameDto, FindInPageDto,
+    FrameDto, NativeWebSearchFrameDto, OpenPageDto, SearchDto,
     ToolCallFrameDto,
     ToolInputDto,
     ToolOutputDto
@@ -9,6 +9,7 @@ import {
 
 import BracketsLiteralIcon from "@/icons/brackets-literal.svg";
 import FunctionIcon from "@/icons/function.svg";
+import GlobeIcon from "@/icons/globe.svg";
 
 import s from './Frame.module.scss';
 import {classnames} from "@/lib/classnames";
@@ -20,11 +21,65 @@ type Props = {
 
 export default function Frame(props: Props) {
     const { frame } = props;
-    if (frame.type === 'data') {
-        return <DataFrame frame={frame}/>
-    } else if (frame.type === 'toolCall') {
-        return <ToolCallFrame frame={frame}/>
+    switch (frame.type) {
+        case "data":
+            return <DataFrame frame={frame}/>
+        case "toolCall":
+            return <ToolCallFrame frame={frame}/>
+        case "nativeWebSearch":
+            return <NativeWebSearchFrame frame={frame}/>
     }
+}
+
+function NativeWebSearchFrame(props: { frame: NativeWebSearchFrameDto }) {
+    const webSearchFrame = props.frame.webSearch;
+    switch (webSearchFrame.type) {
+        case "search":
+            return <SearchFrame frame={webSearchFrame}/>;
+        case "findInPage":
+            return <FindInPageFrame frame={webSearchFrame}/>;
+        case "openPage":
+            return <OpenPageFrame frame={webSearchFrame}/>;
+    }
+}
+
+function SearchFrame(props: { frame: SearchDto }) {
+    return (
+        <div className={s.frame}>
+            <div className={s.head}>
+                <GlobeIcon className={classnames(s.icon, s.data)}/>
+                <div className={s.tag}>
+                    Search: "{props.frame.query}"
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function OpenPageFrame(props: { frame: OpenPageDto }) {
+    return (
+        <div className={s.frame}>
+            <div className={s.head}>
+                <GlobeIcon className={classnames(s.icon, s.data)}/>
+                <div className={s.tag}>
+                    Open Page: {props.frame.url}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function FindInPageFrame(props: { frame: FindInPageDto }) {
+    return (
+        <div className={s.frame}>
+            <div className={s.head}>
+                <GlobeIcon className={classnames(s.icon, s.data)}/>
+                <div className={s.tag}>
+                    Find In Page: "{props.frame.pattern}" in {props.frame.url}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 function DataFrame(props: { frame: DataFrameDto }) {
@@ -75,7 +130,9 @@ function ToolCallFrame(props: { frame: ToolCallFrameDto }) {
                 <ToolCallInput input={props.frame.toolUse.input}/>
             </div>
             <div className={s.content}>
-                <ToolOutput toolOutput={props.frame.result.output}/>
+                { props.frame.result.output.map((part, index) => (
+                    <ToolOutput key={index} toolOutput={part}/>
+                ) ) }
             </div>
         </div>
     );

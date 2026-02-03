@@ -3,18 +3,18 @@ package space.davids_digital.kiri.llm.dsl
 import space.davids_digital.kiri.llm.ChatCompletionToolUse
 
 @DslMarker
-annotation class LlmToolUseDsl
+annotation class ChatCompletionToolUseDsl
 
-fun llmToolUse(block: LlmToolUseBuilder.() -> Unit) = LlmToolUseBuilder().apply(block).build()
+fun chatCompletionToolUse(block: ChatCompletionToolUseBuilder.() -> Unit) = ChatCompletionToolUseBuilder().apply(block).build()
 
-@LlmToolUseDsl
-class LlmToolUseBuilder {
+@ChatCompletionToolUseDsl
+class ChatCompletionToolUseBuilder {
     var id: String = ""
     var name: String = ""
     var input: ChatCompletionToolUse.Input = ChatCompletionToolUse.Input.Object(mapOf())
 
-    fun input(block: LlmToolUseInputBuilder.() -> Unit) {
-        input = LlmToolUseInputBuilder().apply(block).build()
+    fun input(block: ChatCompletionToolUseInputBuilder.() -> Unit) {
+        input = ChatCompletionToolUseInputBuilder().apply(block).build()
     }
 
     fun build(): ChatCompletionToolUse {
@@ -24,18 +24,18 @@ class LlmToolUseBuilder {
     }
 }
 
-@LlmToolUseDsl
+@ChatCompletionToolUseDsl
 interface GenericJsonInputBuilder {
     fun text(text: String)
     fun number(number: Double)
     fun boolean(boolean: Boolean)
-    fun array(block: LlmToolUseInputArrayBuilder.() -> Unit)
-    fun objectValue(block: LlmToolUseInputObjectBuilder.() -> Unit)
+    fun array(block: ChatCompletionToolUseInputArrayBuilder.() -> Unit)
+    fun objectValue(block: ChatCompletionToolUseInputObjectBuilder.() -> Unit)
     fun build(): ChatCompletionToolUse.Input
 }
 
-@LlmToolUseDsl
-class LlmToolUseInputBuilder : GenericJsonInputBuilder {
+@ChatCompletionToolUseDsl
+class ChatCompletionToolUseInputBuilder : GenericJsonInputBuilder {
     var text: String? = null
     var number: Double? = null
     var boolean: Boolean? = null
@@ -54,16 +54,16 @@ class LlmToolUseInputBuilder : GenericJsonInputBuilder {
         this.boolean = boolean
     }
 
-    override fun array(block: LlmToolUseInputArrayBuilder.() -> Unit) {
-        val arr = LlmToolUseInputArrayBuilder().apply(block).items
+    override fun array(block: ChatCompletionToolUseInputArrayBuilder.() -> Unit) {
+        val arr = ChatCompletionToolUseInputArrayBuilder().apply(block).items
         items = (items ?: mutableListOf()).apply { addAll(arr) }
     }
 
-    override fun objectValue(block: LlmToolUseInputObjectBuilder.() -> Unit) {
+    override fun objectValue(block: ChatCompletionToolUseInputObjectBuilder.() -> Unit) {
         if (map == null) {
             map = mutableMapOf()
         }
-        map!!.putAll(LlmToolUseInputObjectBuilder().apply(block).build())
+        map!!.putAll(ChatCompletionToolUseInputObjectBuilder().apply(block).build())
     }
 
     override fun build(): ChatCompletionToolUse.Input {
@@ -78,8 +78,8 @@ class LlmToolUseInputBuilder : GenericJsonInputBuilder {
     }
 }
 
-@LlmToolUseDsl
-class LlmToolUseInputArrayBuilder : GenericJsonInputBuilder {
+@ChatCompletionToolUseDsl
+class ChatCompletionToolUseInputArrayBuilder : GenericJsonInputBuilder {
     var items: MutableList<ChatCompletionToolUse.Input> = mutableListOf()
 
     override fun text(text: String) {
@@ -94,12 +94,12 @@ class LlmToolUseInputArrayBuilder : GenericJsonInputBuilder {
         items.add(ChatCompletionToolUse.Input.Boolean(boolean))
     }
 
-    override fun array(block: LlmToolUseInputArrayBuilder.() -> Unit) {
-        items.add(ChatCompletionToolUse.Input.Array(LlmToolUseInputArrayBuilder().apply(block).items))
+    override fun array(block: ChatCompletionToolUseInputArrayBuilder.() -> Unit) {
+        items.add(ChatCompletionToolUse.Input.Array(ChatCompletionToolUseInputArrayBuilder().apply(block).items))
     }
 
-    override fun objectValue(block: LlmToolUseInputObjectBuilder.() -> Unit) {
-        items.add(ChatCompletionToolUse.Input.Object(LlmToolUseInputObjectBuilder().apply(block).build()))
+    override fun objectValue(block: ChatCompletionToolUseInputObjectBuilder.() -> Unit) {
+        items.add(ChatCompletionToolUse.Input.Object(ChatCompletionToolUseInputObjectBuilder().apply(block).build()))
     }
 
     override fun build(): ChatCompletionToolUse.Input {
@@ -107,8 +107,8 @@ class LlmToolUseInputArrayBuilder : GenericJsonInputBuilder {
     }
 }
 
-@LlmToolUseDsl
-class LlmToolUseInputObjectBuilder {
+@ChatCompletionToolUseDsl
+class ChatCompletionToolUseInputObjectBuilder {
     var items: MutableMap<String, ChatCompletionToolUse.Input> = mutableMapOf()
 
     fun text(name: String, text: String) {
@@ -123,12 +123,12 @@ class LlmToolUseInputObjectBuilder {
         items[name] = ChatCompletionToolUse.Input.Boolean(boolean)
     }
 
-    fun array(name: String, block: LlmToolUseInputArrayBuilder.() -> Unit) {
-        items[name] = ChatCompletionToolUse.Input.Array(LlmToolUseInputArrayBuilder().apply(block).items)
+    fun array(name: String, block: ChatCompletionToolUseInputArrayBuilder.() -> Unit) {
+        items[name] = ChatCompletionToolUse.Input.Array(ChatCompletionToolUseInputArrayBuilder().apply(block).items)
     }
 
-    fun objectValue(name: String, block: LlmToolUseInputObjectBuilder.() -> Unit) {
-        items[name] = ChatCompletionToolUse.Input.Object(LlmToolUseInputObjectBuilder().apply(block).build())
+    fun objectValue(name: String, block: ChatCompletionToolUseInputObjectBuilder.() -> Unit) {
+        items[name] = ChatCompletionToolUse.Input.Object(ChatCompletionToolUseInputObjectBuilder().apply(block).build())
     }
 
     fun build(): Map<String, ChatCompletionToolUse.Input> {

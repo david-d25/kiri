@@ -1,20 +1,27 @@
 package space.davids_digital.kiri.agent.app.telegram
 
 import io.ktor.util.*
+import io.ktor.websocket.Frame
 import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
 import org.springframework.stereotype.Component
-import space.davids_digital.kiri.agent.frame.asPrettyString
+import space.davids_digital.kiri.agent.frame.DataFrameUtils.asPrettyString
+import space.davids_digital.kiri.agent.frame.DataFrameUtils.getImageType
 import space.davids_digital.kiri.agent.frame.dsl.FrameContentBuilder
-import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.integration.telegram.TelegramHtmlMapper.toHtml
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.llm.ChatCompletionImageType
 import space.davids_digital.kiri.model.telegram.*
+import space.davids_digital.kiri.service.TelegramChatService
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MINUTES
 
 @Component
-class TelegramAppRenderer (private val service: TelegramService) {
+class TelegramAppRenderer (
+    private val service: TelegramService,
+    private val telegramChatService: TelegramChatService
+) {
     companion object {
         private const val MAX_MEDIA_SIZE_BYTES = 5 * 1024 * 1024
         private const val MAX_IMAGE_SIDE_LENGTH = 1568
@@ -23,18 +30,12 @@ class TelegramAppRenderer (private val service: TelegramService) {
         private const val MAX_TEXT_LENGTH = 4000
     }
 
-    fun render(state: TelegramAppViewState) = dataFrameContent {
-        if (state.openedChat != null) {
-            renderChat(state, state.openedChat)
-        } else {
-            renderChatList(state)
-        }
-    }
+    private val log = LoggerFactory.getLogger(javaClass)
 
-    private fun FrameContentBuilder.renderChatList(state: TelegramAppViewState) {
-        line("""<chats page="${state.chatsPageIndex + 1}" total-pages="${state.chatsTotalPages}">""")
-        if (state.chatsView.isNotEmpty()) {
-            for (chat in state.chatsView.take(MAX_LIST_ITEMS)) {
+    fun FrameContentBuilder.renderChatsPage(page: Page<TelegramChat>) {
+        line("""<chats page="${page.pageable.pageNumber}" total-pages="${page.totalPages}">""")
+        if (!page.isEmpty) {
+            for (chat in page.take(MAX_LIST_ITEMS)) {
                 renderChatListItem(chat)
             }
         } else {
@@ -43,30 +44,60 @@ class TelegramAppRenderer (private val service: TelegramService) {
         line("</chats>")
     }
 
-    private fun FrameContentBuilder.renderChat(state: TelegramAppViewState, chat: TelegramChat) {
-        val messages = state.messagesView
+    fun FrameContentBuilder.renderUserProfile(user: TelegramUser, chat: TelegramChat?) {
+        line("<user-profile>")
+        line("<main>")
+        line("id: ${user.id}")
+        line("first name: ${user.firstName}")
+        if (user.lastName != null) {
+            line("last name: ${user.lastName}")
+        }
+        if (user.username != null) {
+            line("username: @${user.username}")
+        }
+        line("is premium: ${user.isPremium}")
+        line("</main>")
+        if (chat != null) {
+            if (chat.photo != null) {
+                line("<chat-photo fileId=\"${chat.photo.bigFileId}\">")
+                try {
+                    renderImage(chat.photo.bigFileId)
+                } catch (e: Exception) {
+                    log.error("Failed to render chat photo for chat id=${chat.id}", e)
+                    line("unavailable")
+                }
+                line("</chat-photo>")
+            }
+            if (chat.bio != null) {
+                line("<bio>${chat.bio}</bio>")
+            }
+            if (chat.pinnedMessage != null) {
+                line("<pinned-message>")
+                renderMessage(chat.pinnedMessage, null)
+                line("</pinned-message>")
+            }
+        }
+        line("</user-profile>")
+    }
+
+    fun FrameContentBuilder.renderChat(
+        chat: TelegramChat,
+        messagesPage: Page<TelegramMessage>,
+        laterMessagesRemaining: Long = 0,
+        laterNewMessagesRemaining: Long = 0
+    ) {
         val unsafeTitle = chat.title ?: (chat.firstName + (chat.lastName?.let { " $it" } ?: ""))
         val title = unsafeTitle.safe()
         val attrString = """id="${chat.id}" title="$title""""
         val tag = chatTypeToTag(chat.type)
         line("<$tag $attrString>")
-        renderChatMessages(state.oldLastReadMessageId, messages, state)
+        renderChatMessages(
+            chat.metadata.lastReadMessageId,
+            messagesPage,
+            laterMessagesRemaining,
+            laterNewMessagesRemaining
+        )
         line("</$tag>")
-    }
-
-    private fun ByteArray.getImageType(): ChatCompletionImageType? {
-        if (this.size < 12) return null
-
-        return when {
-            this[0] == 0xFF.toByte() && this[1] == 0xD8.toByte() -> ChatCompletionImageType.JPEG
-            this[0] == 0x89.toByte() && this[1] == 0x50.toByte() -> ChatCompletionImageType.PNG
-            this[0] == 0x47.toByte() && this[1] == 0x49.toByte() -> ChatCompletionImageType.GIF
-            this[0] == 0x52.toByte() && this[1] == 0x49.toByte() && // 'RIFF'
-                    this[2] == 0x46.toByte() && this[3] == 0x46.toByte() &&
-                    this[8] == 0x57.toByte() && this[9] == 0x45.toByte() &&
-                    this[10] == 0x42.toByte() && this[11] == 0x50.toByte() -> ChatCompletionImageType.WEBP
-            else -> null
-        }
     }
 
     private fun chatTypeToTag(type: TelegramChat.Type): String {
@@ -138,20 +169,19 @@ class TelegramAppRenderer (private val service: TelegramService) {
 
     private fun FrameContentBuilder.renderChatMessages(
         lastReadMessageId: Int?,
-        messages: List<TelegramMessage>,
-        state: TelegramAppViewState
+        messagesPage: Page<TelegramMessage>,
+        laterMessagesRemaining: Long = 0,
+        laterNewMessagesRemaining: Long = 0
     ) {
         var sentAt: ZonedDateTime? = null
         line("<messages>")
-        for (message in messages) {
+        for (message in messagesPage.sortedBy { it.messageId }) {
             if (sentAt == null || !sentAt.truncatedTo(MINUTES).isEqual(message.date.truncatedTo(MINUTES))) {
                 sentAt = message.date
                 line("<!-- ${sentAt.asPrettyString()} -->")
             }
             renderMessage(message, lastReadMessageId)
         }
-        val laterMessagesRemaining = state.laterMessagesRemaining
-        val laterNewMessagesRemaining = state.laterNewMessagesRemaining
         if (laterMessagesRemaining > 0) {
             line(buildString {
                 append("<!-- ...$laterMessagesRemaining more messages")
@@ -161,7 +191,7 @@ class TelegramAppRenderer (private val service: TelegramService) {
                 append(" -->")
             })
         }
-        if (messages.isEmpty()) {
+        if (messagesPage.isEmpty) {
             line("<empty/>")
         }
         line("</messages>")
@@ -339,7 +369,7 @@ class TelegramAppRenderer (private val service: TelegramService) {
     }
 
     private fun FrameContentBuilder.renderDocument(document: TelegramDocument) {
-        line("""<document id="${document.fileUniqueId}">""")
+        line("""<document id="${document.fileId}">""")
         line("This Telegram App does not support documents yet.")
         document.fileName?.let { line("File name: " + it.safe()) }
         document.mimeType?.let { line("MIME type: " + it.safe()) }
@@ -853,7 +883,7 @@ class TelegramAppRenderer (private val service: TelegramService) {
     private fun FrameContentBuilder.renderImage(sizes: List<TelegramPhotoSize>, withTag: Boolean = true) {
         val image = pickOptimalImage(sizes)
         if (withTag) {
-            line("<image>")
+            line("<image fileId=\"${image?.fileId}\">")
         }
         if (image == null) {
             line("This image is too large. Requirements: ")
@@ -861,18 +891,21 @@ class TelegramAppRenderer (private val service: TelegramService) {
             line("- Side length: <= $MAX_IMAGE_SIDE_LENGTH px")
             line("- Total pixels: <= $MAX_IMAGE_PIXELS px")
         } else {
-            val fileId = image.fileId
-            val file = runBlocking { service.getFileContent(fileId) }
-            val imageType = file.getImageType()
-            if (imageType == null) {
-                line("This image type is not supported by your Telegram App. " +
-                        "Supported types: ${ChatCompletionImageType.entries.joinToString(", ")}")
-            } else {
-                image(file, imageType)
-            }
+            renderImage(image.fileId)
         }
         if (withTag) {
             line("</image>")
+        }
+    }
+
+    private fun FrameContentBuilder.renderImage(fileId: String) {
+        val file = runBlocking { service.getFileContent(fileId) }
+        val imageType = file.getImageType()
+        if (imageType == null) {
+            line("This image type is not supported by your Telegram App. " +
+                    "Supported types: ${ChatCompletionImageType.entries.joinToString(", ")}")
+        } else {
+            image(file, imageType)
         }
     }
 

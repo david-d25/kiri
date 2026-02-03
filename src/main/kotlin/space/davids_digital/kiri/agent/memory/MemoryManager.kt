@@ -107,15 +107,15 @@ class MemoryManager(
 
     private fun getUnprocessedRollingFrames(): List<Frame> {
         val result = ArrayList<Frame>(frames.size)
-        for (frame in frames.onlyRolling) {
-            if (!processedRollingFrames.contains(frame)) {
-                result.add(frame)
-            }
-        }
+//        for (frame in frames.onlyRolling) {
+//            if (!processedRollingFrames.contains(frame)) {
+//                result.add(frame)
+//            }
+//        }
         return result
     }
 
-    override fun getAvailableAgentToolMethods(): Collection<Function<*>> = listOf(::memorize, ::query)
+    override fun getAvailableAgentToolMethods() = listOf(::memorize, ::query)
 
     @AgentToolMethod(description = "Remember something to general purpose memory")
     suspend fun memorize(

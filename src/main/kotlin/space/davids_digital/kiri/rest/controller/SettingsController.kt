@@ -10,6 +10,7 @@ import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.rest.dto.SettingDto
 import space.davids_digital.kiri.rest.dto.SettingUpdateRequest
 import space.davids_digital.kiri.rest.dto.SettingsUpdateRequest
+import space.davids_digital.kiri.service.exception.ResourceNotFoundException
 import kotlin.let
 import kotlin.text.get
 import kotlin.text.set
@@ -26,7 +27,8 @@ class SettingsController(
 
     @GetMapping("{key}")
     fun get(@PathVariable key: String): SettingDto {
-        return settings.get(key).let { SettingDto(it.key, it.value, it.updatedAt) }
+        val model = settings.get(key) ?: throw ResourceNotFoundException()
+        return SettingDto(model.key, model.value, model.updatedAt)
     }
 
     @PostMapping("{key}")

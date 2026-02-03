@@ -67,6 +67,9 @@ export const sseClient = {
                     eventSource.removeEventListener(name as string, dispatcher as EventListener);
                 }
                 dispatchers.delete(name as string);
+                if (handlers.size === 0) {
+                    this.close();
+                }
             }
         };
     },

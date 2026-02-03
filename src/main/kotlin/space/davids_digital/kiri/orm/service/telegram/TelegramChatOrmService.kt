@@ -31,12 +31,12 @@ class TelegramChatOrmService(
     private val telegramChatMetadataService: TelegramChatMetadataService
 ) {
     @Transactional(readOnly = true)
-    fun findAll(pageable: Pageable): Page<TelegramChat> {
+    suspend fun findAll(pageable: Pageable): Page<TelegramChat> {
         return repo.findAll(pageable).map(::toModel)
     }
 
     @Transactional(readOnly = true)
-    fun findAllEnabled(pageable: Pageable): Page<TelegramChat> {
+    suspend fun findAllEnabled(pageable: Pageable): Page<TelegramChat> {
         return repo.findAllEnabled(pageable).map(::toModel)
     }
 

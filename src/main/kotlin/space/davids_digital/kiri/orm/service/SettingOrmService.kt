@@ -1,10 +1,11 @@
 package space.davids_digital.kiri.orm.service
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.slf4j.LoggerFactory.getLogger
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.Setting
@@ -15,11 +16,9 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.util.Base64
-import kotlin.collections.set
-import kotlin.jvm.java
+import java.util.*
 import kotlin.jvm.optionals.getOrNull
-import kotlin.text.toByteArray
+import kotlin.properties.ReadOnlyProperty
 
 @Service
 class SettingOrmService(
@@ -28,7 +27,11 @@ class SettingOrmService(
 ) {
     private val log = getLogger(this::class.java)
 
-    private val flows: MutableMap<String, MutableSharedFlow<Setting>> = mutableMapOf()
+    @Autowired
+    @Lazy
+    private lateinit var self: SettingOrmService
+
+    private val flows: MutableMap<String, MutableSharedFlow<String?>> = mutableMapOf()
 
     class UpdateRequest(
         val value: String?,
@@ -42,7 +45,7 @@ class SettingOrmService(
     }
 
     @Transactional(readOnly = true)
-    fun get(key: String): Setting { // TODO: Change return type to `Setting?`
+    fun get(key: String): Setting? {
         val entity = repo.findById(key).getOrNull() ?: return Setting(
             key = key,
             value = null,
@@ -53,21 +56,20 @@ class SettingOrmService(
 
     @Transactional(readOnly = true)
     fun getValue(key: String): String? {
-        val entity = repo.findById(key).getOrNull() ?: return null
-        return entity.value
+        return get(key)?.value
     }
 
     /**
      * Sets the value of a setting with the given key.
      */
     @Transactional(readOnly = true)
-    fun listen(key: String): SharedFlow<Setting> {
+    fun listen(key: String): SharedFlow<String?> {
         if (flows.containsKey(key)) {
             return flows[key]!!.asSharedFlow()
         } else {
-            val flow = MutableSharedFlow<Setting>(replay = 1)
+            val flow = MutableSharedFlow<String?>(replay = 1)
             flows[key] = flow
-            flow.tryEmit(get(key)) // Emit the current value immediately
+            flow.tryEmit(getValue(key)) // Emit the current value immediately
             return flow.asSharedFlow()
         }
     }
@@ -101,16 +103,129 @@ class SettingOrmService(
         log.info("Set value for setting with key '$key'")
 
         // Emit the new value to the flow
-        flows[key]?.tryEmit(toModel(entity))
+        flows[key]?.tryEmit(value)
         return toModel(savedEntity)
     }
 
     @Transactional
-    fun delete(key: String) {
+    suspend fun delete(key: String) {
         val entity = repo.findById(key).getOrNull() ?: return
         repo.delete(entity)
         log.info("Deleted setting with key '$key'")
     }
+
+    fun declareStringNullable(key: String, defaultValue: String? = null, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue, encrypt) { it }
+
+    fun declareString(key: String, defaultValue: String, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue, encrypt) { it ?: defaultValue }
+
+    fun declareBooleanNullable(key: String, defaultValue: Boolean? = null, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue.toString(), encrypt) { it?.toBoolean() }
+
+    fun declareBoolean(key: String, defaultValue: Boolean, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue.toString(), encrypt) { it.toBoolean() }
+
+    fun declareLongNullable(key: String, defaultValue: Long? = null, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue.toString(), encrypt) {
+            try {
+                it?.toLong()
+            } catch (e: NumberFormatException) {
+                log.error("Failed to parse long setting for key '$key', returning default value $defaultValue", e)
+                0L
+            }
+        }
+
+    fun declareLong(key: String, defaultValue: Long, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue.toString(), encrypt) {
+            try {
+                it?.toLong() ?: defaultValue
+            } catch (e: NumberFormatException) {
+                log.error("Failed to parse long setting for key '$key', returning default value $defaultValue", e)
+                defaultValue
+            }
+        }
+
+    fun declareIntNullable(key: String, defaultValue: Int? = null, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue.toString(), encrypt) {
+            try {
+                it?.toInt()
+            } catch (e: NumberFormatException) {
+                log.error("Failed to parse int setting for key '$key', returning default value $defaultValue", e)
+                0
+            }
+        }
+
+    fun declareInt(key: String, defaultValue: Int, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue.toString(), encrypt) {
+            try {
+                it?.toInt() ?: defaultValue
+            } catch (e: NumberFormatException) {
+                log.error("Failed to parse int setting for key '$key', returning default value $defaultValue", e)
+                defaultValue
+            }
+        }
+
+    fun declareDouble(key: String, defaultValue: Double? = null, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue.toString(), encrypt) {
+            try {
+                it?.toDouble()
+            } catch (e: NumberFormatException) {
+                log.error("Failed to parse double setting for key '$key', returning default value $defaultValue", e)
+                0.0
+            }
+        }
+
+    fun declareDouble(key: String, defaultValue: Double, encrypt: Boolean = false) =
+        declareGeneric(key, defaultValue.toString(), encrypt) {
+            try {
+                it?.toDouble() ?: defaultValue
+            } catch (e: NumberFormatException) {
+                log.error("Failed to parse double setting for key '$key', returning default value $defaultValue", e)
+                defaultValue
+            }
+        }
+
+    private fun <T> declareGeneric(
+        key: String,
+        defaultValue: String?,
+        encrypt: Boolean = false,
+        parser: (String?) -> T,
+    ): ReadOnlyProperty<Any?, T> {
+        return ReadOnlyProperty { _, _ ->
+            val current = self.getValue(key)
+            if (current != null) {
+                return@ReadOnlyProperty parser(current)
+            }
+            if (defaultValue != null) {
+                self.set(key, defaultValue, encrypt = encrypt)
+            }
+            parser(defaultValue)
+        }
+    }
+
+//    fun declareMutable(
+//        key: String,
+//        defaultValue: String,
+//        encrypt: Boolean = false,
+//        writeDefaultIfAbsent: Boolean = false,
+//    ): ReadWriteProperty<Any?, String> {
+//        return object : ReadWriteProperty<Any?, String> {
+//            override fun getValue(thisRef: Any?, property: KProperty<*>): String {
+//                val current = self.getValue(key)
+//                if (current != null) return current
+//
+//                if (writeDefaultIfAbsent) {
+//                    self.set(key, defaultValue, encrypt = encrypt)
+//                }
+//                return defaultValue
+//            }
+//
+//            override fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
+//                self.set(key, value, encrypt = encrypt)
+//            }
+//        }
+//    }
 
     private fun toModel(entity: SettingEntity): Setting {
         val rawValue = entity.value

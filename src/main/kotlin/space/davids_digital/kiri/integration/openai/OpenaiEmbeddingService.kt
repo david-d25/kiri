@@ -11,12 +11,11 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import space.davids_digital.kiri.model.Setting
 import space.davids_digital.kiri.orm.service.SettingOrmService
 import java.util.concurrent.atomic.AtomicReference
 
 @Service
-class OpenAiEmbeddingService(private val settings: SettingOrmService) {
+class OpenaiEmbeddingService(private val settings: SettingOrmService) {
     object SettingKeys {
         const val API_KEY = "integration.openai.apiKey"
     }
@@ -41,15 +40,14 @@ class OpenAiEmbeddingService(private val settings: SettingOrmService) {
         }
     }
 
-    private fun onApiKeyChange(setting: Setting) {
+    private fun onApiKeyChange(value: String?) {
         log.info("Got new OpenAI API key")
-        val apiKey = setting.value?.takeIf { it.isNotBlank() }
-        if (apiKey == null) {
+        if (value == null) {
             log.warn("OpenAI API key is empty, client will be disabled")
             clientRef.set(null)
             return
         }
-        clientRef.set(buildClient(apiKey))
+        clientRef.set(buildClient(value))
         log.info("OpenAI client created")
     }
 

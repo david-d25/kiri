@@ -4,12 +4,11 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.springframework.stereotype.Component
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ConcurrentLinkedDeque
 
 @Component
 class FrameBuffer : Iterable<Frame> {
-    private val fixedFrames = ConcurrentLinkedQueue<DataFrame>()
-    private val rollingFrames = ConcurrentLinkedQueue<Frame>()
+    private val frames = ConcurrentLinkedDeque<Frame>()
 
     private var sequenceCounter: Long = 0
     private val lock = Any()
@@ -21,98 +20,60 @@ class FrameBuffer : Iterable<Frame> {
     )
     val updates = updatesInternal.asSharedFlow()
 
-    var hardLimit = 18
+    var hardLimit = 128
 
-    val onlyFixed get() = fixedFrames.iterator()
-    val onlyRolling get() = rollingFrames.iterator()
-    val size get() = fixedFrames.size + rollingFrames.size
+    val size get() = frames.size
 
     data class Snapshot(
-        val fixed: List<DataFrame>,
-        val rolling: List<Frame>,
-        val hardLimit: Int,
+        val frames: List<Frame>,
         val sequence: Long
     )
 
     fun snapshot(): Snapshot = synchronized(lock) {
-        Snapshot(
-            fixed = fixedFrames.toList(),
-            rolling = rollingFrames.toList(),
-            hardLimit = hardLimit,
-            sequence = sequenceCounter
-        )
+        Snapshot(frames.toList(), sequenceCounter)
     }
 
-    fun notifyChanged() = synchronized(lock) {
-        bumpLocked()
+    fun clear() = synchronized(lock) {
+        frames.clear()
+        incrementSequenceCounter()
     }
 
-    fun clearAll() = synchronized(lock) {
-        clearOnlyFixedLocked()
-        clearOnlyRollingLocked()
-        bumpLocked()
+    fun trim(keepLastN: Int) {
+        synchronized(lock) {
+            while (frames.size > keepLastN) {
+                frames.poll()
+            }
+            incrementSequenceCounter()
+        }
     }
 
-    fun clearOnlyFixed() = synchronized(lock) {
-        clearOnlyFixedLocked()
-        bumpLocked()
-    }
-    private fun clearOnlyFixedLocked() {
-        fixedFrames.clear()
-    }
-
-    fun clearOnlyRolling() = synchronized(lock) {
-        clearOnlyRollingLocked()
-        bumpLocked()
-    }
-
-    private fun clearOnlyRollingLocked() {
-        rollingFrames.clear()
-    }
-
-    fun addRolling(frame: Frame) = synchronized(lock) {
-        rollingFrames.add(frame)
+    fun add(frame: Frame) = synchronized(lock) {
+        frames.add(frame)
         trimLocked()
-        bumpLocked()
-    }
-
-    fun removeRolling(frame: Frame) = synchronized(lock) {
-        rollingFrames.remove(frame)
-        bumpLocked()
-    }
-
-    fun addFixed(frame: DataFrame) = synchronized(lock) {
-        fixedFrames.add(frame)
-        trimLocked()
-        bumpLocked()
-    }
-
-    fun removeFixed(frame: DataFrame) = synchronized(lock) {
-        fixedFrames.remove(frame); bumpLocked()
+        incrementSequenceCounter()
     }
 
     fun addStatic(block: StaticDataFrame.Builder.() -> Unit) {
         val builder = StaticDataFrame.Builder().apply(block)
-        addRolling(builder.build())
+        add(builder.build())
     }
 
     fun addToolCall(block: ToolCallFrame.Builder.() -> Unit) {
         val builder = ToolCallFrame.Builder().apply(block)
-        addRolling(builder.build())
+        add(builder.build())
     }
 
     override fun iterator(): Iterator<Frame> = sequence {
-        yieldAll(fixedFrames)
-        yieldAll(rollingFrames)
+        yieldAll(frames)
     }.iterator()
 
     private fun trimLocked() {
-        while (rollingFrames.isNotEmpty() && fixedFrames.size + rollingFrames.size > hardLimit) {
-            rollingFrames.poll()
+        while (frames.size > hardLimit) {
+            frames.poll()
         }
     }
 
-    private fun bumpLocked() {
+    private fun incrementSequenceCounter() {
         sequenceCounter++
         updatesInternal.tryEmit(sequenceCounter)
     }

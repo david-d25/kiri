@@ -1,5 +1,7 @@
 package space.davids_digital.kiri.agent.tool
 
+import kotlin.reflect.KFunction
+
 /**
  * Implementing this interface is required for components providing methods to be called by agent.
  */
@@ -16,7 +18,7 @@ interface AgentToolProvider {
      * If a method returns anything other than [String] or [Unit], the return value will be converted to a [String]
      * using [Any.toString].
      */
-    fun getAvailableAgentToolMethods(): Collection<Function<*>>
+    fun getAvailableAgentToolMethods(): Collection<KFunction<*>>
 
     /**
      * Returns a collection of providers for which this provider is parent.

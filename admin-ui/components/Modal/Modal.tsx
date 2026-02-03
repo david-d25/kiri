@@ -76,7 +76,7 @@ export default function Modal({
                 {title && (
                     <div className={styles.modalHeader}>
                         <h2 className={styles.modalTitle}>{title}</h2>
-                        <Button className={styles.modalCloseButton} onClick={onClose} lightweight>
+                        <Button className={styles.modalCloseButton} onClick={onClose} noStyle>
                             ×
                         </Button>
                     </div>

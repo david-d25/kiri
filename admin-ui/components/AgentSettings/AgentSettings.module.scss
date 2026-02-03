@@ -11,10 +11,21 @@
   vertical-align: middle;
 }
 
+.thin {
+  max-width: 480px;
+}
+
 .maxMessageCountInput,
 .usageLimitInput,
 .modelHandleInput {
   max-width: 400px;
+}
+
+.collapsibleHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  cursor: default;
 }
 
 .row {

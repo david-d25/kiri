@@ -8,6 +8,35 @@ sealed interface FrameDto {
     val type: String
 }
 
+data class NativeWebSearchFrameDto(
+    val webSearch: WebSearchDto
+) : FrameDto {
+    override val type: String = "nativeWebSearch"
+}
+
+sealed interface WebSearchDto {
+    val type: String
+
+    data class OpenPage(
+        val url: String,
+    ) : WebSearchDto {
+        override val type: String = "openPage"
+    }
+
+    data class Search(
+        val query: String,
+    ) : WebSearchDto {
+        override val type: String = "search"
+    }
+
+    data class FindInPage(
+        val pattern: String,
+        val url: String,
+    ) : WebSearchDto {
+        override val type: String = "findInPage"
+    }
+}
+
 data class DataFrameDto(
     val tag: String,
     val attributes: Map<String, String>,
@@ -43,7 +72,7 @@ data class ToolUseDto(
 data class ToolResultDto(
     val toolUseId: String,
     val name: String,
-    val output: ToolOutputDto,
+    val output: List<ToolOutputDto>,
 )
 
 sealed interface ToolInputDto {

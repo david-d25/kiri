@@ -4,8 +4,11 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
+import org.jsoup.parser.Parser
 import space.davids_digital.kiri.model.telegram.TelegramMessageEntity
 import space.davids_digital.kiri.model.telegram.TelegramMessageEntity.Type
+import kotlin.compareTo
+import kotlin.text.compareTo
 
 /**
  * Bidirectional mapper between Telegram raw text + entities and lightweight HTML understood by LLM.
@@ -31,32 +34,120 @@ object TelegramHtmlMapper {
      * Convert Telegram raw [text] + [entities] into HTML string understood by LLM.
      */
     fun toHtml(text: String, entities: List<TelegramMessageEntity>): String {
-        if (entities.isEmpty()) return text
+        // IMPORTANT: entity offsets/lengths from Telegram are calculated on the *raw* message text.
+        // If some upstream code already HTML-escaped the text (e.g. turned "&&" into "&amp;&amp;"),
+        // then all entity offsets after the first '&' will shift and tags will "slide".
+        //
+        // We *normally* expect raw text here. As a safety net we detect common HTML entities and
+        // unescape them back to raw text so that offsets line up again.
+        val sourceText = if (looksHtmlEscaped(text)) Parser.unescapeEntities(text, false) else text
+
+        if (entities.isEmpty()) return sourceText
+
+        // Telegram Bot API offsets are UTF‑16 code units, but some client libraries (or intermediate
+        // pipelines) may accidentally provide offsets in Unicode *code points*.
+        // When that happens, entity boundaries can fall **inside** surrogate pairs / emoji sequences,
+        // which leads to:
+        //   1) tags "shifting" (e.g. only part of a link is wrapped),
+        //   2) U+FFFD replacement chars ("�") when an unpaired surrogate is rendered.
+        // We defensively normalize entity indices to safe UTF‑16 boundaries.
+        val normalizedEntities = normalizeEntityIndices(sourceText, entities)
 
         // EVENTS: map from position -> list of tags (with length for ordering by nesting depth)
-        data class TagEvent(val length: Int, val tag: String)
+        data class TagEvent(val length: Int, val seq: Int, val tag: String)
         val opens = mutableMapOf<Int, MutableList<TagEvent>>()
         val closes = mutableMapOf<Int, MutableList<TagEvent>>()
 
         // 1. build open/close lists
-        for (e in entities) {
+        for ((seq, e) in normalizedEntities.withIndex()) {
             val (open, close) = htmlTagsForEntity(e) ?: continue // skip unsupported types
-            opens.computeIfAbsent(e.offset) { mutableListOf() }.add(TagEvent(e.length, open))
-            closes.computeIfAbsent(e.offset + e.length) { mutableListOf() }.add(TagEvent(e.length, close))
+            opens.computeIfAbsent(e.offset) { mutableListOf() }.add(TagEvent(e.length, seq, open))
+            closes.computeIfAbsent(e.offset + e.length) { mutableListOf() }.add(TagEvent(e.length, seq, close))
         }
-        // 2. sort to guarantee valid nesting: open longer first, close shorter first
-        opens.values.forEach { it.sortByDescending { ev -> ev.length } }
-        closes.values.forEach { it.sortBy { ev -> ev.length } }
+        // 2. sort to guarantee valid nesting:
+        //    - open longer first
+        //    - close shorter first
+        //    - BUT if two entities share the same [offset,length] (e.g., bold + link applied to the
+        //      exact same range), then close order MUST be the reverse of open order, otherwise
+        //      you'll produce crossing tags (<a><b>..</a></b>).
+        //    We achieve this by using a stable sequence number.
+        opens.values.forEach { it.sortWith(compareByDescending<TagEvent> { ev -> ev.length }.thenBy { it.seq }) }
+        closes.values.forEach { it.sortWith(compareBy<TagEvent> { ev -> ev.length }.thenByDescending { it.seq }) }
 
         // 3. walk through the text and weave tags
         val sb = StringBuilder()
-        for (i in 0..text.length) { // iterate *between* characters, inclusive upper bound for trailing closes
+        for (i in 0..sourceText.length) { // iterate *between* characters, inclusive upper bound for trailing closes
             closes[i]?.forEach { sb.append(it.tag) }
-            if (i == text.length) break // we are past last char
+            if (i == sourceText.length) break // we are past last char
             opens[i]?.forEach { sb.append(it.tag) }
-            sb.append(text[i])
+            sb.append(sourceText[i].toString().htmlEscape())
         }
         return sb.toString()
+    }
+
+
+    private fun looksHtmlEscaped(s: String): Boolean {
+        // Heuristic: we only care about the common escapes that are likely introduced by an HTML-escape pass.
+        // If the user literally typed "&amp;" in Telegram, this will unescape it back to "&".
+        // In practice this is the right trade-off to keep entity offsets consistent.
+        return s.contains("&amp;") || s.contains("&lt;") || s.contains("&gt;") || s.contains("&quot;") || s.contains("&#39;") || s.contains("&#x")
+    }
+
+    /**
+     * Normalize entity offsets/lengths to safe UTF‑16 indices.
+     *
+     * Why:
+     * - Some sources accidentally provide offsets in code points.
+     * - Or intermediate text processing may change indices.
+     *
+     * Strategy:
+     * 1) If an entity boundary splits a surrogate pair or falls out of bounds, try interpreting
+     *    the offset/length as *code point* indices and convert to UTF‑16 indices.
+     * 2) If it still splits a surrogate pair, expand the range to fully include the surrogate pair.
+     * 3) Clamp everything to [0..text.length].
+     */
+    private fun normalizeEntityIndices(text: String, entities: List<TelegramMessageEntity>): List<TelegramMessageEntity> {
+        if (entities.isEmpty()) return entities
+
+        val cpCount = text.codePointCount(0, text.length)
+
+        fun splitsSurrogate(boundary: Int): Boolean = text.isSurrogatePairBoundary(boundary)
+
+        fun clamp(v: Int): Int = v.coerceIn(0, text.length)
+
+        fun expandToAvoidSurrogates(start0: Int, end0: Int): Pair<Int, Int> {
+            var start = clamp(start0)
+            var end = clamp(end0)
+            // If boundary falls between high+low surrogate, expand to include full pair.
+            if (splitsSurrogate(start)) start = clamp(start - 1)
+            if (splitsSurrogate(end)) end = clamp(end + 1)
+            if (end < start) end = start
+            return start to end
+        }
+
+        return entities.map { e ->
+            var start = e.offset
+            var end = e.offset + e.length
+
+            val inBounds = start >= 0 && end >= 0 && start <= end && end <= text.length
+            val boundariesSafe = inBounds && !splitsSurrogate(start) && !splitsSurrogate(end)
+            if (!boundariesSafe) {
+                // Try treating offsets as code points.
+                val cpInBounds = e.offset >= 0 && e.length >= 0 && (e.offset + e.length) <= cpCount
+                if (cpInBounds) {
+                    start = text.offsetByCodePoints(0, e.offset)
+                    end = text.offsetByCodePoints(0, e.offset + e.length)
+                }
+            }
+
+            val (safeStart, safeEnd) = expandToAvoidSurrogates(start, end)
+            if (safeEnd <= safeStart) {
+                // Empty entity – drop by returning a zero-length clone that will be ignored later.
+                e.copy(offset = safeStart, length = 0)
+            } else {
+                e.copy(offset = safeStart, length = safeEnd - safeStart)
+            }
+        }.filter { it.length > 0 }
     }
 
     /**
@@ -64,7 +155,7 @@ object TelegramHtmlMapper {
      * Complexity: O(totalDomNodes).
      */
     fun fromHtml(html: String): Parsed {
-        val doc = Jsoup.parseBodyFragment(html)
+        val doc = Jsoup.parse(html)
         val body = doc.body()
         val textBuilder = StringBuilder()
         val entities = mutableListOf<TelegramMessageEntity>()
@@ -72,34 +163,51 @@ object TelegramHtmlMapper {
         return Parsed(textBuilder.toString(), entities.sortedWith(compareBy({ it.offset }, { it.length })))
     }
 
-    // ---------------------------------------------------------------------------------------------
-    // Internal helpers
-    // ---------------------------------------------------------------------------------------------
-
     // Recursively traverse DOM, accumulating text and entities.
     private fun traverse(node: Node, depth: Int, acc: StringBuilder, out: MutableList<TelegramMessageEntity>) {
-        when (node) {
-            is TextNode -> acc.append(node.wholeText)
-            is Element  -> processElement(node, depth, acc, out)
-        }
-    }
-
-    private fun processElement(el: Element, depth: Int, acc: StringBuilder, out: MutableList<TelegramMessageEntity>) {
-        val mapping = entityTypeForElement(el)
-        val startOffset = acc.length
-        // children first (depth‑first order)
-        for (child in el.childNodes()) traverse(child, depth + 1, acc, out)
-        val endOffset = acc.length
-        if (mapping != null && endOffset > startOffset) {
-            val (type, url, userId, language) = mapping
-            out += TelegramMessageEntity(
-                type = type,
-                offset = startOffset,
-                length = endOffset - startOffset,
-                url = url,
-                userId = userId,
-                language = language
-            )
+        if (node is TextNode) {
+            acc.append(node.wholeText)
+        } else if (node is Element) {
+            val mapping = entityTypeForElement(node)
+            if (mapping == null && node.tagName() != "body") {
+                // No mapping – output raw HTML tag with attributes
+                // TODO handle void/self-closing tags properly
+                val rawOpenTag = buildString {
+                    append("<")
+                    append(node.tagName())
+                    for (attr in node.attributes()) {
+                        append(" ")
+                        append(attr.key)
+                        if (attr.hasDeclaredValue()) {
+                            append("=\"")
+                            append(attr.value.htmlEscape())
+                            append("\"")
+                        }
+                    }
+                    append(">")
+                }
+                acc.append(rawOpenTag)
+            }
+            val startOffset = acc.length
+            // children first (depth‑first order)
+            for (child in node.childNodes()) {
+                traverse(child, depth + 1, acc, out)
+            }
+            val endOffset = acc.length
+            if (mapping != null && endOffset > startOffset) {
+                val (type, url, userId, language) = mapping
+                out += TelegramMessageEntity(
+                    type = type,
+                    offset = startOffset,
+                    length = endOffset - startOffset,
+                    url = url,
+                    userId = userId,
+                    language = language
+                )
+            }
+            if (mapping == null && !node.tag().isSelfClosing && node.tagName() != "body") {
+                acc.append("</").append(node.tagName()).append(">")
+            }
         }
     }
 
@@ -194,6 +302,17 @@ object TelegramHtmlMapper {
 
     private fun String.htmlEscape(): String =
         this.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+
+    /**
+     * @return true if [index] is a *boundary* that splits a surrogate pair.
+     * Boundary means "between (index-1) and index" in UTF‑16 code units.
+     */
+    private fun String.isSurrogatePairBoundary(index: Int): Boolean {
+        if (index <= 0 || index >= this.length) return false
+        val prev = this[index - 1]
+        val cur = this[index]
+        return Character.isHighSurrogate(prev) && Character.isLowSurrogate(cur)
+    }
 
     /** Simple 4‑tuple substitute to avoid extra Pair/Triple nesting. */
     private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

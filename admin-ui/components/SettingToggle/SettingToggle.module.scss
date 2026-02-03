@@ -1,0 +1,15 @@
+.loadingIcon {
+  display: inline;
+  height: 1rem;
+  animation: icon-appear 500ms step-end;
+}
+
+@keyframes icon-appear {
+  0% {
+    height: 0;
+  }
+
+  100% {
+    height: 1rem;
+  }
+}

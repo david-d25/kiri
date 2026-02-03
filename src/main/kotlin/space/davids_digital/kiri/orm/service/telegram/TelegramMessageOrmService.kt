@@ -80,6 +80,14 @@ class TelegramMessageOrmService(
     }
 
     @Transactional(readOnly = true)
+    fun findOrderedByMessageIdDesc(chatId: Long, limit: Int): Page<TelegramMessage> {
+        return repo.findByIdChatId(
+            chatId,
+            PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "id.messageId"))
+        ).map(mapper::toModel)
+    }
+
+    @Transactional(readOnly = true)
     fun findOldestMessage(chatId: Long): TelegramMessage? {
         return repo.findFirstByIdChatId(chatId, Sort.by("date", "id.messageId"))?.let(mapper::toModel)
     }

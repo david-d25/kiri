@@ -1,15 +1,13 @@
-import {DataFrameDto, FrameDto} from "./FrameDto";
+import {FrameDto} from "./FrameDto";
 
 export type FrameBufferStateDto = {
-    fixedFrames: DataFrameDto[],
-    rollingFrames: FrameDto[],
+    frames: FrameDto[],
     hardLimit: number
 };
 
 export namespace FrameBufferStateDto {
     export const NULL: FrameBufferStateDto = {
-        fixedFrames: [],
-        rollingFrames: [],
+        frames: [],
         hardLimit: 0
     };
 }

@@ -1,11 +1,15 @@
 package space.davids_digital.kiri.agent.app.telegram
 
-import jakarta.transaction.Transactional
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.context.annotation.Scope
 import org.springframework.data.domain.PageRequest
+import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.app.AgentApp
 import space.davids_digital.kiri.agent.frame.DataFrame
+import space.davids_digital.kiri.agent.frame.DataFrameUtils
+import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameter
@@ -15,254 +19,200 @@ import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.service.TelegramNotificationService
+import space.davids_digital.kiri.service.TemporaryFilesService
 import kotlin.math.max
+import kotlin.reflect.KFunction
 
+@Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 @AgentToolNamespace("telegram")
 open class TelegramApp(
     private val telegram: TelegramService,
     private val renderer: TelegramAppRenderer,
     private val telegramNotificationService: TelegramNotificationService,
     private val chatOrm: TelegramChatOrmService,
-    private val messageOrm: TelegramMessageOrmService
+    private val messageOrm: TelegramMessageOrmService,
+    private val files: TemporaryFilesService
 ): AgentApp("telegram") {
 
     companion object {
         private const val CHATS_PAGE_SIZE = 10
-        private const val MAX_MESSAGES_PER_VIEW = 12
+        private const val MAX_MESSAGES_PER_VIEW = 8
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val log = LoggerFactory.getLogger(javaClass)
 
-    private var viewState = TelegramAppViewState()
-    private var autoscrollToEnd = false
+    private var selectedChatId: Long? = null
 
-    @Transactional
-    override fun render(): List<DataFrame.ContentPart> {
-        if (viewState.openedChat != null && autoscrollToEnd) {
-            scrollToBottom()
+    override fun render(): List<DataFrame.ContentPart> = dataFrameContent {
+        text("Telegram App opened.")
+    }
+
+    override fun getAvailableAgentToolMethods(): List<KFunction<*>> = buildList {
+        add(::showUserProfile)
+        if (selectedChatId == null) {
+            add(::listChats)
+            add(::selectChatById)
+            add(::selectChatByUsername)
         } else {
-            updateLaterMessagesRemaining()
+            add(::listLatestMessages)
+            add(::send)
+            add(::sendSticker)
+            add(::closeChat)
+            add(::download)
         }
-        return renderer.render(viewState)
     }
 
     @AgentToolMethod
-    suspend fun openChat(id: Long): String {
-        val newChat = telegram.getChat(id)
-        if (newChat != null) {
-            val previousChat = viewState.openedChat
-            if (previousChat != null) {
-                telegramNotificationService.onChatClosedInAgentApp(previousChat.id)
+    suspend fun listChats(
+        @AgentToolParameter(description = "zero-based page index")
+        page: Int = 0
+    ): List<DataFrame.ContentPart> {
+        val chats = chatOrm.findAllEnabled(PageRequest.of(page, CHATS_PAGE_SIZE))
+
+        return dataFrameContent {
+            with (renderer) {
+                renderChatsPage(chats)
             }
-            showChat(newChat)
-            telegramNotificationService.onChatOpenedInAgentApp(id)
-        } else {
-            return "Chat with id $id does not exist"
         }
-        return "ok"
     }
 
     @AgentToolMethod
-    suspend fun openChatByUsername(username: String): String {
-        val newChat = telegram.getChat(username.removePrefix("@"))
-        if (newChat != null) {
-            val previousChat = viewState.openedChat
-            if (previousChat != null) {
-                telegramNotificationService.onChatClosedInAgentApp(previousChat.id)
+    suspend fun selectChatById(id: Long): String {
+        val newChat = telegram.getChat(id) ?: return "Chat with id $id not found."
+        val previousChatId = selectedChatId
+        selectedChatId = newChat.id
+        if (previousChatId != null) {
+            telegramNotificationService.onChatClosedInAgentApp(previousChatId)
+        }
+        telegramNotificationService.onChatOpenedInAgentApp(newChat.id)
+        return "Chat selected."
+    }
+
+    @AgentToolMethod
+    suspend fun selectChatByUsername(username: String): String {
+        val newChat = telegram.getChat(username.removePrefix("@")) ?: return "Chat with username '$username' not found."
+        val previousChatId = selectedChatId
+        selectedChatId = newChat.id
+        if (previousChatId != null) {
+            telegramNotificationService.onChatClosedInAgentApp(previousChatId)
+        }
+        telegramNotificationService.onChatOpenedInAgentApp(newChat.id)
+        return "Chat selected."
+    }
+
+    @AgentToolMethod
+    suspend fun closeChat(): String {
+        val chatId = selectedChatId ?: return "No chat is currently selected."
+        selectedChatId = null
+        telegramNotificationService.onChatClosedInAgentApp(chatId)
+        return "Chat closed."
+    }
+
+    @AgentToolMethod
+    suspend fun listLatestMessages(): List<DataFrame.ContentPart> {
+        val chatId = selectedChatId ?: error("No chat is currently selected.")
+        val chat = telegram.getChat(chatId) ?: error("Chat with id $chatId not found.")
+        val messages = messageOrm.findOrderedByMessageIdDesc(chatId, MAX_MESSAGES_PER_VIEW)
+        val lastMessage = messages.maxByOrNull { it.messageId }
+        val laterMessagesRemaining = lastMessage?.let { messageOrm.countMessagesAfterId(chatId, it.messageId) } ?: 0
+        val lastReadMessageId = chat.metadata.lastReadMessageId
+        val laterNewMessagesRemaining = lastReadMessageId?.let { messageOrm.countMessagesAfterId(chatId, it) } ?: 0L
+        lastMessage?.let { setLastReadMessageId(chatId, it.messageId) }
+        return dataFrameContent {
+            with (renderer) {
+                renderChat(chat, messages, laterMessagesRemaining, laterNewMessagesRemaining)
             }
-            showChat(newChat)
-            telegramNotificationService.onChatOpenedInAgentApp(newChat.id)
-        } else {
-            return "Chat with username $username not found"
         }
-        return "ok"
     }
 
-    @AgentToolMethod(description = "Open list of chats. Will close current chat.")
-    fun chatList(pageNumber: Int? = null) {
-        val openedChat = viewState.openedChat
-        if (openedChat != null) {
-            telegramNotificationService.onChatClosedInAgentApp(openedChat.id)
-        }
-        showChats(pageNumber ?: (viewState.chatsPageIndex + 1))
-    }
+//    @AgentToolMethod(description = "search messages based on the specified filters")
+//    suspend fun searchMessages(
+//        textContains: String? = null,
+//        @AgentToolParameter("format: ${DataFrameUtils.PRETTY_DATE_TIME_PATTERN}")
+//        beforeDate: String? = null,
+//        @AgentToolParameter("format: ${DataFrameUtils.PRETTY_DATE_TIME_PATTERN}")
+//        afterDate: String? = null,
+//        userId: Long? = null,
+//    ): List<DataFrame.ContentPart> {
+//        val chatId = selectedChatId ?: error("No chat is currently selected.")
+//        val chat = telegram.getChat(chatId) ?: error("Chat with id $chatId not found.")
+//
+//        // TODO
+//    }
 
-    @AgentToolMethod(description = "Scroll messages; positive = down, negative = up")
-    fun scroll(amount: Int): String {
-        if (amount > 0 && autoscrollToEnd) {
-            return "already at bottom"
-        }
-        val chatId = viewState.openedChat?.id ?: return "Chat not opened"
-        val viewLastMessage = viewState.messagesView.lastOrNull() ?: return "No messages"
-        val latestMessage = messageOrm.findMostRecentMessage(chatId) ?: return "No messages"
-        val oldestMessage = messageOrm.findOldestMessage(chatId) ?: return "No messages"
-        val beforeMessageId = (viewLastMessage.messageId + 1 + amount)
-            .coerceAtMost(latestMessage.messageId + 1)
-            .coerceAtLeast(oldestMessage.messageId + MAX_MESSAGES_PER_VIEW + 1)
-        val newMessagesView = messageOrm.findBeforeMessageIdOrderedByMessageIdDesc(
-            chatId,
-            beforeMessageId,
-            MAX_MESSAGES_PER_VIEW
-        ).reversed()
-        val newViewLastMessage = newMessagesView.lastOrNull() ?: return "No messages"
-        val newerMessagesRemaining = messageOrm.countMessagesAfterId(chatId, newViewLastMessage.messageId)
-        viewState = viewState.copy(
-            messagesView = newMessagesView,
-            laterMessagesRemaining = newerMessagesRemaining
-        )
-        setLastReadMessageId(newViewLastMessage.messageId)
-        autoscrollToEnd = viewLastMessage.messageId == latestMessage.messageId
-        return "ok"
-    }
-
-    @Transactional
-    @AgentToolMethod(description = "Skip the whole chat and scroll to the very bottom")
-    open fun scrollToBottom(): String {
-        val chatId = viewState.openedChat?.id ?: return "Chat not opened"
-        val latestMessage = messageOrm.findMostRecentMessage(chatId) ?: return "No messages"
-        val newMessagesView = messageOrm.findBeforeMessageIdOrderedByMessageIdDesc(
-            chatId,
-            latestMessage.messageId + 1,
-            MAX_MESSAGES_PER_VIEW
-        ).reversed()
-        viewState = viewState.copy(
-            messagesView = newMessagesView,
-            laterMessagesRemaining = 0
-        )
-        setLastReadMessageId(latestMessage.messageId)
-        autoscrollToEnd = true
-        return "ok"
-    }
-
-    @Transactional
     @AgentToolMethod
-    open suspend fun sendSticker(fileId: String): String {
-        val openedChat = viewState.openedChat ?: return "Chat not opened"
-        telegram.sendSticker(openedChat.id, fileId)
-        scrollToBottom()
+    suspend fun showUserProfile(username: String): List<DataFrame.ContentPart> {
+        val cleanUsername = username.removePrefix("@")
+        val user = telegram.getUserByUsername(cleanUsername) ?: return dataFrameContent {
+            text("User with username @$cleanUsername not found.")
+        }
+        val chat = telegram.getChat(cleanUsername)
+        return dataFrameContent {
+            with (renderer) {
+                renderUserProfile(user, chat)
+            }
+        }
+    }
+
+    @AgentToolMethod
+    suspend fun showStickerPack(id: String) {
+        // TODO
+    }
+
+    @AgentToolMethod
+    suspend fun download(fileId: String): String {
+        val bytes = telegram.getFileContent(fileId)
+        val fileName = "file_${fileId}"
+        val createdFile = files.create(fileName, bytes)
+        return "Saved as temporary file: $fileName"
+    }
+
+    @AgentToolMethod
+    suspend fun sendSticker(fileId: String): String {
+        val selectedChatId = selectedChatId ?: return "Chat not opened"
+        telegram.sendSticker(selectedChatId, fileId)
         return "sent"
     }
 
-    @Transactional
     @AgentToolMethod(
         description = "Send message. " +
                 "Supported HTML tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, blockquote, " +
-                "blockquote[expandable]. Message appears in chat immediately after sending."
+                "blockquote[expandable]."
     )
     open suspend fun send(
         message: String,
-        @AgentToolParameter(description = "id of message to reply to") replyTo: Int? = null
+
+        @AgentToolParameter(description = "id of message to reply to")
+        replyTo: Int? = null,
+
+        @AgentToolParameter(description = "images as filenames")
+        images: List<String> = emptyList()
     ): String {
-        val openedChat = viewState.openedChat ?: return "Chat not opened"
-        telegram.sendMessage(openedChat.id, message, replyToMessageId = replyTo)
-        scrollToBottom()
-        viewState = viewState.copy(oldLastReadMessageId = viewState.openedChat?.metadata?.lastReadMessageId)
+        val imageContents = images.map { files.getContent(it) ?: error("file '$it' not found") }
+        val selectedChatId = selectedChatId ?: return "Chat not opened"
+        telegram.sendMessage(selectedChatId, message, replyToMessageId = replyTo, images = imageContents)
         return "sent"
     }
 
-    override suspend fun onOpened() {
-        showChats(0)
-    }
-
     override suspend fun onClose() {
-        val openedChat = viewState.openedChat
-        if (openedChat != null) {
-            telegramNotificationService.onChatClosedInAgentApp(openedChat.id)
+        val selectedChatId = selectedChatId
+        if (selectedChatId != null) {
+            telegramNotificationService.onChatClosedInAgentApp(selectedChatId)
         }
         scope.cancel("App is closing")
     }
 
-    override fun getAvailableAgentToolMethods(): List<Function<*>> {
-        val result = mutableListOf<Function<*>>(::openChat, ::openChatByUsername)
-        if (viewState.openedChat != null) {
-            result.add(::send)
-            result.add(::chatList)
-            result.add(::sendSticker)
-            result.add(::scroll)
-            if (!autoscrollToEnd) {
-                result.add(::scrollToBottom)
-            }
-        }
-        return result
-    }
-
-    private fun updateLaterMessagesRemaining() {
-        val openedChat = viewState.openedChat ?: return
-        val chatId = openedChat.id
-        val lastMessage = viewState.messagesView.lastOrNull() ?: return
-        viewState = viewState.copy(
-            laterMessagesRemaining = messageOrm.countMessagesAfterId(chatId, lastMessage.messageId),
-            laterNewMessagesRemaining = messageOrm.countMessagesAfterId(
-                chatId,
-                max(lastMessage.messageId, openedChat.metadata.lastReadMessageId ?: 0)
-            )
-        )
-    }
-
-    private fun chatContainsUnreadMessages(): Boolean {
-        val openedChat = viewState.openedChat ?: return false
-        val lastReadMessageId = openedChat.metadata.lastReadMessageId
-        return messageOrm.countMessagesAfterId(openedChat.id, lastReadMessageId ?: 0) > 0
-    }
-
-    private fun viewContainsUnreadMessages(): Boolean {
-        val openedChat = viewState.openedChat ?: return false
-        val viewLastMessageId = viewState.messagesView.lastOrNull()?.messageId ?: return false
-        val lastReadMessageId = openedChat.metadata.lastReadMessageId ?: return true
-        return lastReadMessageId < viewLastMessageId
-    }
-
-    private fun showChats(pageNumber: Int) {
-        val pageIndex = (pageNumber - 1).coerceAtLeast(0)
-        val chats = chatOrm.findAllEnabled(PageRequest.of(pageIndex, CHATS_PAGE_SIZE))
-        viewState = TelegramAppViewState(
-            chatsView = chats.toList(),
-            chatsPageIndex = chats.pageable.pageNumber,
-            chatsTotalPages = chats.totalPages
-        )
-    }
-
-    private fun showChat(chat: TelegramChat) {
-        val messages: List<TelegramMessage>
-        val newerMessagesRemaining: Long
-
-        if (chat.metadata.lastReadMessageId != null) {
-            messages = messageOrm.findBeforeMessageIdOrderedByMessageIdDesc(
-                chat.id,
-                chat.metadata.lastReadMessageId + 1,
-                MAX_MESSAGES_PER_VIEW
-            ).reversed()
-            val newViewLastMessage = messages.lastOrNull() ?: return
-            newerMessagesRemaining = messageOrm.countMessagesAfterId(chat.id, newViewLastMessage.messageId)
-        } else {
-            val firstPage = messageOrm.findFirstOrderedByMessageId(chat.id, MAX_MESSAGES_PER_VIEW)
-            messages = firstPage.toList()
-            newerMessagesRemaining = firstPage.totalElements - firstPage.numberOfElements
-        }
-
-        viewState = viewState.copy(
-            openedChat = chat,
-            messagesView = messages,
-            laterMessagesRemaining = newerMessagesRemaining
-        )
-
-        scroll(MAX_MESSAGES_PER_VIEW/2)
-    }
-
-    private fun setLastReadMessageId(messageId: Int) {
-        val openedChat = viewState.openedChat ?: error("Chat not opened")
+    private fun setLastReadMessageId(chatId: Long, messageId: Int) {
+        val openedChat = chatOrm.findById(chatId) ?: error("chat with id $chatId found")
         if (openedChat.metadata.lastReadMessageId != null && messageId <= openedChat.metadata.lastReadMessageId) {
             return // Don't move up read cursor
         }
-        val newChat = chatOrm.save(openedChat.copy(
+        chatOrm.save(openedChat.copy(
             metadata = openedChat.metadata.copy(
                 lastReadMessageId = messageId
             )
         ))
-        viewState = viewState.copy(
-            openedChat = newChat,
-            oldLastReadMessageId = viewState.openedChat?.metadata?.lastReadMessageId
-        )
     }
 }

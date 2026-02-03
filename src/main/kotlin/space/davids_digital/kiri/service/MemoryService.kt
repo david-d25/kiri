@@ -2,7 +2,7 @@ package space.davids_digital.kiri.service
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import space.davids_digital.kiri.integration.openai.OpenAiEmbeddingService
+import space.davids_digital.kiri.integration.openai.OpenaiEmbeddingService
 import space.davids_digital.kiri.model.MemoryKey
 import space.davids_digital.kiri.model.MemoryPoint
 import space.davids_digital.kiri.model.ScoredMemoryPoint
@@ -17,7 +17,7 @@ import kotlin.math.pow
 @Service
 class MemoryService(
     private val orm: MemoryOrmService,
-    private val openAiEmbeddingService: OpenAiEmbeddingService,
+    private val openAiEmbeddingService: OpenaiEmbeddingService,
     private val embeddingModelOrmService: EmbeddingModelOrmService
 ) {
     val decayRate: Double = 0.99

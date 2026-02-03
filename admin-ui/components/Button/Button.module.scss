@@ -1,7 +1,7 @@
 .button {
   --bg: oklch(30% 0 0);
 
-  &.primary {
+  &[data-color-accent='primary'] {
     --bg: oklch(from var(--accent-blue) calc(l * 0.5) .1 h);
   }
 
@@ -19,7 +19,6 @@
     padding: 5px 15px;
   }
 
-
   &:hover {
     background: oklch(from var(--bg) .35 c h);
   }
@@ -33,9 +32,13 @@
     outline-offset: 1px;
   }
 
-  &.lightweight {
-    border: none;
-    font-size: 18px;
+  &.noStyle {
+    color: inherit;
+    background: inherit;
+    border: inherit;
+    font-size: inherit;
+    padding: inherit;
+    border-radius: inherit;
   }
 
   &:disabled {

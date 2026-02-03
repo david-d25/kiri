@@ -6,17 +6,19 @@ import CrossIcon from "@/icons/cross.svg";
 import {classnames} from "@/lib/classnames";
 
 export interface MultiSelectProps<T> {
-    items: T[];
-    selectedItems: T[];
+    possibleValues: T[];
+    selectedValues: T[];
     onSelect: (item: T) => void;
     onDeselect: (item: T) => void;
-    itemToLabel: (item: T) => string;
-    itemToIdentityKey: (item: T) => string | number;
-    label?: string;
+    valueToSearchString: (item: T) => string;
+    valueToIdentityKey: (item: T) => string | number;
+    valueToItem?: (item: T) => React.ReactNode;
+    label?: React.ReactNode;
     error?: string | null;
     placeholder?: string;
     className?: string;
     disabled?: boolean;
+    muted?: boolean;
     maxItems?: number;
 }
 
@@ -27,16 +29,19 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
     // User removes the last item by tapping Backspace twice
     const [ lastItemRemoveConfirmation, setLastItemRemoveConfirmation ] = useState(false);
 
-    const suggestions = props.items.filter(item =>
-        !props.selectedItems.map(props.itemToIdentityKey).includes(props.itemToIdentityKey(item))
-        && props.itemToLabel(item).toLowerCase().includes(searchTerm.toLowerCase())
+    const suggestions = props.possibleValues.filter(item =>
+        !props.selectedValues.map(props.valueToIdentityKey).includes(props.valueToIdentityKey(item))
+        && props.valueToSearchString(item).toLowerCase().includes(searchTerm.toLowerCase())
     ).slice(0, 100); // Limit to 100 suggestions
 
-    const maxItemsReached = props.maxItems && props.selectedItems.length >= props.maxItems;
-    const showSuggestions = !maxItemsReached && isInputFocused && (suggestions.length > 0 || searchTerm.length == 0);
+    const maxItemsReached = props.maxItems && props.selectedValues.length >= props.maxItems;
+    const showSuggestions = !maxItemsReached
+        && isInputFocused
+        && (suggestions.length > 0 || searchTerm.length == 0)
+        && props.possibleValues.length > 0;
 
     function onSelect(item: T) {
-        if (props.disabled || props.selectedItems.includes(item) || maxItemsReached) {
+        if (props.disabled || props.selectedValues.includes(item) || maxItemsReached) {
             return; // Do not select if disabled or already selected
         }
         props.onSelect(item);
@@ -60,10 +65,10 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
             e.preventDefault(); // Prevent form submission or other default behavior
         } else if (e.key === "Escape") {
             setSearchTerm(""); // Clear search term on Escape
-        } else if (e.key === "Backspace" && searchTerm === "" && props.selectedItems.length > 0) {
+        } else if (e.key === "Backspace" && searchTerm === "" && props.selectedValues.length > 0) {
             if (lastItemRemoveConfirmation) {
                 // Remove the last selected item
-                props.onDeselect(props.selectedItems[props.selectedItems.length - 1]);
+                props.onDeselect(props.selectedValues[props.selectedValues.length - 1]);
                 setLastItemRemoveConfirmation(false);
             } else {
                 setLastItemRemoveConfirmation(true);
@@ -96,21 +101,21 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
     })
 
     return (
-        <div className={rootClassname}>
+        <div className={rootClassname} data-muted={Boolean(props.muted)}>
             { props.label && <label className={styles.label}>{props.label}</label> }
             <div className={styles.body} data-error={Boolean(props.error)}>
-                { props.selectedItems.map((item, index) => {
-                    const lastItem = index === props.selectedItems.length - 1;
+                { props.selectedValues.map((item, index) => {
+                    const lastItem = index === props.selectedValues.length - 1;
                     const removeConfirmation = lastItem && lastItemRemoveConfirmation;
                     const className = classnames({
                         [styles.removeConfirmation]: removeConfirmation,
                     });
                     return (
-                        <Item<T>
+                        <Item
                             className={className}
-                            key={props.itemToIdentityKey(item)}
+                            key={props.valueToIdentityKey(item)}
                             item={item}
-                            renderItem={props.itemToLabel}
+                            renderItem={item => props.valueToItem?.(item) || props.valueToSearchString(item)}
                             onRemove={() => props.onDeselect(item)}
                             disabled={props.disabled}
                         />
@@ -144,7 +149,7 @@ export default function MultiSelect<T>(props: MultiSelectProps<T>) {
                                     onMouseOver={() => setSelectedIndex(index)}
                                     key={index}
                                 >
-                                    {props.itemToLabel(suggestion)}
+                                    {props.valueToItem?.(suggestion) || props.valueToSearchString(suggestion)}
                                 </div>
                             )
                         }) }

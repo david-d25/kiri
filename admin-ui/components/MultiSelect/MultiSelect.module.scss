@@ -1,6 +1,17 @@
 .root {
   position: relative;
   height: fit-content;
+
+  &[data-muted="true"] {
+    .body {
+      background: oklch(from var(--bg-interactive) l c h / 0.5);
+      border-color: oklch(from var(--border-interactive) l c h / 0.5);
+    }
+
+    .item {
+      opacity: 0.5;
+    }
+  }
 }
 
 .body {

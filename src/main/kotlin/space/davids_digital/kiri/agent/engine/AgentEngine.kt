@@ -12,16 +12,23 @@ import kotlinx.coroutines.sync.Mutex
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.agent.app.AppManager
+import space.davids_digital.kiri.agent.engine.event.EngineEvent
+import space.davids_digital.kiri.agent.engine.event.SleepEvent
+import space.davids_digital.kiri.agent.engine.event.TickEvent
+import space.davids_digital.kiri.agent.engine.event.WakeUpRequestEvent
 import space.davids_digital.kiri.agent.frame.DataFrame
+import space.davids_digital.kiri.agent.frame.DataFrameUtils.addCreatedAtNow
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.FrameRenderer
-import space.davids_digital.kiri.agent.frame.addCreatedAtNow
+import space.davids_digital.kiri.agent.frame.NativeWebSearchFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
+import space.davids_digital.kiri.llm.ChatCompletionRequest.Reasoning.Effort
 import space.davids_digital.kiri.llm.ChatCompletionResponse
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
+import space.davids_digital.kiri.llm.ChatCompletionWebSearch
 import space.davids_digital.kiri.llm.dsl.chatCompletionRequest
 import space.davids_digital.kiri.llm.dsl.chatCompletionToolUseResult
 import space.davids_digital.kiri.model.EngineState
@@ -30,6 +37,7 @@ import space.davids_digital.kiri.service.ChatCompletionService
 import space.davids_digital.kiri.service.ChatCompletionServiceRegistry
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.min
 import kotlin.time.Duration.Companion.seconds
 
 @Service
@@ -44,18 +52,21 @@ class AgentEngine(
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
     private val chatCompletionServiceRegistry: ChatCompletionServiceRegistry,
-    private val settingOrmService: SettingOrmService
+    settings: SettingOrmService
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 10000L
     }
 
-    private object SettingsKeys {
-        const val INSTRUCTIONS = "agent.engine.content.instructions"
-        const val MODEL_HANDLE = "agent.engine.modelHandle"
-    }
-
     private val log = LoggerFactory.getLogger(this::class.java)
+
+    private val instructions by settings.declareString("agent.engine.content.instructions", "")
+    private val modelHandle by settings.declareStringNullable("agent.engine.modelHandle", null)
+    private val maxOutputTokens by settings.declareLong("agent.engine.llm.maxOutputTokens", 1024)
+    private val reasoningEnabled by settings.declareBoolean("agent.engine.llm.reasoning.enabled", false)
+    private val reasoningMaxTokens by settings.declareLong("agent.engine.llm.reasoning.maxTokens", 2048)
+    private val reasoningEffort by settings.declareStringNullable("agent.engine.llm.reasoning.effort", null)
+    private val webSearchEnabled by settings.declareBoolean("agent.engine.llm.tool.external.webSearch.enabled", false)
 
     private val run = AtomicBoolean(false)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -68,7 +79,7 @@ class AgentEngine(
 
     @PostConstruct
     private fun init() {
-        frames.clearOnlyRolling()
+        frames.clear()
         addSimpleText("system", "System started.")
         scope.launch {
             eventBus.events.collect(::handleEvent)
@@ -110,8 +121,8 @@ class AgentEngine(
         }
         try {
             mutableState.emit(EngineState.RUNNING)
-            val modelHandle = settingOrmService.getValue(SettingsKeys.MODEL_HANDLE)
-            if (modelHandle == null) {
+            val modelHandle = modelHandle
+            if (modelHandle.isNullOrBlank()) {
                 log.error("No model handle configured")
                 softStop()
                 return
@@ -130,6 +141,7 @@ class AgentEngine(
             return
         } catch (e: Exception) {
             log.error("Tick error", e)
+            delay(10000)
             return
         } finally {
             tickMutex.unlock()
@@ -168,12 +180,16 @@ class AgentEngine(
         modelHandle: String,
         chatCompletionService: ChatCompletionService
     ): ChatCompletionResponse {
-        val instructions = settingOrmService.getValue(SettingsKeys.INSTRUCTIONS) ?: ""
+        val maxOutputTokensWithReasoning = if (reasoningEnabled) {
+            maxOutputTokens + reasoningMaxTokens
+        } else {
+            maxOutputTokens
+        }
         val request = chatCompletionRequest {
             this.modelHandle = modelHandle
-            this.instructions = instructions
-            maxOutputTokens = 2048
-            temperature = 0.8
+            this@chatCompletionRequest.instructions = this@AgentEngine.instructions
+            maxOutputTokens = maxOutputTokensWithReasoning
+            temperature = 1.0
             tools {
                 choice = REQUIRED
                 allowParallelUse = true
@@ -184,80 +200,128 @@ class AgentEngine(
                         parameters = toolParameterMapper.map(it.callable)
                     }
                 }
+                external {
+                    webSearch {
+                        enabled = webSearchEnabled && !compactionRequired()
+                    }
+                }
             }
-            frameRenderer.render(frames, this)
+            reasoning {
+                enabled = reasoningEnabled
+                effort = when (reasoningEffort) {
+                    "low" -> Effort.LOW
+                    "medium" -> Effort.MEDIUM
+                    "high" -> Effort.HIGH
+                    else -> Effort.AUTO
+                }
+                maxTokens = reasoningMaxTokens
+            }
+            with (frameRenderer) {
+                render(frames)
+            }
         }
+        log.info("${request.tools.functions.size} function tools available for this request")
         return chatCompletionService.request(request)
     }
 
     private suspend fun handleResponse(response: ChatCompletionResponse) {
         for (item in response.content) {
-            if (item !is ChatCompletionResponse.ContentItem.ToolUse) {
+            handleResponseItem(item)
+        }
+    }
+
+    private suspend fun handleResponseItem(item: ChatCompletionResponse.ContentItem) {
+        when (item) {
+            is ChatCompletionResponse.ContentItem.ToolUse -> handleResponseItem(item)
+            is ChatCompletionWebSearch -> handleResponseItem(item)
+            else -> {
                 log.warn("Unexpected agent response part '${item::class}', skipping")
-                continue
             }
+        }
+    }
 
-            // Very tricky shit happening here, will probably need to refactor
+    private suspend fun handleResponseItem(item: ChatCompletionResponse.ContentItem.ToolUse) {
+        // Very tricky shit happening here, will probably need to refactor
 
-            val toolUse = item.toolUse
+        val toolUse = item.toolUse
 
-            val proxy = object {
-                lateinit var provider: () -> ChatCompletionToolUseResult
-            }
-            val toolResult: (String) -> Unit = {
-                proxy.provider = {
-                    chatCompletionToolUseResult {
-                        id = toolUse.id
-                        name = toolUse.name
-                        output {
-                            text(it)
-                        }
+        val proxy = object {
+            lateinit var provider: () -> ChatCompletionToolUseResult
+        }
+        val toolResult: (String) -> Unit = {
+            proxy.provider = {
+                chatCompletionToolUseResult {
+                    id = toolUse.id
+                    name = toolUse.name
+                    output {
+                        text(it)
                     }
                 }
             }
-            toolResult("<Tool is still running, result is not ready...>")
+        }
+        toolResult("<Tool is still running, result is not ready...>")
 
-            log.info("Agent called tool '${toolUse.name}'")
+        log.info("Agent called tool '${toolUse.name}'")
 
-            val entry = toolRegistry.find(toolUse.name)
-            if (entry == null) {
-                log.warn("Tool '${toolUse.name}' not found in registry, which is weird")
-                toolResult("Unexpected error: tool '${toolUse.name}' was not found. This is certainly a system bug.")
-                continue
-            }
-            if (entry.createFrame) {
-                frames.addToolCall {
-                    this.toolUse = item.toolUse
-                    resultProvider = {
-                        proxy.provider()
-                    }
+        val entry = toolRegistry.find(toolUse.name)
+        if (entry == null || entry.createFrame) {
+            frames.addToolCall {
+                this.toolUse = item.toolUse
+                resultProvider = {
+                    proxy.provider()
                 }
             }
-            val toolResponse = try {
-                toolCallExecutor.execute(entry.callable, toolUse.input, entry.receiver)
-            } catch (e: ServiceException) {
-                log.error("Tool '${toolUse.name}' threw a service exception", e)
-                toolResult("Tool failed with message '${e.message}'")
-                continue
-            } catch (e: Exception) {
-                log.error("Tool '${toolUse.name}' threw an exception", e)
-                toolResult(
-                    """
+        }
+        if (entry == null) {
+            log.warn("Tool '${toolUse.name}' not found in registry, which is weird")
+            toolResult("Unexpected error: tool '${toolUse.name}' was not found")
+            return
+        }
+
+        val toolResponse = try {
+            toolCallExecutor.execute(entry.callable, toolUse.input, entry.receiver)
+        } catch (e: ServiceException) {
+            log.error("Tool '${toolUse.name}' threw a service exception", e)
+            toolResult("Tool failed with message '${e.message}'")
+            return
+        } catch (e: Exception) {
+            log.error("Tool '${toolUse.name}' threw an exception", e)
+            toolResult(
+                """
                     Tool threw an unexpected exception ${e::class}: ${e.message}.
                     Here are top 3 stack trace items:
                     ```
                     ${e.stackTrace.take(3).joinToString("\n")}
                     ```
-                    """.trimIndent()
-                )
-                continue
-            }
-            if (toolResponse === Unit) {
-                toolResult("ok")
-            } else {
-                toolResult(toolResponse.toString())
-            }
+                """.trimIndent()
+            )
+            return
         }
+        if (toolResponse === Unit) {
+            toolResult("ok")
+        } else if (toolResponse is List<*> && toolResponse.all { it is DataFrame.ContentPart }) {
+            proxy.provider = {
+                chatCompletionToolUseResult {
+                    id = toolUse.id
+                    name = toolUse.name
+                    output = toolResponse.filterIsInstance<DataFrame.ContentPart>().map {
+                        when (it) {
+                            is DataFrame.Text -> ChatCompletionToolUseResult.Output.Text(it.text)
+                            is DataFrame.Image -> ChatCompletionToolUseResult.Output.Image(
+                                it.data,
+                                it.type
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            toolResult(toolResponse.toString())
+        }
+    }
+
+    private suspend fun handleResponseItem(item: ChatCompletionWebSearch) {
+        frames.add(NativeWebSearchFrame(webSearch = item))
     }
 
     private suspend fun handleError(e: Exception) {
@@ -279,7 +343,11 @@ class AgentEngine(
 
     private fun updateToolRegistry() {
         toolRegistry.clear()
-        toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
+        if (compactionRequired()) {
+            toolScanner.scan(listOf(this), toolRegistry)
+        } else {
+            toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
+        }
     }
 
     private suspend fun wakeUp() {
@@ -311,27 +379,39 @@ class AgentEngine(
         }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::think, ::doNothing, ::cleanRolling)
+    override fun getAvailableAgentToolMethods() = if (compactionRequired()) {
+        listOf(::compact)
+    } else {
+        listOf(::think, ::wait, ::compact)
+    }
+
+    fun compactionRequired(): Boolean {
+        return frames.size > 32
+    }
 
     @AgentToolMethod(description = "Think to yourself and plan")
     fun think(thoughts: String) {
         addSimpleText("thoughts", thoughts)
     }
 
-    @AgentToolMethod(name = "cleanup", description = "Delete old frames")
-    fun cleanRolling(
-        @AgentToolParameter(description = "Text to keep after cleanup")
-        summary: String
-    ) {
-        frames.clearOnlyRolling()
-        addSimpleText("cleanup", "Cleaned up. Context summary:\n$summary")
+    @AgentToolMethod(description = "Free up short-term memory by summarizing older content")
+    fun compact(
+        @AgentToolParameter(description = "Summary of older content to retain")
+        summary: String,
+        @AgentToolParameter(description = "Number of most recent messages to keep unaltered")
+        keepLastN: Int = 10
+    ): String {
+        frames.trim(min(keepLastN, 16))
+        addSimpleText("compaction", summary)
+        return "Compacted memory, kept last $keepLastN frames."
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @AgentToolMethod(
-        description = "Wait for a specified amount of time. This can be interrupted by external events."
+        description = "Wait for a specified amount of time. " +
+                "Waiting can be interrupted by external events like app notifications."
     )
-    suspend fun doNothing(hours: Long, minutes: Long, seconds: Long) {
+    suspend fun wait(hours: Long, minutes: Long, seconds: Long) {
         val effectiveSeconds = hours * 3600 + minutes * 60 + seconds
         log.debug("Agent is going to sleep for $effectiveSeconds seconds")
         val sleptAt = System.currentTimeMillis()

@@ -176,8 +176,7 @@ class AgentToolParameterMapper {
             classifier == Int::class
                     || classifier == Long::class
                     || classifier == Float::class
-                    || classifier == Double::class ->
-                createNumberValue(description)
+                    || classifier == Double::class -> createNumberValue(description)
             classifier == Boolean::class -> createBooleanValue(description)
 
             // Handle data classes - recursively map their properties

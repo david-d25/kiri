@@ -1,20 +1,18 @@
 import s from "./AgentSettings.module.scss";
-import {useGetSettingsByKeys, useUpdateSettings} from "@/hooks/settings";
-import {useGetChatCompletionModels} from "@/hooks/chatCompletion";
-import {SettingDto} from "@/lib/api/types/SettingDto";
 import {useEffect, useState} from "react";
-import {useDebouncedCallback} from "@/lib/useDebouncedCallback";
-import {Tiktoken} from "js-tiktoken/lite";
-// @ts-ignore I don't know why my IDE complains about this import, but it works
-import o200k_base from "js-tiktoken/ranks/o200k_base";
 import InfoPanel from "@/components/InfoPanel/InfoPanel";
-import MultiSelect from "@/components/MultiSelect/MultiSelect";
-import Link from "next/link";
-import TextArea from "@/components/TextArea/TextArea";
 import Button from "@/components/Button/Button";
 import Container from "../Container/Container";
+import {useSettingsFormState} from "@/hooks/useSettingsFormState";
+import {ChatCompletionModelDto} from "@/lib/api/types/ChatCompletionModelDto";
+import LoadingOverlay from "@/components/LoadingOverlay/LoadingOverlay";
+import ChatCompletionModelSelector from "@/components/ChatCompletionModelSelector/ChatCompletionModelSelector";
+import FormLabel from "@/components/FormLabel/FormLabel";
+import LlmMaxTokensInput from "@/components/AgentSettings/common/LlmMaxTokensInput";
+import ReasoningSettingsCollapsibleInput from "@/components/AgentSettings/common/ReasoningSettingsCollapsibleInput";
+import Checkbox from "@/components/Checkbox/Checkbox";
+import InstructionsInput from "@/components/AgentSettings/common/InstructionsInput";
 
-const tokenEncoding = new Tiktoken(o200k_base);
 
 export default function AgentSettings() {
     return (
@@ -27,96 +25,50 @@ export default function AgentSettings() {
 }
 
 function DiscussionChatSettings() {
-    const messageStatsPerformanceWarningThreshold = 1000000;
+    const {
+        settings,
+        loading,
+        anyError,
+        anyChanged,
+        clearErrors,
+        save,
+        reset
+    } = useSettingsFormState({
+        instructions:       { key: "agent.engine.content.instructions", defaultValue: "" },
+        modelHandle:        { key: "agent.engine.modelHandle", defaultValue: null as string | null },
+        maxOutputTokens:    { key: "agent.engine.llm.maxOutputTokens", defaultValue: 1024 },
+        reasoningEnabled:   { key: "agent.engine.llm.reasoning.enabled", defaultValue: false },
+        reasoningMaxTokens: { key: "agent.engine.llm.reasoning.maxTokens", defaultValue: 2048 },
+        reasoningEffort:    { key: "agent.engine.llm.reasoning.effort", defaultValue: null as string | null },
+        webSearchEnabled:   { key: "agent.engine.llm.tool.external.webSearch.enabled", defaultValue: false },
+    });
 
-    const Keys = {
-        ASSISTANT_INSTRUCTIONS: 'agent.engine.content.instructions',
-        MODEL_HANDLE: 'agent.engine.modelHandle',
-    };
+    // Model features
+    const [ modelFeatures, setModelFeatures ] = useState<ChatCompletionModelDto.Features | null>(null);
+    const [ modelReasoningType, setModelReasoningType ] = useState<ChatCompletionModelDto.ReasoningType | null>(null);
 
-    const settingsRequest = useGetSettingsByKeys([
-        Keys.ASSISTANT_INSTRUCTIONS,
-        Keys.MODEL_HANDLE,
-    ]);
-    const updateRequest = useUpdateSettings();
-    const modelsRequest = useGetChatCompletionModels();
+    useEffect(resetModelHandleError, [settings.modelHandle.value]);
 
-    const settingByKey = settingsRequest.data?.reduce<Record<string, SettingDto>>((acc, setting) => {
-        acc[setting.key] = setting;
-        return acc;
-    }, {}) || {};
-    const modelOptions = modelsRequest.data?.map(model => model.handle) || [];
-
-    // Original values
-    const assistantInstructionsSettingValue = settingByKey[Keys.ASSISTANT_INSTRUCTIONS]?.value;
-    const modelHandleSettingValue = settingByKey[Keys.MODEL_HANDLE]?.value;
-
-    // Input states
-    const [ assistantInstructions, setAssistantInstructions ] = useState('');
-    const [ modelHandle, setModelHandle ] = useState<string | null>(null);
-
-    // Input errors
-    const [ modelHandleError, setModelHandleError ] = useState<string | null>(null);
-
-    // Stats
-    const [ symbolCount, setSymbolCount ] = useState(0);
-    const [ o200KBaseTokenCount, setO200KBaseTokenCount ] = useState(0);
-
-    // Change detection
-    const assistantInstructionsChanged = (assistantInstructionsSettingValue || '') !== assistantInstructions;
-    const modelHandleChanged = modelHandleSettingValue !== modelHandle;
-    const anythingChanged = assistantInstructionsChanged || modelHandleChanged;
-
-    const loading = settingsRequest.isLoading || updateRequest.isPending || modelsRequest.isLoading;
-
-    const recalculateStats = useDebouncedCallback(recalculateStatsSync, 300);
-
-    const anyError = updateRequest.error || settingsRequest.error || modelsRequest.error;
-
-    useEffect(recalculateStats, [assistantInstructions]);
-
-    useEffect(() => {
-        if (settingsRequest.data) {
-            setAssistantInstructions(assistantInstructionsSettingValue || '');
-            setModelHandle(modelHandleSettingValue);
-        }
-    }, [settingsRequest.data]);
-
-    useEffect(() => {
-        setModelHandleError(null);
-    }, [modelHandle]);
-
-    function recalculateStatsSync() {
-        setSymbolCount(assistantInstructions.length);
-        if (assistantInstructions.length > messageStatsPerformanceWarningThreshold) {
-            setO200KBaseTokenCount(-1);
-        } else {
-            setO200KBaseTokenCount(tokenEncoding.encode(assistantInstructions).length);
-        }
+    function resetModelHandleError() {
+        settings.modelHandle.setValidationError(null);
     }
 
     function onSave() {
-        if (loading) {
-            return;
-        }
-        updateRequest.mutate({
-            updates: {
-                [Keys.ASSISTANT_INSTRUCTIONS]: {
-                    value: assistantInstructions,
-                },
-                [Keys.MODEL_HANDLE]: {
-                    value: modelHandle,
-                },
-            }
-        });
+        save()
     }
 
     function onCancel() {
         if (loading) {
             return;
         }
-        setAssistantInstructions(assistantInstructionsSettingValue || '');
-        setModelHandle(modelHandleSettingValue);
+        reset();
+        clearErrors();
+    }
+
+    function onChatCompletionModelSelectorChange(model: ChatCompletionModelDto | null) {
+        settings.modelHandle.setValue(model ? model.handle : null);
+        setModelFeatures(model ? model.features : null);
+        setModelReasoningType(model ? model.reasoningType : null);
     }
 
     return (
@@ -124,58 +76,52 @@ function DiscussionChatSettings() {
             { anyError && (
                 <InfoPanel type={'error'}>{anyError.message}</InfoPanel>
             ) }
-            <MultiSelect
-                items={modelOptions}
-                selectedItems={modelHandle ? [modelHandle] : []}
-                onSelect={it => setModelHandle(it)}
-                onDeselect={() => setModelHandle(null)}
-                itemToLabel={it => it}
-                itemToIdentityKey={it => it}
-                maxItems={1}
-                disabled={loading || !!anyError}
-                error={modelHandleError}
-                label={'LLM' + (modelHandleChanged ? '*' : '')}
-                className={s.modelHandleInput}
-            />
-            { modelsRequest.data && modelOptions.length == 0 && (
-                <InfoPanel minimalistic borderless type={'warning'}>
-                    No models available. Set up <Link href={'/integrations'}>integrations</Link>.
-                </InfoPanel>
-            ) }
-            <TextArea
-                value={assistantInstructions}
-                onChange={setAssistantInstructions}
-                disabled={loading || !!anyError}
-                label={'Instructions' + (assistantInstructionsChanged ? '*' : '')}
-                rows={30}
-            />
-            <div className={s.stats}>
-                <span>{symbolCount} symbols</span>
-                { assistantInstructions.length <= messageStatsPerformanceWarningThreshold && (
-                    <>
-                        <span>, </span>
-                        <span>
-                            {o200KBaseTokenCount} tokens (o200k_base)
-                        </span>
-                    </>
-                ) }
-            </div>
-            { assistantInstructions.length > messageStatsPerformanceWarningThreshold && (
-                <div className={s.row}>
-                    <InfoPanel type={'warning'} borderless minimalistic>
-                        Token count disabled for performance
-                    </InfoPanel>
+            <LoadingOverlay loading={loading}>
+                <div className={s.column}>
+                    <ChatCompletionModelSelector
+                        className={s.thin}
+                        modelHandle={settings.modelHandle.value}
+                        onChange={onChatCompletionModelSelectorChange}
+                        error={settings.modelHandle.validationError}
+                        label={<FormLabel changed={settings.modelHandle.isChanged}>LLM</FormLabel>}
+                    />
+                    <LlmMaxTokensInput
+                        setting={settings.maxOutputTokens}
+                    />
+                    <ReasoningSettingsCollapsibleInput
+                        reasoningEnabledSetting={settings.reasoningEnabled}
+                        reasoningMaxTokensSetting={settings.reasoningMaxTokens}
+                        reasoningEffortSetting={settings.reasoningEffort}
+                        modelReasoningType={modelReasoningType}
+                        modelFeatures={modelFeatures}
+                        disabled={loading || !!anyError}
+                    />
+                    <Checkbox
+                        className={s.thin}
+                        disabled={loading || !!anyError}
+                        checked={settings.webSearchEnabled.value}
+                        onChange={settings.webSearchEnabled.setValue}
+                        label={
+                            <FormLabel changed={settings.webSearchEnabled.isChanged}>
+                                Enable web search
+                            </FormLabel>
+                        }
+                    />
+                    <InstructionsInput
+                        setting={settings.instructions}
+                        disabled={loading || !!anyError}
+                    />
                 </div>
-            ) }
+            </LoadingOverlay>
             <div className={s.row}>
                 <Button
                     colorAccent={'primary'}
-                    disabled={!anythingChanged || loading}
+                    disabled={!anyChanged || loading}
                     onClick={onSave}
                 >
                     Save
                 </Button>
-                { anythingChanged && (
+                { anyChanged && (
                     <Button onClick={onCancel} disabled={loading}>Cancel</Button>
                 ) }
             </div>
