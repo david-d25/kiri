@@ -6,7 +6,6 @@ data class ChatCompletionModelDto (
     val reasoningType: ReasoningType = ReasoningType.NONE
 ) {
     data class Features(
-        val reasoning: Boolean,
         val webSearch: Boolean,
         val reasoningEffort: Boolean,
         val reasoningMaxTokens: Boolean
