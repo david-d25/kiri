@@ -6,7 +6,6 @@ export type ChatCompletionModelDto = {
 
 export namespace ChatCompletionModelDto {
     export type Features = {
-        reasoning: boolean;
         webSearch: boolean;
         reasoningEffort: boolean;
         reasoningMaxTokens: boolean;
