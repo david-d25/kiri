@@ -32,12 +32,14 @@ class ToolCallExecutor {
             if (valueParams.size == 1) {
                 val param = valueParams[0]
                 val effectiveName = effectiveParameterName(param)
-                val argInput = if (input is ChatCompletionToolUse.Input.Object && input.items.containsKey(effectiveName)) {
-                    input.items[effectiveName]!!
-                } else {
-                    input
+                if (input is ChatCompletionToolUse.Input.Object && input.items.containsKey(effectiveName)) {
+                    args[param] = inputToParameter(input.items[effectiveName]!!, param)
+                } else if (input !is ChatCompletionToolUse.Input.Object) {
+                    // Input is a primitive/array — use it directly as the parameter value
+                    args[param] = inputToParameter(input, param)
+                } else if (!param.isOptional && !param.type.isMarkedNullable) {
+                    throw IllegalArgumentException("Missing required parameter: $effectiveName")
                 }
-                args[param] = inputToParameter(argInput, param)
             } else if (valueParams.isNotEmpty()) {
                 if (input !is ChatCompletionToolUse.Input.Object) {
                     throw IllegalArgumentException("Function expects multiple parameters, but input is not an object")

@@ -20,7 +20,7 @@ class FrameBuffer : Iterable<Frame> {
     )
     val updates = updatesInternal.asSharedFlow()
 
-    var hardLimit = 128
+    var hardLimit = 32
 
     val size get() = frames.size
 

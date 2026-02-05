@@ -22,6 +22,12 @@ interface TelegramMessageRepository: JpaRepository<TelegramMessageEntity, Telegr
         pageable: Pageable
     ): Page<TelegramMessageEntity>
 
+    fun findByIdChatIdAndIdMessageIdGreaterThan(
+        chatId: Long,
+        afterMessageId: Int,
+        pageable: Pageable
+    ): Page<TelegramMessageEntity>
+
     fun findByIdChatIdAndIdMessageIdLessThan(
         chatId: Long,
         beforeMessageId: Int,

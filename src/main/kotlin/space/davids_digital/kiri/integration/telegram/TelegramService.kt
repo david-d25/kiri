@@ -289,6 +289,7 @@ class TelegramService(
     suspend fun fetchAndSaveChatById(chatId: Long): TelegramChat? {
         val response = bot.getChat(chatId)
         if (response.errorCode() == 400) {
+            log.error("Failed to get chat with id $chatId: ${response.description()}")
             return null
         }
         response.checkNoErrors("Failed to get chat id $chatId")
@@ -299,6 +300,7 @@ class TelegramService(
     suspend fun fetchAndSaveChatByUsername(username: String): TelegramChat? {
         val response = bot.getChat("@$username")
         if (response.errorCode() == 400) {
+            log.error("Failed to get chat with username '$username': ${response.description()}")
             return null
         }
         response.checkNoErrors("Failed to get chat by username '$username'")
@@ -309,22 +311,6 @@ class TelegramService(
         bot.execute(AnswerCallbackQuery(callbackQueryId).apply {
             text?.let { text(it) }
         }).checkNoErrors("Failed to answer callback query")
-    }
-
-    suspend fun getChat(username: String): TelegramChat? {
-        val savedChat = chatOrm.findByUsername(username)
-        if (savedChat != null) {
-            return savedChat
-        }
-        return self.fetchAndSaveChatByUsername(username)
-    }
-
-    suspend fun getChat(id: Long): TelegramChat? {
-        val savedChat = chatOrm.findById(id)
-        if (savedChat != null) {
-            return savedChat
-        }
-        return self.fetchAndSaveChatById(id)
     }
 
     fun createMessageLink(chatId: Long, messageId: Int): String {
@@ -366,8 +352,15 @@ class TelegramService(
         }
     }
 
-    fun getUser(id: Long) = userOrm.findById(id)
-    fun getUserByUsername(username: String) = userOrm.findByUsername(username)
+    @Cacheable(value = ["TelegramService#getUser"], key = "#id")
+    fun getUser(id: Long): TelegramUser? {
+        return userOrm.findById(id)
+    }
+
+    @Cacheable(value = ["TelegramService#getUserByUsername"], key = "#username")
+    fun getUserByUsername(username: String): TelegramUser? {
+        return userOrm.findByUsername(username)
+    }
 
     @Cacheable(value = ["TelegramService#getFileContent"], key = "#fileId")
     suspend fun getFileContent(fileId: String): ByteArray {
@@ -383,7 +376,9 @@ class TelegramService(
     private suspend fun onMessage(message: TelegramMessage) {
         log.debug("Received Telegram message from chat {}", message.chatId)
         try {
-            messageOrm.save(message)
+            withContext(Dispatchers.IO) {
+                messageOrm.save(message)
+            }
         } catch (e: Exception) {
             log.error("Failed to save Telegram message", e)
         }
@@ -492,7 +487,9 @@ class TelegramService(
                 entities.forEach { e ->
                     val eStart = e.offset
                     val eEnd   = e.offset + e.length
-                    if (eStart < chunkEnd && eEnd > chunkEnd) chunkEnd = eStart
+                    if (chunkEnd in (eStart + 1)..<eEnd) {
+                        chunkEnd = eStart
+                    }
                 }
 
                 var optEnd = chunkEnd

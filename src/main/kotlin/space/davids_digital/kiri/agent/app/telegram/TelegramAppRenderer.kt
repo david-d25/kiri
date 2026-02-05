@@ -1,7 +1,6 @@
 package space.davids_digital.kiri.agent.app.telegram
 
 import io.ktor.util.*
-import io.ktor.websocket.Frame
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
@@ -44,6 +43,43 @@ class TelegramAppRenderer (
         line("</chats>")
     }
 
+    fun FrameContentBuilder.renderChatInfo(chat: TelegramChat, full: Boolean) {
+        line("""<chat-info id="${chat.id}" type="${chat.type.name.lowercase()}" username="${chat.username}">""")
+        if (chat.title != null) {
+            line("<title>")
+            line(chat.title.escapeHTML())
+            line("</title>")
+        }
+        if (full) {
+            if (chat.bio != null) {
+                line("<bio>")
+                line(chat.bio.escapeHTML())
+                line("</bio>")
+            }
+            if (chat.description != null) {
+                line("<description>")
+                line(chat.description.escapeHTML())
+                line("</description>")
+            }
+            if (chat.photo != null) {
+                line("<chat-photo>")
+                try {
+                    renderImage(chat.photo.bigFileId)
+                } catch (e: Exception) {
+                    log.error("Failed to render chat photo for chat id=${chat.id}", e)
+                    line("unavailable")
+                }
+                line("</chat-photo>")
+            }
+            if (chat.pinnedMessage != null) {
+                line("<pinned-message>")
+                renderMessage(chat.pinnedMessage, null)
+                line("</pinned-message>")
+            }
+        }
+        line("</chat-info>")
+    }
+
     fun FrameContentBuilder.renderUserProfile(user: TelegramUser, chat: TelegramChat?) {
         line("<user-profile>")
         line("<main>")
@@ -58,46 +94,9 @@ class TelegramAppRenderer (
         line("is premium: ${user.isPremium}")
         line("</main>")
         if (chat != null) {
-            if (chat.photo != null) {
-                line("<chat-photo fileId=\"${chat.photo.bigFileId}\">")
-                try {
-                    renderImage(chat.photo.bigFileId)
-                } catch (e: Exception) {
-                    log.error("Failed to render chat photo for chat id=${chat.id}", e)
-                    line("unavailable")
-                }
-                line("</chat-photo>")
-            }
-            if (chat.bio != null) {
-                line("<bio>${chat.bio}</bio>")
-            }
-            if (chat.pinnedMessage != null) {
-                line("<pinned-message>")
-                renderMessage(chat.pinnedMessage, null)
-                line("</pinned-message>")
-            }
+            renderChatInfo(chat, full = true)
         }
         line("</user-profile>")
-    }
-
-    fun FrameContentBuilder.renderChat(
-        chat: TelegramChat,
-        messagesPage: Page<TelegramMessage>,
-        laterMessagesRemaining: Long = 0,
-        laterNewMessagesRemaining: Long = 0
-    ) {
-        val unsafeTitle = chat.title ?: (chat.firstName + (chat.lastName?.let { " $it" } ?: ""))
-        val title = unsafeTitle.safe()
-        val attrString = """id="${chat.id}" title="$title""""
-        val tag = chatTypeToTag(chat.type)
-        line("<$tag $attrString>")
-        renderChatMessages(
-            chat.metadata.lastReadMessageId,
-            messagesPage,
-            laterMessagesRemaining,
-            laterNewMessagesRemaining
-        )
-        line("</$tag>")
     }
 
     private fun chatTypeToTag(type: TelegramChat.Type): String {
@@ -167,7 +166,7 @@ class TelegramAppRenderer (
         }
     }
 
-    private fun FrameContentBuilder.renderChatMessages(
+    fun FrameContentBuilder.renderMessages(
         lastReadMessageId: Int?,
         messagesPage: Page<TelegramMessage>,
         laterMessagesRemaining: Long = 0,
@@ -805,7 +804,7 @@ class TelegramAppRenderer (
             line("- To participate, user must join the following chats:")
             for (chatId in giveaway.chats) {
                 val chat = try {
-                    runBlocking { service.getChat(chatId) }
+                    runBlocking { service.fetchAndSaveChatById(chatId) }
                 } catch (_: Exception) {
                     null
                 }

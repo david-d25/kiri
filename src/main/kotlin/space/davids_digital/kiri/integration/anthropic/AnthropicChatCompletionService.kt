@@ -144,9 +144,10 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
             "claude-sonnet-4-20250514",
             "claude-3-7-sonnet-20250219",
             "claude-haiku-4-5-20251001",
-            "claude-opus-4-5-20251101",
+            "claude-opus-4-20250514",
             "claude-opus-4-1-20250805",
-            "claude-opus-4-20250514"
+            "claude-opus-4-5-20251101",
+            "claude-opus-4-6"
         )
         if (supported.contains(modelId)) {
             return ChatCompletionModel.ReasoningType.OPTIONAL
@@ -166,9 +167,10 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
             "claude-3-7-sonnet-20250219",
             "claude-haiku-4-5-20251001",
             "claude-3-5-haiku-latest",
-            "claude-opus-4-5-20251101",
+            "claude-opus-4-20250514",
             "claude-opus-4-1-20250805",
-            "claude-opus-4-20250514"
+            "claude-opus-4-5-20251101",
+            "claude-opus-4-6",
         )
         return supported.contains(modelId)
     }

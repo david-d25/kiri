@@ -64,7 +64,7 @@ class TelegramNotificationService (
     }
 
     private suspend fun handleMessage(message: TelegramMessage) {
-        val chat = telegram.getChat(message.chatId)
+        val chat = telegram.fetchAndSaveChatById(message.chatId)
         if (chat == null) {
             log.warn("Received message from unknown chat with id {}", message.chatId)
             return

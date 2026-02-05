@@ -36,7 +36,7 @@ class TelegramChatOrmService(
     }
 
     @Transactional(readOnly = true)
-    suspend fun findAllEnabled(pageable: Pageable): Page<TelegramChat> {
+    fun findAllEnabled(pageable: Pageable): Page<TelegramChat> {
         return repo.findAllEnabled(pageable).map(::toModel)
     }
 

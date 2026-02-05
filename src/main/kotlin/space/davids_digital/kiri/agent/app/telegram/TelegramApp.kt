@@ -8,25 +8,21 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.app.AgentApp
 import space.davids_digital.kiri.agent.frame.DataFrame
-import space.davids_digital.kiri.agent.frame.DataFrameUtils
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameter
 import space.davids_digital.kiri.integration.telegram.TelegramService
-import space.davids_digital.kiri.model.telegram.TelegramChat
-import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.service.TelegramNotificationService
 import space.davids_digital.kiri.service.TemporaryFilesService
-import kotlin.math.max
 import kotlin.reflect.KFunction
 
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 @AgentToolNamespace("telegram")
-open class TelegramApp(
+class TelegramApp(
     private val telegram: TelegramService,
     private val renderer: TelegramAppRenderer,
     private val telegramNotificationService: TelegramNotificationService,
@@ -37,7 +33,7 @@ open class TelegramApp(
 
     companion object {
         private const val CHATS_PAGE_SIZE = 10
-        private const val MAX_MESSAGES_PER_VIEW = 8
+        private const val MAX_MESSAGES_PER_VIEW = 10
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -50,16 +46,16 @@ open class TelegramApp(
     }
 
     override fun getAvailableAgentToolMethods(): List<KFunction<*>> = buildList {
-        add(::showUserProfile)
-        if (selectedChatId == null) {
-            add(::listChats)
-            add(::selectChatById)
-            add(::selectChatByUsername)
-        } else {
+        add(::getUserProfile)
+        add(::listChats)
+        add(::switchToChatChatById)
+        add(::switchToChatByUsername)
+        if (selectedChatId != null) {
             add(::listLatestMessages)
             add(::send)
             add(::sendSticker)
             add(::closeChat)
+            add(::getChatInfo)
             add(::download)
         }
     }
@@ -69,7 +65,9 @@ open class TelegramApp(
         @AgentToolParameter(description = "zero-based page index")
         page: Int = 0
     ): List<DataFrame.ContentPart> {
-        val chats = chatOrm.findAllEnabled(PageRequest.of(page, CHATS_PAGE_SIZE))
+        val chats = withContext(Dispatchers.IO) {
+            chatOrm.findAllEnabled(PageRequest.of(page, CHATS_PAGE_SIZE))
+        }
 
         return dataFrameContent {
             with (renderer) {
@@ -79,27 +77,28 @@ open class TelegramApp(
     }
 
     @AgentToolMethod
-    suspend fun selectChatById(id: Long): String {
-        val newChat = telegram.getChat(id) ?: return "Chat with id $id not found."
+    suspend fun switchToChatChatById(id: Long): String {
+        val newChat = telegram.fetchAndSaveChatById(id) ?: return "Chat with id $id not found."
         val previousChatId = selectedChatId
         selectedChatId = newChat.id
         if (previousChatId != null) {
             telegramNotificationService.onChatClosedInAgentApp(previousChatId)
         }
         telegramNotificationService.onChatOpenedInAgentApp(newChat.id)
-        return "Chat selected."
+        return "Chat selected. Title: ${newChat.title ?: newChat.firstName}"
     }
 
     @AgentToolMethod
-    suspend fun selectChatByUsername(username: String): String {
-        val newChat = telegram.getChat(username.removePrefix("@")) ?: return "Chat with username '$username' not found."
+    suspend fun switchToChatByUsername(username: String): String {
+        val newChat = telegram.fetchAndSaveChatByUsername(username.removePrefix("@"))
+            ?: return "Chat with username '$username' not found."
         val previousChatId = selectedChatId
         selectedChatId = newChat.id
         if (previousChatId != null) {
             telegramNotificationService.onChatClosedInAgentApp(previousChatId)
         }
         telegramNotificationService.onChatOpenedInAgentApp(newChat.id)
-        return "Chat selected."
+        return "Chat selected. Title: ${newChat.title ?: newChat.firstName}"
     }
 
     @AgentToolMethod
@@ -110,19 +109,53 @@ open class TelegramApp(
         return "Chat closed."
     }
 
-    @AgentToolMethod
-    suspend fun listLatestMessages(): List<DataFrame.ContentPart> {
+    @AgentToolMethod(description = "Get brief or full information about the currently selected chat")
+    suspend fun getChatInfo(
+        @AgentToolParameter(description = "show all info, i.e. avatar and description")
+        full: Boolean = false
+    ): List<DataFrame.ContentPart> {
+        val chatId = selectedChatId ?: return dataFrameContent {
+            text("No chat is currently selected.")
+        }
+        val chat = telegram.fetchAndSaveChatById(chatId) ?: return dataFrameContent {
+            text("Chat with id $chatId not found.")
+        }
+        return dataFrameContent {
+            with (renderer) {
+                renderChatInfo(chat, full)
+            }
+        }
+    }
+
+    @AgentToolMethod(description = "show chat latest messages; can show up to $MAX_MESSAGES_PER_VIEW")
+    suspend fun listLatestMessages(
+        @AgentToolParameter(description = "Number of messages to list; 0 = only poll for new messages")
+        n: Int = 0
+    ): List<DataFrame.ContentPart> {
+        require(n >= 0) { "Number of messages must not be negative, got $n" }
+        val nSafe = if (n > 0) n.coerceAtMost(MAX_MESSAGES_PER_VIEW) else MAX_MESSAGES_PER_VIEW
         val chatId = selectedChatId ?: error("No chat is currently selected.")
-        val chat = telegram.getChat(chatId) ?: error("Chat with id $chatId not found.")
-        val messages = messageOrm.findOrderedByMessageIdDesc(chatId, MAX_MESSAGES_PER_VIEW)
+        val chat = telegram.fetchAndSaveChatById(chatId) ?: error("Chat with id $chatId not found.")
+        val lastReadMessageId = chat.metadata.lastReadMessageId
+        val messages = withContext(Dispatchers.IO) {
+            if (n == 0 && lastReadMessageId != null) {
+                messageOrm.findAfterMessageIdOrderedByMessageIdDesc(chatId, lastReadMessageId, nSafe)
+            } else {
+                messageOrm.findOrderedByMessageIdDesc(chatId, nSafe)
+            }
+        }
         val lastMessage = messages.maxByOrNull { it.messageId }
         val laterMessagesRemaining = lastMessage?.let { messageOrm.countMessagesAfterId(chatId, it.messageId) } ?: 0
-        val lastReadMessageId = chat.metadata.lastReadMessageId
         val laterNewMessagesRemaining = lastReadMessageId?.let { messageOrm.countMessagesAfterId(chatId, it) } ?: 0L
         lastMessage?.let { setLastReadMessageId(chatId, it.messageId) }
         return dataFrameContent {
             with (renderer) {
-                renderChat(chat, messages, laterMessagesRemaining, laterNewMessagesRemaining)
+                renderMessages(
+                    chat.metadata.lastReadMessageId,
+                    messages,
+                    laterMessagesRemaining,
+                    laterNewMessagesRemaining
+                )
             }
         }
     }
@@ -143,12 +176,12 @@ open class TelegramApp(
 //    }
 
     @AgentToolMethod
-    suspend fun showUserProfile(username: String): List<DataFrame.ContentPart> {
+    suspend fun getUserProfile(username: String): List<DataFrame.ContentPart> {
         val cleanUsername = username.removePrefix("@")
         val user = telegram.getUserByUsername(cleanUsername) ?: return dataFrameContent {
             text("User with username @$cleanUsername not found.")
         }
-        val chat = telegram.getChat(cleanUsername)
+        val chat = telegram.fetchAndSaveChatById(user.id)
         return dataFrameContent {
             with (renderer) {
                 renderUserProfile(user, chat)
@@ -165,7 +198,7 @@ open class TelegramApp(
     suspend fun download(fileId: String): String {
         val bytes = telegram.getFileContent(fileId)
         val fileName = "file_${fileId}"
-        val createdFile = files.create(fileName, bytes)
+        files.create(fileName, bytes)
         return "Saved as temporary file: $fileName"
     }
 
@@ -181,7 +214,7 @@ open class TelegramApp(
                 "Supported HTML tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, blockquote, " +
                 "blockquote[expandable]."
     )
-    open suspend fun send(
+    suspend fun send(
         message: String,
 
         @AgentToolParameter(description = "id of message to reply to")

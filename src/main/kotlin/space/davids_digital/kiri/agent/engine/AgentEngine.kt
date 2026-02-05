@@ -69,7 +69,8 @@ class AgentEngine(
     private val webSearchEnabled by settings.declareBoolean("agent.engine.llm.tool.external.webSearch.enabled", false)
 
     private val run = AtomicBoolean(false)
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val eventHandlingScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val mainScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var sleepJob: Job? = null
     private val tickMutex = Mutex()
 
@@ -81,7 +82,7 @@ class AgentEngine(
     private fun init() {
         frames.clear()
         addSimpleText("system", "System started.")
-        scope.launch {
+        eventHandlingScope.launch {
             eventBus.events.collect(::handleEvent)
         }
     }
@@ -96,7 +97,7 @@ class AgentEngine(
             sleepJob?.cancelAndJoin()
         }
         if (run.compareAndSet(false, true)) {
-            scope.launch {
+            mainScope.launch {
                 try {
                     log.info("Starting agent engine")
                     while (run.get()) {
@@ -110,7 +111,7 @@ class AgentEngine(
     }
 
     suspend fun tick() {
-        scope.launch {
+        mainScope.launch {
             tickInternal()
         }
     }
@@ -162,7 +163,7 @@ class AgentEngine(
     suspend fun hardStop() {
         log.info("Hard stopping agent engine")
         run.set(false)
-        scope.coroutineContext[Job]?.cancelChildren() // TODO this cancels event handling
+        mainScope.coroutineContext[Job]?.cancelChildren()
         sleepJob?.cancel()
         sleepJob = null
         mutableState.emit(EngineState.PAUSED)
@@ -202,7 +203,7 @@ class AgentEngine(
                 }
                 external {
                     webSearch {
-                        enabled = webSearchEnabled && !compactionRequired()
+                        enabled = webSearchEnabled
                     }
                 }
             }
@@ -343,11 +344,7 @@ class AgentEngine(
 
     private fun updateToolRegistry() {
         toolRegistry.clear()
-        if (compactionRequired()) {
-            toolScanner.scan(listOf(this), toolRegistry)
-        } else {
-            toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
-        }
+        toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
     }
 
     private suspend fun wakeUp() {
@@ -364,8 +361,10 @@ class AgentEngine(
      * Handle incoming engine events (e.g., wake-up signals).
      */
     private suspend fun handleEvent(event: EngineEvent) {
-        if (event is WakeUpRequestEvent) {
-            wakeUp()
+        mainScope.launch {
+            if (event is WakeUpRequestEvent) {
+                wakeUp()
+            }
         }
     }
 
@@ -379,19 +378,11 @@ class AgentEngine(
         }
     }
 
-    override fun getAvailableAgentToolMethods() = if (compactionRequired()) {
-        listOf(::compact)
-    } else {
-        listOf(::think, ::wait, ::compact)
-    }
-
-    fun compactionRequired(): Boolean {
-        return frames.size > 32
-    }
+    override fun getAvailableAgentToolMethods() = listOf(::think, ::wait, ::compact)
 
     @AgentToolMethod(description = "Think to yourself and plan")
     fun think(thoughts: String) {
-        addSimpleText("thoughts", thoughts)
+//        addSimpleText("thoughts", thoughts)
     }
 
     @AgentToolMethod(description = "Free up short-term memory by summarizing older content")
@@ -402,7 +393,7 @@ class AgentEngine(
         keepLastN: Int = 10
     ): String {
         frames.trim(min(keepLastN, 16))
-        addSimpleText("compaction", summary)
+//        addSimpleText("compaction", summary)
         return "Compacted memory, kept last $keepLastN frames."
     }
 
@@ -421,7 +412,7 @@ class AgentEngine(
             sleepJob?.cancelAndJoin()
         }
 
-        val newSleepJob = scope.launch {
+        val newSleepJob = mainScope.launch {
             val wake = CompletableDeferred<Unit>()
             try {
                 mutableState.emit(EngineState.PAUSED)
