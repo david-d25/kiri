@@ -4,14 +4,13 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Component
-import space.davids_digital.kiri.agent.app.openai.OpenaiImageApp
+import space.davids_digital.kiri.agent.app.image.ImageApp
 import space.davids_digital.kiri.agent.app.scratchpad.ScratchpadApp
 import space.davids_digital.kiri.agent.app.telegram.TelegramApp
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
-import java.util.function.Supplier
 
 /**
  * This component manages apps and their lifecycle.
@@ -21,7 +20,7 @@ import java.util.function.Supplier
 class AppManager(
     private val telegramAppProvider: ObjectProvider<TelegramApp>,
     private val scratchpadAppProvider: ObjectProvider<ScratchpadApp>,
-    private val openaiImageAppProvider: ObjectProvider<OpenaiImageApp>,
+    private val imageAppProvider: ObjectProvider<ImageApp>,
 ) : AgentToolProvider {
     private val log = LoggerFactory.getLogger(this::class.java)
 
@@ -32,7 +31,7 @@ class AppManager(
     private fun init() {
         availableApps["telegram"] = { telegramAppProvider.getObject() }
         availableApps["notepad"] = { scratchpadAppProvider.getObject() }
-        availableApps["openaiImage"] = { openaiImageAppProvider.getObject() }
+        availableApps["image"] = { imageAppProvider.getObject() }
     }
 
     override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close, ::render, ::restart)

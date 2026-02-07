@@ -31,9 +31,6 @@ class FileSystemNodeEntity {
     @Column(name = "type", nullable = false)
     var type: NodeType = NodeType.DIRECTORY
 
-    @Column(name = "size", nullable = false)
-    var size: Long = 0
-
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
         schema = "main",

@@ -37,7 +37,6 @@ import space.davids_digital.kiri.service.ChatCompletionService
 import space.davids_digital.kiri.service.ChatCompletionServiceRegistry
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.min
 import kotlin.time.Duration.Companion.seconds
 
 @Service
@@ -378,31 +377,32 @@ class AgentEngine(
         }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::think, ::wait, ::compact)
+    override fun getAvailableAgentToolMethods() = listOf(::think, ::pause, ::compact)
 
-    @AgentToolMethod(description = "Think to yourself and plan")
-    fun think(thoughts: String) {
-//        addSimpleText("thoughts", thoughts)
-    }
+    @AgentToolMethod(description = "Think to yourself and plan next moves.")
+    fun think(
+        @Suppress("unused") // Value stays in framebuffer
+        thoughts: String,
+    ) {}
 
     @AgentToolMethod(description = "Free up short-term memory by summarizing older content")
     fun compact(
-        @AgentToolParameter(description = "Summary of older content to retain")
+        @AgentToolParameter(description = "Information to retain")
+        @Suppress("unused") // Value stays in framebuffer
         summary: String,
         @AgentToolParameter(description = "Number of most recent messages to keep unaltered")
         keepLastN: Int = 10
     ): String {
-        frames.trim(min(keepLastN, 16))
-//        addSimpleText("compaction", summary)
-        return "Compacted memory, kept last $keepLastN frames."
+        frames.trim(keepLastN.coerceIn(1..frames.hardLimit))
+        return "Memory compacted, kept last $keepLastN items."
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @AgentToolMethod(
         description = "Wait for a specified amount of time. " +
-                "Waiting can be interrupted by external events like app notifications."
+                "Notifications (i.e. chat mentions) will wake you up. "
     )
-    suspend fun wait(hours: Long, minutes: Long, seconds: Long) {
+    suspend fun pause(hours: Long, minutes: Long, seconds: Long) {
         val effectiveSeconds = hours * 3600 + minutes * 60 + seconds
         log.debug("Agent is going to sleep for $effectiveSeconds seconds")
         val sleptAt = System.currentTimeMillis()

@@ -4,10 +4,10 @@ import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import space.davids_digital.kiri.agent.engine.EngineEventBus
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.notification.Notification
 import space.davids_digital.kiri.agent.notification.NotificationManager
+import space.davids_digital.kiri.bot.telegram.command.CommandUtils.isCommand
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.model.telegram.TelegramMessage
@@ -19,8 +19,7 @@ import javax.annotation.PostConstruct
 @Service
 class TelegramNotificationService (
     private val telegram: TelegramService,
-    private val notificationManager: NotificationManager,
-    private val engineEventBus: EngineEventBus
+    private val notificationManager: NotificationManager
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -49,7 +48,7 @@ class TelegramNotificationService (
         scope.launch {
             telegram.updates.collect { update ->
                 try {
-                    handleUpdate(update)
+                    onUpdate(update)
                 } catch (e: Exception) {
                     log.error("Error handling update", e)
                 }
@@ -57,13 +56,13 @@ class TelegramNotificationService (
         }
     }
 
-    private suspend fun handleUpdate(update: TelegramUpdate) {
+    private suspend fun onUpdate(update: TelegramUpdate) {
         when {
-            update.message != null -> handleMessage(update.message)
+            update.message != null -> onMessage(update.message)
         }
     }
 
-    private suspend fun handleMessage(message: TelegramMessage) {
+    private suspend fun onMessage(message: TelegramMessage) {
         val chat = telegram.fetchAndSaveChatById(message.chatId)
         if (chat == null) {
             log.warn("Received message from unknown chat with id {}", message.chatId)
@@ -72,7 +71,11 @@ class TelegramNotificationService (
         val chatDisabledMessage = "Agent is disabled in this chat. Please talk to the administrator to enable it."
         val chatEnabled = chat.metadata.enabled
         val self = telegram.getSelf()
-        val isAgentMentioned = message.text?.contains("@" + self.username) == true
+        val textOrCaption = message.text ?: message.caption
+        if (textOrCaption != null && isCommand(textOrCaption, chat.type, telegram.getSelf().username ?: "")) {
+            return
+        }
+        val isAgentMentioned = textOrCaption?.contains("@" + self.username) == true
         val isPrivateChat = chat.type == TelegramChat.Type.PRIVATE
         val isAgentMessageRepliedTo = message.replyToMessage?.fromId == self.id
         val chatIsOpenedInApp = message.chatId in chatsOpenedInAgentApp

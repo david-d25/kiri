@@ -3,35 +3,11 @@ package space.davids_digital.kiri.integration.openai
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.JsonNodeType
-import com.openai.client.OpenAIClient
-import com.openai.client.okhttp.OpenAIOkHttpClient
 import com.openai.core.JsonObject
 import com.openai.core.JsonValue
 import com.openai.models.Reasoning
 import com.openai.models.ReasoningEffort
-import com.openai.models.responses.FunctionTool
-import com.openai.models.responses.Response
-import com.openai.models.responses.ResponseCreateParams
-import com.openai.models.responses.ResponseFunctionCallOutputItem
-import com.openai.models.responses.ResponseFunctionToolCall
-import com.openai.models.responses.ResponseFunctionWebSearch
-import com.openai.models.responses.ResponseIncludable
-import com.openai.models.responses.ResponseInputImage
-import com.openai.models.responses.ResponseInputImageContent
-import com.openai.models.responses.ResponseInputItem
-import com.openai.models.responses.ResponseInputTextContent
-import com.openai.models.responses.ResponseOutputMessage
-import com.openai.models.responses.ResponseOutputText
-import com.openai.models.responses.ResponseReasoningItem
-import com.openai.models.responses.Tool
-import com.openai.models.responses.ToolChoiceOptions
-import com.openai.models.responses.WebSearchTool
-import jakarta.annotation.PostConstruct
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import com.openai.models.responses.*
 import org.slf4j.LoggerFactory
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
@@ -39,22 +15,16 @@ import space.davids_digital.kiri.aop.EvictCacheOnException
 import space.davids_digital.kiri.integration.ChatCompletionUtils.optimize
 import space.davids_digital.kiri.integration.ChatCompletionUtils.parameterToJson
 import space.davids_digital.kiri.integration.ChatCompletionUtils.toolUseInputToJson
-import space.davids_digital.kiri.llm.ChatCompletionImageType
-import space.davids_digital.kiri.llm.ChatCompletionRequest
+import space.davids_digital.kiri.llm.*
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Message.ContentItem
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.Function.ParameterValue
-import space.davids_digital.kiri.llm.ChatCompletionResponse
-import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
-import space.davids_digital.kiri.llm.ChatCompletionWebSearch
-import space.davids_digital.kiri.llm.dsl.GenericJsonInputBuilder
 import space.davids_digital.kiri.llm.dsl.ChatCompletionToolUseInputObjectBuilder
+import space.davids_digital.kiri.llm.dsl.GenericJsonInputBuilder
 import space.davids_digital.kiri.llm.dsl.chatCompletionResponse
 import space.davids_digital.kiri.model.ChatCompletionModel
 import space.davids_digital.kiri.model.ExternalServiceGatewayStatus
-import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.service.ChatCompletionService
-import java.util.Base64
-import java.util.concurrent.atomic.AtomicReference
+import java.util.*
 import kotlin.jvm.optionals.getOrNull
 
 @Service
@@ -487,7 +457,7 @@ class OpenaiChatCompletionService(
                         } else {
                             webSearchOpenPage {
                                 id = webSearchCall.id()
-                                url = open.url()
+                                url = open.url().orElse("")
                                 // We do not parse the content of the opened page here, as it is not returned by OpenAI
                             }
                         }

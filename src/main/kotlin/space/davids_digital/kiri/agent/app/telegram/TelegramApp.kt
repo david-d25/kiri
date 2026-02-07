@@ -43,6 +43,9 @@ class TelegramApp(
 
     override fun render(): List<DataFrame.ContentPart> = dataFrameContent {
         text("Telegram App opened.")
+        if (selectedChatId != null) {
+            line("Selected chat id: $selectedChatId")
+        }
     }
 
     override fun getAvailableAgentToolMethods(): List<KFunction<*>> = buildList {

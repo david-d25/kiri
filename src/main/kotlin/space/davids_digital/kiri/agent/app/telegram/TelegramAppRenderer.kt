@@ -62,7 +62,7 @@ class TelegramAppRenderer (
                 line("</description>")
             }
             if (chat.photo != null) {
-                line("<chat-photo>")
+                line("<chat-photo file-id=\"${chat.photo.bigFileId}\">")
                 try {
                     renderImage(chat.photo.bigFileId)
                 } catch (e: Exception) {

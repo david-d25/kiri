@@ -8,7 +8,6 @@ data class FileSystemNode(
     val parentId: UUID?,
     val name: String,
     val type: Type,
-    val mimeType: String?,
     val attributes: Map<String, String>,
     val createdAt: ZonedDateTime,
     val updatedAt: ZonedDateTime,

@@ -15,6 +15,7 @@ class CacheConfig {
     fun cacheManager(): CacheManager {
         val cacheManager = CaffeineCacheManager()
         cacheManager.setCaffeine(Caffeine.newBuilder().expireAfterWrite(60, TimeUnit.SECONDS))
+        cacheManager.setAsyncCacheMode(true)
         return cacheManager
     }
 }

@@ -1,0 +1,19 @@
+package space.davids_digital.kiri.bot.telegram.command
+
+/**
+ * Abstract class representing a command in the Telegram bot.
+ * To execute a command, Telegram user sends a message like `/command arg1 arg2 ...`.
+ */
+abstract class Command {
+    /**
+     * The name of the command without the leading slash.
+     */
+    abstract val name: String
+
+    /**
+     * Executes the command with the provided arguments.
+     *
+     * @param context The context for command execution, containing arguments, message details, and maybe other data.
+     */
+    abstract suspend fun execute(context: CommandExecutionContext)
+}

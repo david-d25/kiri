@@ -1,19 +1,17 @@
 package space.davids_digital.kiri.service
 
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class TemporaryFilesService {
     val overallMaxSize = 256 * 1024 * 1024 // 256 MB
     val fileTtl = 60 * 60 * 1000L // 1 hour
-
-    data class TemporaryFile(
-        val content: ByteArray,
-        val createdAt: Long,
-    )
 
     private val mutex = Mutex()
     private val files = ConcurrentHashMap<String, TemporaryFile>()
@@ -23,7 +21,7 @@ class TemporaryFilesService {
             throw IllegalArgumentException("File size exceeds maximum allowed size of $overallMaxSize bytes")
         }
         mutex.withLock {
-            val file = TemporaryFile(content, System.currentTimeMillis())
+            val file = TemporaryFile(content = content)
             files[name] = file
             cleanupUnsafe()
             return file
@@ -33,6 +31,15 @@ class TemporaryFilesService {
     suspend fun getContent(name: String): ByteArray? {
         mutex.withLock {
             return files[name]?.content
+        }
+    }
+
+    @Scheduled(fixedDelay = 60 * 60 * 1000)
+    fun cleanup() {
+        runBlocking {
+            mutex.withLock {
+                cleanupUnsafe()
+            }
         }
     }
 
@@ -59,6 +66,23 @@ class TemporaryFilesService {
             if (totalSize <= overallMaxSize) {
                 break
             }
+        }
+    }
+
+    data class TemporaryFile(
+        val id: UUID = UUID.randomUUID(),
+        val content: ByteArray,
+        val createdAt: Long = System.currentTimeMillis(),
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as TemporaryFile
+            return id == other.id
+        }
+
+        override fun hashCode(): Int {
+            return id.hashCode()
         }
     }
 }

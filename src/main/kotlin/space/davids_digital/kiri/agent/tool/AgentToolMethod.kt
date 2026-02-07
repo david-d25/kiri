@@ -9,7 +9,7 @@ package space.davids_digital.kiri.agent.tool
 @Target(AnnotationTarget.FUNCTION)
 annotation class AgentToolMethod(
     /**
-     * Method name for agent. Leave blank to use component method name by default.
+     * Method name for agent. Leave blank to use the component method name by default.
      *
      * Name should only contain alphanumeric characters.
      * @see AgentToolScanner.validateMethodName

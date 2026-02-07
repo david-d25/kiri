@@ -51,7 +51,7 @@ class OpenaiImageService (
     fun edit(image: ByteArray, prompt: String, n: Long = 1): List<ByteArray> {
         require(image.isNotEmpty()) { "images array must not be empty" }
         require(n in 1..10) { "n must be between 1 and 10" }
-        log.info("Editing image(s) with gpt-image-1.5, ${image.size} images, prompt: '$prompt', n: $n")
+        log.info("Editing image(s) with gpt-image-1.5, prompt: '$prompt', n: $n")
         val client = clientHolder.requireClient()
         val response = client.images().edit(
             ImageEditParams.builder()

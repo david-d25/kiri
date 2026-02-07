@@ -7,12 +7,14 @@ import com.pengrad.telegrambot.model.Chat
 import com.pengrad.telegrambot.model.Update
 import com.pengrad.telegrambot.model.User
 import com.pengrad.telegrambot.model.request.InputMediaPhoto
-import com.pengrad.telegrambot.model.request.ParseMode
 import com.pengrad.telegrambot.model.request.ReplyParameters
 import com.pengrad.telegrambot.request.*
 import com.pengrad.telegrambot.response.BaseResponse
 import com.pengrad.telegrambot.response.SendResponse
-import com.pengrad.telegrambot.utility.kotlin.extension.request.*
+import com.pengrad.telegrambot.utility.kotlin.extension.request.forwardMessage
+import com.pengrad.telegrambot.utility.kotlin.extension.request.getChat
+import com.pengrad.telegrambot.utility.kotlin.extension.request.getFile
+import com.pengrad.telegrambot.utility.kotlin.extension.request.getMe
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -285,7 +287,7 @@ class TelegramService(
         response.checkNoErrors("Failed to edit message $messageId in chat $chatId")
     }
 
-    @Cacheable(value = ["TelegramService#fetchAndSaveChatById"], key = "#chatId")
+    @Cacheable(value = ["TelegramService#fetchAndSaveChatById"], key = "#chatId", sync = true)
     suspend fun fetchAndSaveChatById(chatId: Long): TelegramChat? {
         val response = bot.getChat(chatId)
         if (response.errorCode() == 400) {
@@ -296,7 +298,7 @@ class TelegramService(
         return chatOrm.save(mapper.toModel(response.chat())!!)
     }
 
-    @Cacheable(value = ["TelegramService#fetchAndSaveChatByUsername"], key = "#username")
+    @Cacheable(value = ["TelegramService#fetchAndSaveChatByUsername"], key = "#username", sync = true)
     suspend fun fetchAndSaveChatByUsername(username: String): TelegramChat? {
         val response = bot.getChat("@$username")
         if (response.errorCode() == 400) {
@@ -405,7 +407,8 @@ class TelegramService(
     }
 
     fun getSelf(): TelegramUser {
-        return requireNotNull(getUser(appProperties.integration.telegram.botId))
+        return self.getUser(appProperties.integration.telegram.botId)
+            ?: bot.getMe().checkNoErrors().user().let(mapper::toModel)
     }
 
     private fun updateSelfInfo() {

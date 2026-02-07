@@ -1,13 +1,6 @@
 package space.davids_digital.kiri.integration.google
 
-import com.google.genai.Client
 import com.google.genai.types.*
-import jakarta.annotation.PostConstruct
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
@@ -15,68 +8,23 @@ import space.davids_digital.kiri.aop.EvictCacheOnException
 import space.davids_digital.kiri.llm.*
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Message
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.Function.ParameterValue
-import space.davids_digital.kiri.llm.dsl.GenericJsonInputBuilder
 import space.davids_digital.kiri.llm.dsl.ChatCompletionToolUseInputObjectBuilder
+import space.davids_digital.kiri.llm.dsl.GenericJsonInputBuilder
 import space.davids_digital.kiri.llm.dsl.chatCompletionResponse
 import space.davids_digital.kiri.model.ChatCompletionModel
 import space.davids_digital.kiri.model.ExternalServiceGatewayStatus
-import space.davids_digital.kiri.model.Setting
-import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.service.ChatCompletionService
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.jvm.optionals.getOrNull
-import kotlin.text.toFloat
-import kotlin.text.toInt
 
 @Service
-class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) : ChatCompletionService {
-    object SettingKeys {
-        const val API_KEY = "integration.google.genAi.apiKey"
-    }
-
-    override val serviceHandle = "google-genai"
-
-    class ServiceDisabledException : RuntimeException()
+class GoogleGenAiChatCompletionService(private val clientHolder: GoogleGenAiClientHolder) : ChatCompletionService {
+    override val serviceHandle = "google-genai-chat"
 
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val clientRef = AtomicReference<Client?>()
-
-    @PostConstruct
-    private fun init() {
-        scope.launch {
-            settings.listen(SettingKeys.API_KEY).collectLatest {
-                try {
-                    onApiKeyChange(it)
-                } catch (e: Exception) {
-                    log.error("Failed to handle Google GenAI API Key change", e)
-                }
-            }
-        }
-    }
-
-    private fun onApiKeyChange(newValue: String?) {
-        log.info("Got new Google GenAI API key")
-        val apiKey = newValue?.takeIf { it.isNotBlank() }
-        if (apiKey == null) {
-            log.warn("Google GenAI API key is empty, client will be disabled")
-            clientRef.set(null)
-            return
-        }
-        clientRef.set(buildClient(apiKey))
-        log.info("Google GenAI client created")
-    }
-
-    private fun buildClient(apiKey: String): Client {
-        return Client.builder().apiKey(apiKey).build()
-    }
-
-    private fun requireClient() = clientRef.get() ?: throw ServiceDisabledException()
-
     @EvictCacheOnException(cacheNames = ["GoogleGenAiChatCompletionService#getStatus"])
     override suspend fun request(request: ChatCompletionRequest): ChatCompletionResponse {
-        val client = requireClient()
+        val client = clientHolder.requireClient()
         val content = buildContent(request)
         val config = buildConfig(request)
         val (provider, model) = request.modelHandle.split("/", limit = 2)
@@ -97,7 +45,7 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
         cacheManager = "oneHour"
     )
     override suspend fun getStatus(): ExternalServiceGatewayStatus {
-        val client = clientRef.get()
+        val client = clientHolder.getClient()
         return if (client != null) {
             try {
                 client.models.list(ListModelsConfig.builder().pageSize(1).build())
@@ -112,7 +60,7 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
     }
 
     override suspend fun getModels(): List<ChatCompletionModel> {
-        val client = clientRef.get() ?: return emptyList()
+        val client = clientHolder.getClient() ?: return emptyList()
         val model = client.models.list(ListModelsConfig.builder().pageSize(100).build())
         return model.filter { it.name().isPresent && isSupportedModelId(it.name().get()) }.map {
             ChatCompletionModel(
@@ -222,7 +170,7 @@ class GoogleGenAiChatCompletionService(private val settings: SettingOrmService) 
                     tools(buildTools(request.tools))
                     toolConfig(
                         ToolConfig.builder().functionCallingConfig(
-                            FunctionCallingConfig.builder().mode(mode).build() // TODO add 'allowParallelUse' when available
+                            FunctionCallingConfig.builder().mode(mode).build()
                         ).build()
                     )
                 }
