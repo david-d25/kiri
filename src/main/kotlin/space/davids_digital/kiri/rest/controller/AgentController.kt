@@ -87,7 +87,7 @@ class AgentController(
 
     @GetMapping("/events/subscribe", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     suspend fun eventStream(): SseEmitter {
-        val emitter = sseClients.register(SseEmitter(30_000L))
+        val emitter = sseClients.register(SseEmitter(60_000L))
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         val jobs = mutableListOf<Job>()
 
@@ -149,7 +149,7 @@ class AgentController(
             }
         }
 
-        emitter.onTimeout { cancelJobs() }
+        emitter.onTimeout { cancelJobs(); emitter.complete() }
         emitter.onCompletion { cancelJobs() }
         return emitter
     }

@@ -36,7 +36,12 @@ export default function ToolParameterForm({schema, value, onChange}: Props) {
                             schema={propSchema}
                             value={objectValue.items[key]}
                             onChange={(v) => {
-                                onChange({type: "object", items: {...objectValue.items, [key]: v}});
+                                if (!isRequired && isEmptyInput(v, propSchema)) {
+                                    const {[key]: _, ...rest} = objectValue.items;
+                                    onChange({type: "object", items: rest});
+                                } else {
+                                    onChange({type: "object", items: {...objectValue.items, [key]: v}});
+                                }
                             }}
                         />
                     </div>
@@ -73,7 +78,7 @@ function ParameterField({schema, value, onChange}: {
             return (
                 <NumberInput
                     value={value?.type === "number" ? value.number : null}
-                    onChange={(v) => onChange({type: "number", number: v ?? 0})}
+                    onChange={(v) => onChange({type: "number", number: v})}
                 />
             );
         case "boolean":
@@ -107,6 +112,14 @@ function ParameterField({schema, value, onChange}: {
                     onChange={onChange}
                 />
             );
+    }
+}
+
+function isEmptyInput(v: ToolInputDto, schema: ToolParameterValueDto): boolean {
+    switch (schema.type) {
+        case "string": return v.type === "text" && v.text === "";
+        case "number": return v.type === "number" && v.number === null;
+        default: return false;
     }
 }
 

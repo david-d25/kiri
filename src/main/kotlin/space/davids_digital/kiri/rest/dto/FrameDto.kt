@@ -8,10 +8,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
  * Concrete implementations are {@link DataFrameDto} and {@link ToolCallFrameDto}.
  */
 sealed interface FrameDto {
+    val id: String
     val type: String
 }
 
 data class NativeWebSearchFrameDto(
+    override val id: String,
     val webSearch: WebSearchDto
 ) : FrameDto {
     override val type: String = "nativeWebSearch"
@@ -41,6 +43,7 @@ sealed interface WebSearchDto {
 }
 
 data class DataFrameDto(
+    override val id: String,
     val tag: String,
     val attributes: Map<String, String>,
     val content: List<ContentPartDto>,
@@ -60,6 +63,7 @@ sealed interface ContentPartDto {
 }
 
 data class ToolCallFrameDto(
+    override val id: String,
     val toolUse: ToolUseDto,
     val result: ToolResultDto,
 ) : FrameDto {

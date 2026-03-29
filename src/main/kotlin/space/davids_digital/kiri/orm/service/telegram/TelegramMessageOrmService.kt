@@ -3,8 +3,10 @@ package space.davids_digital.kiri.orm.service.telegram
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import space.davids_digital.kiri.orm.entity.telegram.TelegramMessageEntity
 import space.davids_digital.kiri.model.telegram.TelegramInaccessibleMessage
 import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.orm.entity.telegram.id.TelegramMessageEntityId
@@ -138,5 +140,10 @@ class TelegramMessageOrmService(
     @Transactional(readOnly = true)
     fun countMessagesAfterId(chatId: Long, afterMessageId: Int): Long {
         return repo.countByIdChatIdAndIdMessageIdGreaterThan(chatId, afterMessageId)
+    }
+
+    @Transactional(readOnly = true)
+    fun search(spec: Specification<TelegramMessageEntity>, pageable: PageRequest): Page<TelegramMessage> {
+        return repo.findAll(spec, pageable).map(mapper::toModel)
     }
 }

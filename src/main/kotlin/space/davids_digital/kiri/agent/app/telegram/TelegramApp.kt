@@ -1,22 +1,29 @@
 package space.davids_digital.kiri.agent.app.telegram
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.app.AgentApp
 import space.davids_digital.kiri.agent.frame.DataFrame
+import space.davids_digital.kiri.agent.frame.DataFrameUtils.PRETTY_DATE_TIME_PATTERN
+import space.davids_digital.kiri.agent.frame.DataFrameUtils.fromPrettyStringToZonedDateTime
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameter
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.model.telegram.TelegramChat
+import space.davids_digital.kiri.orm.entity.telegram.TelegramMessageEntity
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
+import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications
 import space.davids_digital.kiri.service.TelegramNotificationService
 import space.davids_digital.kiri.service.TemporaryFilesService
 import kotlin.reflect.KFunction
@@ -44,8 +51,15 @@ class TelegramApp(
 
     override fun render(): List<DataFrame.ContentPart> = dataFrameContent {
         text("Telegram App opened.")
-        if (selectedChatId != null) {
-            line("Selected chat id: $selectedChatId")
+        val chatId = selectedChatId
+        if (chatId != null) {
+            val chat = runBlocking(Dispatchers.IO) { chatOrm.findById(chatId) }
+            val title = chat?.title ?: chat?.firstName ?: chatId.toString()
+            val unreadCount = runBlocking(Dispatchers.IO) {
+                messageOrm.countMessagesAfterId(chatId, chat?.metadata?.lastReadMessageId ?: 0)
+            }
+            line("")
+            text("Selected chat: $title (id $chatId). Unread messages: $unreadCount")
         }
     }
 
@@ -56,6 +70,7 @@ class TelegramApp(
         add(::switchToChatByUsername)
         if (selectedChatId != null) {
             add(::listLatestMessages)
+            add(::searchMessages)
             add(::send)
             add(::sendSticker)
             add(::closeChat)
@@ -72,10 +87,15 @@ class TelegramApp(
         val chats = withContext(Dispatchers.IO) {
             chatOrm.findAllEnabled(PageRequest.of(page, CHATS_PAGE_SIZE))
         }
+        val unreadCounts = withContext(Dispatchers.IO) {
+            chats.associate { chat ->
+                chat.id to messageOrm.countMessagesAfterId(chat.id, chat.metadata.lastReadMessageId ?: 0)
+            }
+        }
 
         return dataFrameContent {
             with (renderer) {
-                renderChatsPage(chats)
+                renderChatsPage(chats, unreadCounts)
             }
         }
     }
@@ -88,7 +108,9 @@ class TelegramApp(
 
     @AgentToolMethod
     suspend fun switchToChatByUsername(username: String): String {
-        val newChat = telegram.fetchAndSaveChatByUsername(username.removePrefix("@"))
+        val cleanUsername = username.removePrefix("@")
+        val newChat = withContext(Dispatchers.IO) { chatOrm.findByUsername(cleanUsername) }
+            ?: telegram.fetchAndSaveChatByUsername(cleanUsername)
             ?: return "Chat with username '$username' not found."
         return selectChat(newChat)
     }
@@ -100,7 +122,15 @@ class TelegramApp(
             telegramNotificationService.onChatClosedInAgentApp(previousChatId)
         }
         telegramNotificationService.onChatOpenedInAgentApp(chat.id)
-        return "Chat selected. Title: ${chat.title ?: chat.firstName}"
+        val title = chat.title ?: chat.firstName
+        val unreadCount = withContext(Dispatchers.IO) {
+            messageOrm.countMessagesAfterId(chat.id, chat.metadata.lastReadMessageId ?: 0)
+        }
+        return if (unreadCount > 0) {
+            "Chat selected. Title: $title. Unread messages: $unreadCount"
+        } else {
+            "Chat selected. Title: $title. No unread messages."
+        }
     }
 
     @AgentToolMethod
@@ -131,7 +161,7 @@ class TelegramApp(
 
     @AgentToolMethod(description = "show chat latest messages; can show up to $MAX_MESSAGES_PER_VIEW")
     suspend fun listLatestMessages(
-        @AgentToolParameter(description = "Number of messages to list; 0 = only poll for new messages")
+        @AgentToolParameter(description = "Number of messages to list; 0 = show only unread, but no more than $MAX_MESSAGES_PER_VIEW")
         n: Int = 0,
         @AgentToolParameter(description = "if true, show full XML with nested replies, all metadata, thumbnails. Default: compact plain-text.")
         detailed: Boolean = false
@@ -153,7 +183,7 @@ class TelegramApp(
             lastMessage?.let { messageOrm.countMessagesAfterId(chatId, it.messageId) } ?: 0
         }
         val laterNewMessagesRemaining = withContext(Dispatchers.IO) {
-            lastReadMessageId?.let { messageOrm.countMessagesAfterId(chatId, it) } ?: 0L
+            messageOrm.countMessagesAfterId(chatId, lastReadMessageId ?: 0)
         }
         withContext(Dispatchers.IO) {
             lastMessage?.let { setLastReadMessageId(chatId, it.messageId) }
@@ -181,20 +211,71 @@ class TelegramApp(
         }
     }
 
-//    @AgentToolMethod(description = "search messages based on the specified filters")
-//    suspend fun searchMessages(
-//        textContains: String? = null,
-//        @AgentToolParameter("format: ${DataFrameUtils.PRETTY_DATE_TIME_PATTERN}")
-//        beforeDate: String? = null,
-//        @AgentToolParameter("format: ${DataFrameUtils.PRETTY_DATE_TIME_PATTERN}")
-//        afterDate: String? = null,
-//        userId: Long? = null,
-//    ): List<DataFrame.ContentPart> {
-//        val chatId = selectedChatId ?: error("No chat is currently selected.")
-//        val chat = telegram.getChat(chatId) ?: error("Chat with id $chatId not found.")
-//
-//        // TODO
-//    }
+    @AgentToolMethod(description = "search/filter messages in the current chat; returns newest-first by default")
+    suspend fun searchMessages(
+        @AgentToolParameter(description = "filter by text (case-insensitive substring match)")
+        textContains: String? = null,
+        @AgentToolParameter(description = "filter by sender user id")
+        fromUserId: Long? = null,
+        @AgentToolParameter(description = "only messages before this date; format: $PRETTY_DATE_TIME_PATTERN")
+        beforeDate: String? = null,
+        @AgentToolParameter(description = "only messages after this date; format: $PRETTY_DATE_TIME_PATTERN")
+        afterDate: String? = null,
+        @AgentToolParameter(description = "only messages before this message id (exclusive)")
+        beforeId: Int? = null,
+        @AgentToolParameter(description = "only messages after this message id (exclusive)")
+        afterId: Int? = null,
+        @AgentToolParameter(description = "max number of messages to return (max $MAX_MESSAGES_PER_VIEW)")
+        limit: Int = MAX_MESSAGES_PER_VIEW,
+        @AgentToolParameter(description = "'newest_first' (default) or 'oldest_first'")
+        order: String = "newest_first",
+        @AgentToolParameter(description = "if true, show full XML with nested replies, all metadata, thumbnails. Default: compact plain-text.")
+        detailed: Boolean = false
+    ): List<DataFrame.ContentPart> {
+        val chatId = selectedChatId ?: error("No chat is currently selected.")
+        val chat = telegram.fetchAndSaveChatById(chatId) ?: error("Chat with id $chatId not found.")
+        val limitSafe = limit.coerceIn(1, MAX_MESSAGES_PER_VIEW)
+
+        var spec: Specification<TelegramMessageEntity> = TelegramMessageSpecifications.chatId(chatId)
+        textContains?.let { spec = spec.and(TelegramMessageSpecifications.textContains(it)) }
+        fromUserId?.let { spec = spec.and(TelegramMessageSpecifications.fromUser(it)) }
+        beforeDate?.let {
+            spec = spec.and(TelegramMessageSpecifications.dateBefore(it.fromPrettyStringToZonedDateTime().toOffsetDateTime()))
+        }
+        afterDate?.let {
+            spec = spec.and(TelegramMessageSpecifications.dateAfter(it.fromPrettyStringToZonedDateTime().toOffsetDateTime()))
+        }
+        beforeId?.let { spec = spec.and(TelegramMessageSpecifications.messageIdLessThan(it)) }
+        afterId?.let { spec = spec.and(TelegramMessageSpecifications.messageIdGreaterThan(it)) }
+
+        val sortDirection = if (order == "oldest_first") Sort.Direction.ASC else Sort.Direction.DESC
+        val pageable = PageRequest.of(0, limitSafe, Sort.by(sortDirection, "id.messageId"))
+        val messages = withContext(Dispatchers.IO) {
+            messageOrm.search(spec, pageable)
+        }
+
+        return dataFrameContent {
+            with(renderer) {
+                if (detailed) {
+                    renderMessages(
+                        chat.title, chatId,
+                        chat.metadata.lastReadMessageId,
+                        messages,
+                        laterMessagesRemaining = 0,
+                        laterNewMessagesRemaining = 0
+                    )
+                } else {
+                    renderMessagesCompact(
+                        chat.title, chatId,
+                        chat.metadata.lastReadMessageId,
+                        messages,
+                        laterMessagesRemaining = 0,
+                        laterNewMessagesRemaining = 0
+                    )
+                }
+            }
+        }
+    }
 
     @AgentToolMethod
     suspend fun getUserProfile(username: String): List<DataFrame.ContentPart> {

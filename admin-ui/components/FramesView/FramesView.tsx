@@ -46,7 +46,7 @@ function FramesList({ frames, autoscroll }: FramesListProps) {
     return (
         <div className={s.framesList} ref={listRef}>
             {frames.map((frame, i) => (
-                <Frame key={(frame as any)?.id ?? i} frame={frame}/>
+                <Frame key={frame.id} frame={frame}/>
             ))}
         </div>
     );

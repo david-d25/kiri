@@ -18,6 +18,7 @@ import space.davids_digital.kiri.agent.engine.event.TickEvent
 import space.davids_digital.kiri.agent.engine.event.WakeUpRequestEvent
 import space.davids_digital.kiri.agent.frame.DataFrameUtils.addCreatedAtNow
 import space.davids_digital.kiri.agent.frame.FrameBuffer
+import space.davids_digital.kiri.agent.frame.trackToolCall
 import space.davids_digital.kiri.agent.frame.FrameRenderer
 import space.davids_digital.kiri.agent.frame.NativeWebSearchFrame
 import space.davids_digital.kiri.agent.frame.ToolCallFrame
@@ -438,5 +439,6 @@ class AgentEngine(
         } finally {
             sleepJob = null
         }
+        frames.trackToolCall(appManager::render)
     }
 }

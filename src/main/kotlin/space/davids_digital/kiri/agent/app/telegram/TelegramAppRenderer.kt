@@ -33,11 +33,11 @@ class TelegramAppRenderer (
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun FrameContentBuilder.renderChatsPage(page: Page<TelegramChat>) {
+    fun FrameContentBuilder.renderChatsPage(page: Page<TelegramChat>, unreadCounts: Map<Long, Long>) {
         line("""<chats page="${page.pageable.pageNumber}" total-pages="${page.totalPages}">""")
         if (!page.isEmpty) {
             for (chat in page.take(MAX_LIST_ITEMS)) {
-                renderChatListItem(chat)
+                renderChatListItem(chat, unreadCounts[chat.id] ?: 0)
             }
         } else {
             line("<empty/>")
@@ -139,23 +139,24 @@ class TelegramAppRenderer (
         }
     }
 
-    private fun FrameContentBuilder.renderChatListItem(chat: TelegramChat) {
+    private fun FrameContentBuilder.renderChatListItem(chat: TelegramChat, unreadCount: Long) {
         val tag = chatTypeToTag(chat.type)
+        val unreadAttr = if (unreadCount > 0) """ unread="$unreadCount"""" else ""
         when (chat.type) {
             TelegramChat.Type.PRIVATE -> {
                 val id = chat.id
                 val displayName = getUserDisplayNameOrNull(id) ?: "(unknown user)"
-                line("""<$tag chat-id="$id">$displayName</$tag>""")
+                line("""<$tag chat-id="$id"$unreadAttr>$displayName</$tag>""")
             }
             TelegramChat.Type.GROUP, TelegramChat.Type.SUPERGROUP -> {
                 val id = chat.id
                 val title = chat.title?.safe() ?: "<no_title/>"
-                line("""<$tag chat-id="$id">$title</$tag>""")
+                line("""<$tag chat-id="$id"$unreadAttr>$title</$tag>""")
             }
             else -> {
                 val id = chat.id
                 val type = chat.type.name
-                line("""<$tag chat-id="$id" type="$type"/>""")
+                line("""<$tag chat-id="$id"$unreadAttr type="$type"/>""")
             }
         }
     }

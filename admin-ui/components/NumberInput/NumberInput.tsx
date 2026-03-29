@@ -46,6 +46,11 @@ export default function NumberInput(props: Props) {
     }
 
     function handleValueSet(value: string) {
+        if (value.trim() === '') {
+            props.onChange(null);
+            setInternalError(null);
+            return;
+        }
         if (isNaN(+value)) {
             setInternalError('Это должно быть число');
             return;

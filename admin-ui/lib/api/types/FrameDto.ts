@@ -1,6 +1,7 @@
 export type FrameDto = DataFrameDto | ToolCallFrameDto | NativeWebSearchFrameDto;
 
 export type NativeWebSearchFrameDto = {
+    id: string;
     type: "nativeWebSearch";
     webSearch: WebSearchDto;
 };
@@ -24,6 +25,7 @@ export type FindInPageDto = {
 }
 
 export type DataFrameDto = {
+    id: string;
     type: "data";
     tag: string;
     attributes: { [key: string]: string };
@@ -46,6 +48,7 @@ export namespace ContentPartDto {
 export type ContentPartDto = ContentPartDto.Text | ContentPartDto.Image;
 
 export type ToolCallFrameDto = {
+    id: string;
     type: "toolCall"
     toolUse: ToolUseDto;
     result: ToolResultDto;
@@ -66,7 +69,7 @@ export type ToolInputDto =
 
 export namespace ToolInputDto {
     export type Text = {        type: "text";       text: string                            };
-    export type Number = {      type: "number";     number: number                          };
+    export type Number = {      type: "number";     number: number | null                   };
     export type BooleanVal = {  type: "boolean";    boolean: boolean                        };
     export type Array = {       type: "array";      items: ToolInputDto[]                   };
     export type Object = {      type: "object";     items: { [key: string]: ToolInputDto }  };

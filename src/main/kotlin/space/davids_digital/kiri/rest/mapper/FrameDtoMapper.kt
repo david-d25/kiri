@@ -26,16 +26,19 @@ class FrameDtoMapper {
         when (frame.webSearch) {
             is ChatCompletionWebSearch.OpenPage -> {
                 return NativeWebSearchFrameDto(
+                    frame.id,
                     WebSearchDto.OpenPage(frame.webSearch.url)
                 )
             }
             is ChatCompletionWebSearch.Search -> {
                 return NativeWebSearchFrameDto(
+                    frame.id,
                     WebSearchDto.Search(frame.webSearch.query)
                 )
             }
             is ChatCompletionWebSearch.FindInPage -> {
                 return NativeWebSearchFrameDto(
+                    frame.id,
                     WebSearchDto.FindInPage(frame.webSearch.pattern, frame.webSearch.url)
                 )
             }
@@ -52,13 +55,13 @@ class FrameDtoMapper {
                 )
             }
         }
-        return DataFrameDto(frame.tag, frame.attributes, parts)
+        return DataFrameDto(frame.id, frame.tag, frame.attributes, parts)
     }
 
     fun mapToolCallFrame(frame: ToolCallFrame): ToolCallFrameDto {
         val toolUseDto = mapToolUse(frame.toolUse)
         val resultDto = mapToolResult(frame.resultProvider())
-        return ToolCallFrameDto(toolUseDto, resultDto)
+        return ToolCallFrameDto(frame.id, toolUseDto, resultDto)
     }
 
     private fun mapToolUse(toolUse: ChatCompletionToolUse): ToolUseDto =
