@@ -15,7 +15,8 @@ class StopCommand(
         try {
             engine.softStop()
             telegram.sendMessage(context.message.chatId, "Stop requested")
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            log.error("Error stopping engine", e)
             telegram.sendMessage(context.message.chatId, "Error stopping engine")
         }
     }

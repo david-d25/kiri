@@ -16,11 +16,11 @@ import space.davids_digital.kiri.agent.engine.event.EngineEvent
 import space.davids_digital.kiri.agent.engine.event.SleepEvent
 import space.davids_digital.kiri.agent.engine.event.TickEvent
 import space.davids_digital.kiri.agent.engine.event.WakeUpRequestEvent
-import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.DataFrameUtils.addCreatedAtNow
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.FrameRenderer
 import space.davids_digital.kiri.agent.frame.NativeWebSearchFrame
+import space.davids_digital.kiri.agent.frame.ToolCallFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
@@ -70,6 +70,7 @@ class AgentEngine(
     private val run = AtomicBoolean(false)
     private val eventHandlingScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val mainScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    @Volatile
     private var sleepJob: Job? = null
     private val tickMutex = Mutex()
 
@@ -163,6 +164,7 @@ class AgentEngine(
         log.info("Hard stopping agent engine")
         run.set(false)
         mainScope.coroutineContext[Job]?.cancelChildren()
+        eventHandlingScope.coroutineContext[Job]?.cancelChildren()
         sleepJob?.cancel()
         sleepJob = null
         mutableState.emit(EngineState.PAUSED)
@@ -297,27 +299,7 @@ class AgentEngine(
             )
             return
         }
-        if (toolResponse === Unit) {
-            toolResult("ok")
-        } else if (toolResponse is List<*> && toolResponse.all { it is DataFrame.ContentPart }) {
-            proxy.provider = {
-                chatCompletionToolUseResult {
-                    id = toolUse.id
-                    name = toolUse.name
-                    output = toolResponse.filterIsInstance<DataFrame.ContentPart>().map {
-                        when (it) {
-                            is DataFrame.Text -> ChatCompletionToolUseResult.Output.Text(it.text)
-                            is DataFrame.Image -> ChatCompletionToolUseResult.Output.Image(
-                                it.data,
-                                it.type
-                            )
-                        }
-                    }
-                }
-            }
-        } else {
-            toolResult(toolResponse.toString())
-        }
+        proxy.provider = { ToolCallFrame.formatResult(toolUse.id, toolUse.name, toolResponse) }
     }
 
     private suspend fun handleResponseItem(item: ChatCompletionWebSearch) {
@@ -344,6 +326,14 @@ class AgentEngine(
     private fun updateToolRegistry() {
         toolRegistry.clear()
         toolScanner.scan(listOf(this, appManager, memoryManager), toolRegistry)
+    }
+
+    /**
+     * Rebuilds the tool registry from current providers.
+     * Safe to call from outside the tick loop (e.g. from admin endpoints).
+     */
+    fun refreshToolRegistry() {
+        updateToolRegistry()
     }
 
     private suspend fun wakeUp() {

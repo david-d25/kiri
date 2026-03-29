@@ -1,5 +1,8 @@
 package space.davids_digital.kiri.rest.dto
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+
 /**
  * Base DTO for data sent to the admin front‑end representing a frame inside the agent buffer.
  * Concrete implementations are {@link DataFrameDto} and {@link ToolCallFrameDto}.
@@ -75,6 +78,14 @@ data class ToolResultDto(
     val output: List<ToolOutputDto>,
 )
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ToolInputDto.Text::class, name = "text"),
+    JsonSubTypes.Type(value = ToolInputDto.Number::class, name = "number"),
+    JsonSubTypes.Type(value = ToolInputDto.BooleanVal::class, name = "boolean"),
+    JsonSubTypes.Type(value = ToolInputDto.Array::class, name = "array"),
+    JsonSubTypes.Type(value = ToolInputDto.Object::class, name = "object"),
+)
 sealed interface ToolInputDto {
     val type: String
 

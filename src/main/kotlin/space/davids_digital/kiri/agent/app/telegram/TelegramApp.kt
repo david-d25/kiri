@@ -1,6 +1,7 @@
 package space.davids_digital.kiri.agent.app.telegram
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
@@ -13,6 +14,7 @@ import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameter
 import space.davids_digital.kiri.integration.telegram.TelegramService
+import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.service.TelegramNotificationService
@@ -36,7 +38,6 @@ class TelegramApp(
         private const val MAX_MESSAGES_PER_VIEW = 10
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val log = LoggerFactory.getLogger(javaClass)
 
     private var selectedChatId: Long? = null
@@ -51,7 +52,7 @@ class TelegramApp(
     override fun getAvailableAgentToolMethods(): List<KFunction<*>> = buildList {
         add(::getUserProfile)
         add(::listChats)
-        add(::switchToChatChatById)
+        add(::switchToChatById)
         add(::switchToChatByUsername)
         if (selectedChatId != null) {
             add(::listLatestMessages)
@@ -80,28 +81,26 @@ class TelegramApp(
     }
 
     @AgentToolMethod
-    suspend fun switchToChatChatById(id: Long): String {
+    suspend fun switchToChatById(id: Long): String {
         val newChat = telegram.fetchAndSaveChatById(id) ?: return "Chat with id $id not found."
-        val previousChatId = selectedChatId
-        selectedChatId = newChat.id
-        if (previousChatId != null) {
-            telegramNotificationService.onChatClosedInAgentApp(previousChatId)
-        }
-        telegramNotificationService.onChatOpenedInAgentApp(newChat.id)
-        return "Chat selected. Title: ${newChat.title ?: newChat.firstName}"
+        return selectChat(newChat)
     }
 
     @AgentToolMethod
     suspend fun switchToChatByUsername(username: String): String {
         val newChat = telegram.fetchAndSaveChatByUsername(username.removePrefix("@"))
             ?: return "Chat with username '$username' not found."
+        return selectChat(newChat)
+    }
+
+    private suspend fun selectChat(chat: TelegramChat): String {
         val previousChatId = selectedChatId
-        selectedChatId = newChat.id
+        selectedChatId = chat.id
         if (previousChatId != null) {
             telegramNotificationService.onChatClosedInAgentApp(previousChatId)
         }
-        telegramNotificationService.onChatOpenedInAgentApp(newChat.id)
-        return "Chat selected. Title: ${newChat.title ?: newChat.firstName}"
+        telegramNotificationService.onChatOpenedInAgentApp(chat.id)
+        return "Chat selected. Title: ${chat.title ?: chat.firstName}"
     }
 
     @AgentToolMethod
@@ -133,7 +132,9 @@ class TelegramApp(
     @AgentToolMethod(description = "show chat latest messages; can show up to $MAX_MESSAGES_PER_VIEW")
     suspend fun listLatestMessages(
         @AgentToolParameter(description = "Number of messages to list; 0 = only poll for new messages")
-        n: Int = 0
+        n: Int = 0,
+        @AgentToolParameter(description = "if true, show full XML with nested replies, all metadata, thumbnails. Default: compact plain-text.")
+        detailed: Boolean = false
     ): List<DataFrame.ContentPart> {
         require(n >= 0) { "Number of messages must not be negative, got $n" }
         val nSafe = if (n > 0) n.coerceAtMost(MAX_MESSAGES_PER_VIEW) else MAX_MESSAGES_PER_VIEW
@@ -148,17 +149,34 @@ class TelegramApp(
             }
         }
         val lastMessage = messages.maxByOrNull { it.messageId }
-        val laterMessagesRemaining = lastMessage?.let { messageOrm.countMessagesAfterId(chatId, it.messageId) } ?: 0
-        val laterNewMessagesRemaining = lastReadMessageId?.let { messageOrm.countMessagesAfterId(chatId, it) } ?: 0L
-        lastMessage?.let { setLastReadMessageId(chatId, it.messageId) }
+        val laterMessagesRemaining = withContext(Dispatchers.IO) {
+            lastMessage?.let { messageOrm.countMessagesAfterId(chatId, it.messageId) } ?: 0
+        }
+        val laterNewMessagesRemaining = withContext(Dispatchers.IO) {
+            lastReadMessageId?.let { messageOrm.countMessagesAfterId(chatId, it) } ?: 0L
+        }
+        withContext(Dispatchers.IO) {
+            lastMessage?.let { setLastReadMessageId(chatId, it.messageId) }
+        }
         return dataFrameContent {
             with (renderer) {
-                renderMessages(
-                    chat.metadata.lastReadMessageId,
-                    messages,
-                    laterMessagesRemaining,
-                    laterNewMessagesRemaining
-                )
+                if (detailed) {
+                    renderMessages(
+                        chat.title, chatId,
+                        chat.metadata.lastReadMessageId,
+                        messages,
+                        laterMessagesRemaining,
+                        laterNewMessagesRemaining
+                    )
+                } else {
+                    renderMessagesCompact(
+                        chat.title, chatId,
+                        chat.metadata.lastReadMessageId,
+                        messages,
+                        laterMessagesRemaining,
+                        laterNewMessagesRemaining
+                    )
+                }
             }
         }
     }
@@ -193,11 +211,6 @@ class TelegramApp(
     }
 
     @AgentToolMethod
-    suspend fun showStickerPack(id: String) {
-        // TODO
-    }
-
-    @AgentToolMethod
     suspend fun download(fileId: String): String {
         val bytes = telegram.getFileContent(fileId)
         val fileName = "file_${fileId}"
@@ -226,8 +239,8 @@ class TelegramApp(
         @AgentToolParameter(description = "images as filenames")
         images: List<String> = emptyList()
     ): String {
-        val imageContents = images.map { files.getContent(it) ?: error("file '$it' not found") }
         val selectedChatId = selectedChatId ?: return "Chat not opened"
+        val imageContents = images.map { files.getContent(it) ?: error("file '$it' not found") }
         telegram.sendMessage(selectedChatId, message, replyToMessageId = replyTo, images = imageContents)
         return "sent"
     }
@@ -237,11 +250,10 @@ class TelegramApp(
         if (selectedChatId != null) {
             telegramNotificationService.onChatClosedInAgentApp(selectedChatId)
         }
-        scope.cancel("App is closing")
     }
 
     private fun setLastReadMessageId(chatId: Long, messageId: Int) {
-        val openedChat = chatOrm.findById(chatId) ?: error("chat with id $chatId found")
+        val openedChat = chatOrm.findById(chatId) ?: error("chat with id $chatId not found")
         if (openedChat.metadata.lastReadMessageId != null && messageId <= openedChat.metadata.lastReadMessageId) {
             return // Don't move up read cursor
         }

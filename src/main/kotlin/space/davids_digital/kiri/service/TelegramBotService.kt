@@ -10,13 +10,15 @@ import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.bot.telegram.command.CommandExecutionContext
+import space.davids_digital.kiri.bot.telegram.command.CommandUtils
 import space.davids_digital.kiri.bot.telegram.command.CommandUtils.isCommand
+import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.bot.telegram.command.CommandsHolder
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.model.User
 import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.orm.service.UserOrmService
-import javax.annotation.PostConstruct
+import jakarta.annotation.PostConstruct
 
 @Service
 class TelegramBotService (
@@ -73,7 +75,7 @@ class TelegramBotService (
         if (message.forwardOrigin != null) {
             return // Ignore forwarded messages
         }
-        val context = parseCommand(message)
+        val context = parseCommand(message, chat.type)
         if (context == null) {
             telegram.sendMessage(message.chatId, "Bad command format")
             return
@@ -92,15 +94,23 @@ class TelegramBotService (
         }
     }
 
-    private fun parseCommand(message: TelegramMessage): CommandExecutionContext? {
+    private fun parseCommand(message: TelegramMessage, chatType: TelegramChat.Type): CommandExecutionContext? {
         val textOrCaption = message.text ?: message.caption ?: return null
+        val text = textOrCaption.trimStart()
 
-        // Parsing command name and omitting bot username, if present
-        val token = textOrCaption.trimStart().substring(1).split("\\s+".toRegex(), limit = 2)[0]
-        val commandName = token.substringBefore('@')
+        // In groups, format is "@botusername /command [args...]"
+        // In private chats, format is "/command [args...]"
+        val commandText = when (chatType) {
+            TelegramChat.Type.GROUP, TelegramChat.Type.SUPERGROUP -> {
+                text.split(CommandUtils.WHITESPACE_RE, limit = 2).getOrNull(1) ?: return null
+            }
+            else -> text
+        }
 
-        // Parsing arguments
-        val arguments = textOrCaption.trimStart().substring(1).split("\\s+".toRegex()).drop(1)
+        if (commandText.length < 2) return null
+        val afterSlash = commandText.substring(1).split(CommandUtils.WHITESPACE_RE, limit = 2)
+        val commandName = afterSlash[0].substringBefore('@')
+        val arguments = afterSlash.getOrElse(1) { "" }.split(CommandUtils.WHITESPACE_RE).filter { it.isNotEmpty() }
 
         return CommandExecutionContext(
             commandName = commandName,

@@ -1,10 +1,14 @@
 package space.davids_digital.kiri.bot.telegram.command
 
+import org.slf4j.LoggerFactory
+
 /**
  * Abstract class representing a command in the Telegram bot.
  * To execute a command, Telegram user sends a message like `/command arg1 arg2 ...`.
  */
 abstract class Command {
+    protected val log = LoggerFactory.getLogger(javaClass)
+
     /**
      * The name of the command without the leading slash.
      */

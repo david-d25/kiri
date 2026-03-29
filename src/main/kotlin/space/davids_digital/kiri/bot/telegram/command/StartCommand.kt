@@ -15,7 +15,8 @@ class StartCommand(
         try {
             engine.start()
             telegram.sendMessage(context.message.chatId, "Start requested")
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            log.error("Error starting engine", e)
             telegram.sendMessage(context.message.chatId, "Error starting engine")
         }
     }

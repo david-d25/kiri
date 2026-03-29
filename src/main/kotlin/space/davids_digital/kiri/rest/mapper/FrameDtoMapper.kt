@@ -55,7 +55,7 @@ class FrameDtoMapper {
         return DataFrameDto(frame.tag, frame.attributes, parts)
     }
 
-    private fun mapToolCallFrame(frame: ToolCallFrame): ToolCallFrameDto {
+    fun mapToolCallFrame(frame: ToolCallFrame): ToolCallFrameDto {
         val toolUseDto = mapToolUse(frame.toolUse)
         val resultDto = mapToolResult(frame.resultProvider())
         return ToolCallFrameDto(toolUseDto, resultDto)

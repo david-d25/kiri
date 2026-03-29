@@ -3,24 +3,25 @@ package space.davids_digital.kiri.agent.tool
 import org.springframework.stereotype.Component
 
 /**
- * Resolves tool calls to their respective methods.
+ * Resolves tool calls to their respective methods. Thread-safe.
  *
  * How methods are resolved:
  * - Each method is registered with a path and a name.
  * - The path is a list of namespaces.
  * - Namespaces and the name are separated by an underscore.
  *
- * Foe example, the method `foo_bar_baz` would be registered with the path `["foo", "bar"]` and the name `baz`.
+ * For example, the method `foo_bar_baz` would be registered with the path `["foo", "bar"]` and the name `baz`.
  */
 @Component
 class AgentToolRegistry {
+    private val lock = Any()
     private val root = Node()
 
     /**
      * Registers a function in the registry.
      * If the function is already registered, it will be overwritten.
      */
-    fun put(block: EntryBuilder.() -> Unit) {
+    fun put(block: EntryBuilder.() -> Unit): Unit = synchronized(lock) {
         put(EntryBuilder().apply(block).build())
     }
 
@@ -28,7 +29,7 @@ class AgentToolRegistry {
      * Registers a function in the registry.
      * If the function is already registered, it will be overwritten.
      */
-    fun put(entry: Entry) {
+    fun put(entry: Entry): Unit = synchronized(lock) {
         var node = root
         for (segment in entry.path) {
             node = node.children.getOrPut(segment) { Node() }
@@ -36,7 +37,7 @@ class AgentToolRegistry {
         node.functions[entry.name] = entry
     }
 
-    fun find(path: List<String>, name: String): Entry? {
+    fun find(path: List<String>, name: String): Entry? = synchronized(lock) {
         var node = root
         for (segment in path) {
             node = node.children[segment] ?: return null
@@ -46,8 +47,8 @@ class AgentToolRegistry {
 
     /**
      * Finds a function by its full name.
-     * The full name is a dot-separated string of the path and the name.
-     * For example, `foo.bar.baz` would be resolved with the path `["foo", "bar"]` and the name `baz`.
+     * The full name is an underscore-separated string of the path and the name.
+     * For example, `foo_bar_baz` would be resolved with the path `["foo", "bar"]` and the name `baz`.
      */
     fun find(fullName: String): Entry? {
         val parts = fullName.split('_')
@@ -58,29 +59,29 @@ class AgentToolRegistry {
         return find(path, name) != null
     }
 
-    fun clear() {
+    fun clear(): Unit = synchronized(lock) {
         root.functions.clear()
         root.children.clear()
     }
 
     /**
-     * Iterates over all registered functions.
+     * Returns a snapshot of all registered functions.
      * The order of the functions is not guaranteed.
-     * If registry is edited during iteration, the behavior is undefined.
      */
     fun iterate(): Sequence<Entry> {
-        return iterate(root, emptyList())
+        val entries = synchronized(lock) { collectAll(root) }
+        return entries.asSequence()
     }
 
-    private fun iterate(node: Node, path: List<String>): Sequence<Entry> {
-        return sequence {
-            for ((_, entry) in node.functions) {
-                yield(entry)
-            }
-            for ((segment, child) in node.children) {
-                yieldAll(iterate(child, path + segment))
-            }
+    private fun collectAll(node: Node): List<Entry> {
+        val result = mutableListOf<Entry>()
+        for ((_, entry) in node.functions) {
+            result.add(entry)
         }
+        for ((_, child) in node.children) {
+            result.addAll(collectAll(child))
+        }
+        return result
     }
 
     class EntryBuilder {

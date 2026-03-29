@@ -15,7 +15,8 @@ class HardStopCommand(
         try {
             engine.hardStop()
             telegram.sendMessage(context.message.chatId, "Engine off")
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            log.error("Error hard-stopping engine", e)
             telegram.sendMessage(context.message.chatId, "Error stopping engine")
         }
     }

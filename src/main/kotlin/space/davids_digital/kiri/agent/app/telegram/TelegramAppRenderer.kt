@@ -14,6 +14,7 @@ import space.davids_digital.kiri.llm.ChatCompletionImageType
 import space.davids_digital.kiri.model.telegram.*
 import space.davids_digital.kiri.service.TelegramChatService
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit.MINUTES
 
 @Component
@@ -27,6 +28,7 @@ class TelegramAppRenderer (
         private const val MAX_IMAGE_PIXELS = 1150000
         private const val MAX_LIST_ITEMS = 50
         private const val MAX_TEXT_LENGTH = 4000
+        private val HH_MM = DateTimeFormatter.ofPattern("HH:mm")
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -113,15 +115,7 @@ class TelegramAppRenderer (
     }
 
     private fun getUserDisplayNameOrNull(userId: Long?): String? {
-        if (userId == null) {
-            return null
-        }
-        val user = service.getUser(userId)
-        return if (user != null) {
-            getDisplayName(user)
-        } else {
-            null
-        }
+        return userId?.let { service.getUser(it) }?.let { getDisplayName(it) }
     }
 
     private fun getDisplayName(user: TelegramUser): String {
@@ -137,9 +131,9 @@ class TelegramAppRenderer (
 
     private fun String.safe(maxLength: Int = MAX_TEXT_LENGTH): String {
         return if (length > maxLength) {
-            val length = length
+            val totalLength = length
             substring(0, maxLength).escapeHTML() +
-                    "...<warning>text too long: $length/$maxLength, truncated</warning>"
+                    "...<warning>text too long: $totalLength/$maxLength, truncated</warning>"
         } else {
             escapeHTML()
         }
@@ -167,13 +161,16 @@ class TelegramAppRenderer (
     }
 
     fun FrameContentBuilder.renderMessages(
+        chatTitle: String?,
+        chatId: Long,
         lastReadMessageId: Int?,
         messagesPage: Page<TelegramMessage>,
         laterMessagesRemaining: Long = 0,
         laterNewMessagesRemaining: Long = 0
     ) {
         var sentAt: ZonedDateTime? = null
-        line("<messages>")
+        val titleAttr = chatTitle?.let { """ title="${it.safe(100)}"""" } ?: ""
+        line("""<messages chat-id="$chatId"$titleAttr>""")
         for (message in messagesPage.sortedBy { it.messageId }) {
             if (sentAt == null || !sentAt.truncatedTo(MINUTES).isEqual(message.date.truncatedTo(MINUTES))) {
                 sentAt = message.date
@@ -196,17 +193,190 @@ class TelegramAppRenderer (
         line("</messages>")
     }
 
-    private fun FrameContentBuilder.renderMessage(message: TelegramMessage, lastReadMessageId: Int? = null) {
-        val fromId = message.fromId
+    // ==================== Compact rendering ====================
+
+    fun FrameContentBuilder.renderMessagesCompact(
+        chatTitle: String?,
+        chatId: Long,
+        lastReadMessageId: Int?,
+        messagesPage: Page<TelegramMessage>,
+        laterMessagesRemaining: Long = 0,
+        laterNewMessagesRemaining: Long = 0
+    ) {
+        val label = chatTitle?.let { "\"$it\" (id $chatId)" } ?: "id $chatId"
+        line("Chat: $label")
+        line("")
+        for (message in messagesPage.sortedBy { it.messageId }) {
+            renderMessageCompact(message, lastReadMessageId)
+            line("")
+        }
+        if (messagesPage.isEmpty) {
+            line("(no messages)")
+        }
+        if (laterMessagesRemaining > 0) {
+            val newPart = if (laterNewMessagesRemaining > 0) ", $laterNewMessagesRemaining new" else ""
+            line("-- $laterMessagesRemaining more messages$newPart")
+        }
+    }
+
+    private fun FrameContentBuilder.renderMessageCompact(
+        message: TelegramMessage,
+        lastReadMessageId: Int?
+    ) {
+        // Header: [14:32] #42 Author [flags]:
+        val time = message.date.toLocalTime().format(HH_MM)
         val from = getUserDisplayNameOrNull(message.fromId)
+        val flags = buildCompactFlags(message, lastReadMessageId)
+        val viaBot = message.viaBot?.let { bot ->
+            " (via ${bot.username?.let { "@$it" } ?: "bot"})"
+        } ?: ""
+
+        text("[$time] #${message.messageId}")
+        if (from != null) text(" $from")
+        text(viaBot)
+        if (flags.isNotEmpty()) text(" [$flags]")
+        line(":")
+
+        // Text content
+        message.text?.let { line(toHtml(it.safe(), message.entities)) }
+
+        // Photos — keep Image ContentPart
+        if (message.photo.isNotEmpty()) {
+            renderImage(message.photo)
+        }
+
+        // Media placeholders
+        message.sticker?.let {          line("[sticker ${it.emoji}]")                                             }
+        message.video?.let {            line("[video ${it.duration}s]")                                           }
+        message.audio?.let {            line("[audio ${(it.title ?: it.fileName ?: "").safe(100)}]")              }
+        message.document?.let {         line("[document ${(it.fileName ?: "").safe(100)}]")                       }
+        message.voice?.let {            line("[voice ${it.duration}s]")                                           }
+        message.videoNote?.let {        line("[video note ${it.duration}s]")                                      }
+        message.animation?.let {        line("[animation ${it.duration}s]")                                       }
+        message.poll?.let {             renderPollCompact(it)                                                     }
+        message.location?.let {         line("[location ${it.latitude}, ${it.longitude}]")                        }
+        message.venue?.let {            line("[venue \"${it.title.safe(100)}\"]")                                 }
+        message.contact?.let {          line("[contact ${it.firstName.safe(50)} ${it.phoneNumber.safe(20)}]")     }
+        message.dice?.let {             line("[dice ${it.emoji}=${it.value}]")                                    }
+        message.game?.let {             line("[game \"${it.title.safe(100)}\"]")                                  }
+        message.story?.let {            line("[story]")                                                           }
+        message.invoice?.let {          line("[invoice \"${it.title.safe(100)}\"]")                               }
+        message.giveaway?.let {         line("[giveaway: ${it.winnerCount} winners]")                             }
+        message.giveawayCreated?.let {  line("[giveaway created]")                                                }
+        message.giveawayWinners?.let {  line("[giveaway winners]")                                                }
+        message.giveawayCompleted?.let { line("[giveaway completed: ${it.winnerCount} winners]")                  }
+        message.successfulPayment?.let { line("[payment ${it.currency.safe(10)}]")                                }
+        message.refundedPayment?.let {  line("[refund ${it.currency.safe(10)}]")                                  }
+        message.webAppData?.let {       line("[web app data]")                                                    }
+        message.passportData?.let {     line("[passport data]")                                                   }
+        message.paidMediaInfo?.let {    line("[paid media: ${it.starCount} stars]")                               }
+
+        // Caption
+        message.caption?.let { line(toHtml(it.safe(), message.captionEntities)) }
+
+        // Service messages
+        message.newChatMembers.takeIf { it.isNotEmpty() }?.let {
+            line("-- ${it.size} member(s) joined")
+        }
+        message.leftChatMemberId?.let {                 line("-- ${getUserDisplayName(it)} left")                 }
+        message.newChatTitle?.let {                      line("-- chat renamed to \"${it.safe(100)}\"")           }
+        if (message.newChatPhoto.isNotEmpty())           line("-- new chat photo")
+        if (message.deleteChatPhoto)                    line("-- chat photo deleted")
+        if (message.groupChatCreated)                   line("-- group created")
+        if (message.supergroupChatCreated)              line("-- supergroup created")
+        if (message.channelChatCreated)                 line("-- channel created")
+        message.migrateToChatId?.let {                   line("-- migrated to chat $it")                          }
+        message.migrateFromChatId?.let {                 line("-- migrated from chat $it")                        }
+        message.messageAutoDeleteTimerChanged?.let {     line("-- auto-delete: ${it.messageAutoDeleteTime}s")     }
+        message.connectedWebsite?.let {                  line("-- connected: ${it.safe(100)}")                    }
+        message.writeAccessAllowed?.let {                line("-- write access allowed")                          }
+        message.videoChatScheduled?.let {                line("-- video chat scheduled")                          }
+        message.videoChatEnded?.let {                    line("-- video chat ended (${it.duration}s)")            }
+        message.videoChatParticipantsInvited?.let {      line("-- ${it.users.size} invited to video chat")        }
+        message.forumTopicCreated?.let {                 line("-- topic created: ${it.name.safe(100)}")           }
+        message.forumTopicEdited?.let {                  line("-- topic edited")                                  }
+        message.forumTopicClosed?.let {                  line("-- topic closed")                                  }
+        message.forumTopicReopened?.let {                line("-- topic reopened")                                }
+        message.generalForumTopicHidden?.let {           line("-- general topic hidden")                          }
+        message.generalForumTopicUnhidden?.let {         line("-- general topic unhidden")                        }
+        message.chatBackgroundSet?.let {                 line("-- chat background changed")                       }
+        message.chatBoostAdded?.let {                    line("-- ${it.boostCount} boost(s) added")               }
+        message.proximityAlertTriggered?.let {           line("-- proximity alert: ${it.distance}m")              }
+        message.usersShared?.let {                       line("[${it.users.size} user(s) shared]")                }
+        message.chatShared?.let {                        line("[chat shared: ${it.title?.safe(50) ?: it.chatId}]")}
+
+        message.pinnedMessage?.let {
+            when (it) {
+                is TelegramMessage -> line("[pinned #${it.messageId}]")
+                else -> line("[pinned message]")
+            }
+        }
+
+        // Inline keyboard
+        message.replyMarkup?.let { markup ->
+            val buttons = markup.inlineKeyboard.flatten()
+            line("[${buttons.size} button(s): ${buttons.joinToString(", ") { "\"${it.text.safe(30)}\"" }}]")
+        }
+    }
+
+    private fun buildCompactFlags(message: TelegramMessage, lastReadMessageId: Int?): String {
+        return buildList {
+            if (lastReadMessageId != null && message.messageId > lastReadMessageId) add("new")
+            if (message.editDate != null) add("edited")
+            message.forwardOrigin?.let { origin ->
+                val name = when (origin) {
+                    is TelegramMessageOrigin.User ->
+                        getUserDisplayNameOrNull(origin.senderUserId) ?: "id ${origin.senderUserId}"
+                    is TelegramMessageOrigin.HiddenUser -> origin.senderUserName
+                    is TelegramMessageOrigin.Chat -> "chat ${origin.senderChatId}"
+                    is TelegramMessageOrigin.Channel -> "channel ${origin.chatId}"
+                    is TelegramMessageOrigin.Unknown -> "unknown"
+                }
+                add("fwd from $name")
+            }
+            message.replyToMessage?.let { add("> #${it.messageId}") }
+            message.externalReplyInfo?.let { add("> external") }
+            if (message.isAutomaticForward) add("auto-fwd")
+            if (message.isTopicMessage) add("topic")
+        }.joinToString(", ")
+    }
+
+    private fun FrameContentBuilder.renderPollCompact(poll: TelegramPoll) {
+        val options = poll.options.joinToString(", ") { "${it.text.safe(30)}: ${it.voterCount}" }
+        line("[poll \"${poll.question.safe(100)}\" | $options]")
+    }
+
+    // ==================== Full rendering ====================
+
+    private fun FrameContentBuilder.renderMessage(message: TelegramMessage, lastReadMessageId: Int? = null) {
         val forwarded = message.forwardOrigin != null
 
-        text("<message id=\"${message.messageId}\"")
+        text("<message")
+        renderMessageAttributes(message, lastReadMessageId)
+        line(">")
+
+        if (forwarded) {
+            text("<forwarded")
+            renderMessageOriginAttributes(message.forwardOrigin)
+            line(">")
+        }
+
+        renderMessageContent(message)
+
+        if (forwarded) {
+            line("</forwarded>")
+        }
+        line("</message>")
+    }
+
+    private fun FrameContentBuilder.renderMessageAttributes(message: TelegramMessage, lastReadMessageId: Int?) {
+        val from = getUserDisplayNameOrNull(message.fromId)
+        text(" id=\"${message.messageId}\"")
         if (from != null) {
             text(""" from="$from"""")
         }
         if (message.editDate != null) {
-            text(""" edited-at="${message.editDate.asPrettyString()}" """)
+            text(""" edited-at="${message.editDate.asPrettyString()}"""")
         }
         if (message.viaBot != null) {
             val value = if (message.viaBot.username != null) {
@@ -228,12 +398,10 @@ class TelegramAppRenderer (
         if (lastReadMessageId != null && message.messageId > lastReadMessageId) {
             text(" new")
         }
-        line(">")
-        if (forwarded) {
-            text("<forwarded")
-            renderMessageOriginAttributes(message.forwardOrigin)
-            line(">")
-        }
+    }
+
+    private fun FrameContentBuilder.renderMessageContent(message: TelegramMessage) {
+        val fromId = message.fromId
 
         if (message.caption != null && message.showCaptionAboveMedia) {
             renderCaption(message.caption, message.captionEntities)
@@ -251,7 +419,7 @@ class TelegramAppRenderer (
         message.videoChatEnded?.let {                   renderVideoChatEnded(it)                                    }
         message.videoChatParticipantsInvited?.let {     renderVideoChatParticipantsInvited(message.fromId ?: 0, it) }
         message.replyMarkup?.let {                      renderReplyMarkup(it)                                       }
-        message.generalForumTopicUnhidden?.let {        line("<service>General forum topic hidden</service>")       }
+        message.generalForumTopicUnhidden?.let {        line("<service>General forum topic unhidden</service>")     }
         message.generalForumTopicHidden?.let {          line("<service>General forum topic hidden</service>")       }
         message.forumTopicCreated?.let {                renderForumTopicCreated(it)                                 }
         message.forumTopicEdited?.let {                 renderForumTopicEdited(it)                                  }
@@ -321,10 +489,6 @@ class TelegramAppRenderer (
         if (message.isAutomaticForward) {
             line("<service>Automatically forwarded channel post</service>")
         }
-        if (forwarded) {
-            line("</forwarded>")
-        }
-        line("</message>")
     }
 
     private fun FrameContentBuilder.renderDice(dice: TelegramDice) {
@@ -724,7 +888,7 @@ class TelegramAppRenderer (
     }
 
     private fun FrameContentBuilder.renderLeftChatMember(leftChatMemberId: Long) {
-        line("<service>User ${getUserDisplayName(leftChatMemberId)}} left the chat.</service>")
+        line("<service>User ${getUserDisplayName(leftChatMemberId)} left the chat.</service>")
     }
 
     private fun FrameContentBuilder.renderSupergroupChatCreated() {
@@ -882,7 +1046,11 @@ class TelegramAppRenderer (
     private fun FrameContentBuilder.renderImage(sizes: List<TelegramPhotoSize>, withTag: Boolean = true) {
         val image = pickOptimalImage(sizes)
         if (withTag) {
-            line("<image fileId=\"${image?.fileId}\">")
+            if (image != null) {
+                line("<image fileId=\"${image.fileId}\">")
+            } else {
+                line("<image>")
+            }
         }
         if (image == null) {
             line("This image is too large. Requirements: ")

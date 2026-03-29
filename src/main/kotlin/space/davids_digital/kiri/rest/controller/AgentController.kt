@@ -1,22 +1,24 @@
 package space.davids_digital.kiri.rest.controller
 
 import kotlinx.coroutines.*
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import space.davids_digital.kiri.agent.engine.AgentEngine
 import space.davids_digital.kiri.agent.engine.EngineEventBus
 import space.davids_digital.kiri.agent.engine.event.TickEvent
 import space.davids_digital.kiri.agent.frame.FrameBuffer
+import space.davids_digital.kiri.agent.tool.AgentToolParameterMapper
 import space.davids_digital.kiri.rest.SseClients
-import space.davids_digital.kiri.rest.dto.FrameBufferStateDto
+import space.davids_digital.kiri.rest.dto.*
 import space.davids_digital.kiri.rest.mapper.EngineStateDtoMapper
 import space.davids_digital.kiri.rest.mapper.FrameDtoMapper
+import space.davids_digital.kiri.rest.mapper.ToolDtoMapper
 import space.davids_digital.kiri.rest.sse.SseEventName
 import space.davids_digital.kiri.rest.sse.sendEvent
+import space.davids_digital.kiri.service.AdminToolService
 
 /**
  * Administrative endpoints for monitoring and controlling the single agent instance.
@@ -30,6 +32,9 @@ class AgentController(
     private val engineStateMapper: EngineStateDtoMapper,
     private val sseClients: SseClients,
     private val engineEventBus: EngineEventBus,
+    private val adminToolService: AdminToolService,
+    private val toolDtoMapper: ToolDtoMapper,
+    private val toolParameterMapper: AgentToolParameterMapper,
 ) {
     @PostMapping("start")
     suspend fun start() {
@@ -58,19 +63,36 @@ class AgentController(
         return FrameBufferStateDto(frames, frameBuffer.hardLimit)
     }
 
+    @GetMapping("/tools")
+    fun getTools(): List<ToolDto> = adminToolService.listTools().map { entry ->
+        ToolDto(
+            fullName = entry.fullName,
+            description = entry.description,
+            parameters = toolDtoMapper.mapParameterValue(
+                toolParameterMapper.map(entry.callable)
+            )
+        )
+    }
+
+    @PostMapping("/tools/execute")
+    suspend fun executeTool(@RequestBody request: ToolExecuteRequest): ToolCallFrameDto {
+        val input = toolDtoMapper.mapToolInput(request.input)
+        try {
+            val frame = adminToolService.executeTool(request.toolName, input)
+            return frameDtoMapper.mapToolCallFrame(frame)
+        } catch (e: IllegalArgumentException) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND, e.message)
+        }
+    }
+
     @GetMapping("/events/subscribe", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     suspend fun eventStream(): SseEmitter {
         val emitter = sseClients.register(SseEmitter(30_000L))
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         val jobs = mutableListOf<Job>()
 
-        fun complete(e: Exception? = null) {
+        fun cancelJobs() {
             jobs.forEach { it.cancel() }
-            if (e != null) {
-                emitter.completeWithError(e)
-            } else {
-                emitter.complete()
-            }
         }
 
         try {
@@ -79,7 +101,8 @@ class AgentController(
             emitter.sendEvent(SseEventName.FrameBufferState, getFrameBufferState())
             emitter.sendEvent(SseEventName.EngineState, engineStateMapper.toDto(engine.state.value))
         } catch (e: Exception) {
-            complete(e)
+            cancelJobs()
+            emitter.completeWithError(e)
             return emitter
         }
 
@@ -89,7 +112,6 @@ class AgentController(
                     emitter.sendEvent(SseEventName.EngineState, engineStateMapper.toDto(state))
                 } catch (e: Exception) {
                     cancel("SSE send failed", e)
-                    complete(e)
                 }
             }
         }
@@ -102,7 +124,6 @@ class AgentController(
                     }
                 } catch (e: Exception) {
                     cancel("SSE send failed", e)
-                    complete(e)
                 }
             }
         }
@@ -113,7 +134,6 @@ class AgentController(
                     emitter.sendEvent(SseEventName.FrameBufferState, getFrameBufferState())
                 } catch (e: Exception) {
                     cancel("SSE send failed", e)
-                    complete(e)
                 }
             }
         }
@@ -125,13 +145,12 @@ class AgentController(
                     emitter.sendEvent(SseEventName.Heartbeat, Unit)
                 } catch (e: Exception) {
                     cancel("Heartbeat failed", e)
-                    complete(e)
                 }
             }
         }
 
-        emitter.onTimeout { complete() }
-        emitter.onCompletion { complete() }
+        emitter.onTimeout { cancelJobs() }
+        emitter.onCompletion { cancelJobs() }
         return emitter
     }
 }

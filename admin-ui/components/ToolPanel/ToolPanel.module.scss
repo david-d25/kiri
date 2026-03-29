@@ -1,0 +1,44 @@
+.header {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.description {
+  font-size: 0.85em;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+
+.muted {
+  font-size: 0.85em;
+  color: var(--text-secondary);
+}
+
+.parameterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.parameterField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.paramLabel {
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.paramDescription {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--accent-red);
+  font-size: 0.85em;
+  margin-top: 8px;
+}
