@@ -9,6 +9,7 @@ import space.davids_digital.kiri.agent.frame.DataFrameUtils.asPrettyString
 import space.davids_digital.kiri.agent.frame.DataFrameUtils.getImageType
 import space.davids_digital.kiri.agent.frame.dsl.FrameContentBuilder
 import space.davids_digital.kiri.integration.telegram.TelegramHtmlMapper.toHtml
+import space.davids_digital.kiri.integration.openai.OpenaiTranscriptionService
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.llm.ChatCompletionImageType
 import space.davids_digital.kiri.model.telegram.*
@@ -20,7 +21,8 @@ import java.time.temporal.ChronoUnit.MINUTES
 @Component
 class TelegramAppRenderer (
     private val service: TelegramService,
-    private val telegramChatService: TelegramChatService
+    private val telegramChatService: TelegramChatService,
+    private val transcriptionService: OpenaiTranscriptionService
 ) {
     companion object {
         private const val MAX_MEDIA_SIZE_BYTES = 5 * 1024 * 1024
@@ -251,7 +253,7 @@ class TelegramAppRenderer (
         message.video?.let {            line("[video ${it.duration}s]")                                           }
         message.audio?.let {            line("[audio ${(it.title ?: it.fileName ?: "").safe(100)}]")              }
         message.document?.let {         line("[document ${(it.fileName ?: "").safe(100)}]")                       }
-        message.voice?.let {            line("[voice ${it.duration}s]")                                           }
+        message.voice?.let {            renderVoiceCompact(it)                                                    }
         message.videoNote?.let {        line("[video note ${it.duration}s]")                                      }
         message.animation?.let {        line("[animation ${it.duration}s]")                                       }
         message.poll?.let {             renderPollCompact(it)                                                     }
@@ -796,9 +798,32 @@ class TelegramAppRenderer (
         line("</video-note>")
     }
 
+    private fun FrameContentBuilder.renderVoiceCompact(voice: TelegramVoice) {
+        try {
+            val text = transcriptionService.transcribe(voice.fileUniqueId) {
+                runBlocking { service.getFileContent(voice.fileId) }
+            }
+            if (text != null) {
+                line("[voice ${voice.duration}s] $text")
+            } else {
+                line("[voice ${voice.duration}s]")
+            }
+        } catch (e: Exception) {
+            line("[voice ${voice.duration}s]")
+        }
+    }
+
     private fun FrameContentBuilder.renderVoice(voice: TelegramVoice) {
-        line("""<voice id="${voice.fileUniqueId}" duration="${voice.duration}">""")
-        line("This message has a voice message, but your Telegram App does not support it yet.")
+        line("""<voice duration="${voice.duration}">""")
+        try {
+            val text = transcriptionService.transcribe(voice.fileUniqueId) {
+                runBlocking { service.getFileContent(voice.fileId) }
+            }
+            line(text ?: "[Transcription service unavailable]")
+        } catch (e: Exception) {
+            log.warn("Voice transcription failed for {}", voice.fileUniqueId, e)
+            line("[Voice transcription failed]")
+        }
         line("</voice>")
     }
 
