@@ -6,10 +6,13 @@ import com.pengrad.telegrambot.UpdatesListener.CONFIRMED_UPDATES_ALL
 import com.pengrad.telegrambot.model.Chat
 import com.pengrad.telegrambot.model.Update
 import com.pengrad.telegrambot.model.User
+import com.pengrad.telegrambot.model.Message
+import com.pengrad.telegrambot.model.request.InputMediaDocument
 import com.pengrad.telegrambot.model.request.InputMediaPhoto
 import com.pengrad.telegrambot.model.request.ReplyParameters
 import com.pengrad.telegrambot.request.*
 import com.pengrad.telegrambot.response.BaseResponse
+import com.pengrad.telegrambot.response.MessagesResponse
 import com.pengrad.telegrambot.response.SendResponse
 import com.pengrad.telegrambot.utility.kotlin.extension.request.forwardMessage
 import com.pengrad.telegrambot.utility.kotlin.extension.request.getChat
@@ -113,6 +116,11 @@ class TelegramService(
         messageOrm.save(mapper.toModel(message)!!)
     }
 
+    suspend fun send(chatId: Long, block: TelegramMessageBuilder.() -> Unit): List<TelegramMessage> {
+        val builder = TelegramMessageBuilder().apply(block)
+        return sendInternal(chatId, builder)
+    }
+
     suspend fun sendMessage(
         chatId: Long,
         text: String,
@@ -121,15 +129,16 @@ class TelegramService(
         disableNotification: Boolean = false,
         messageThreadId: Int? = null,
         replyToMessageId: Int? = null
-    ) = sendMessage(
-        listOf(chatId),
-        text,
-        images,
-        replyMarkup,
-        disableNotification,
-        messageThreadId,
-        replyToMessageId
-    )
+    ) {
+        send(chatId) {
+            html(text)
+            images.forEach { photo(it) }
+            this.replyMarkup = replyMarkup
+            this.disableNotification = disableNotification
+            this.messageThreadId = messageThreadId
+            this.replyToMessageId = replyToMessageId
+        }
+    }
 
     suspend fun sendSticker(chatId: Long, fileId: String): TelegramMessage {
         val file = getFile(fileId) ?: throw IllegalArgumentException("File ID $fileId not found")
@@ -142,77 +151,67 @@ class TelegramService(
         return mapper.toModel(bot.execute(GetStickerSet(name)).checkNoErrors().stickerSet())!!
     }
 
-    suspend fun sendMessage(
-        chatIds: List<Long>,
-        text: String,
-        images: List<ByteArray> = emptyList(),
-        replyMarkup: TelegramInlineKeyboardMarkup? = null,
-        disableNotification: Boolean = false,
-        messageThreadId: Int? = null,
-        replyToMessageId: Int? = null
-    ) {
-        for (chatId in chatIds) {
-            val (rawText, textEntities) = TelegramHtmlMapper.fromHtml(text)
-            val requests = buildSendMessageRequests(
-                chatId,
-                rawText,
-                textEntities,
-                images,
-                replyMarkup,
-                disableNotification,
-                messageThreadId,
-                replyToMessageId
-            )
+    private suspend fun sendInternal(chatId: Long, builder: TelegramMessageBuilder): List<TelegramMessage> {
+        val sentMessages = mutableListOf<TelegramMessage>()
+        val requests = buildSendRequests(
+            chatId              = chatId,
+            text                = builder.text,
+            textEntities        = builder.entities,
+            attachments         = builder.attachments,
+            replyMarkup         = builder.replyMarkup,
+            disableNotification = builder.disableNotification,
+            messageThreadId     = builder.messageThreadId,
+            replyToMessageId    = builder.replyToMessageId
+        )
 
-            for (request in requests) {
-                var sent = false
-                while (!sent) {
-                    rateLimiter.acquire()
-                    val response = bot.execute(request)
-                    if (response.isOk) {
-                        sent = true
-                        when (response) {
-                            is SendResponse -> messageOrm.save(mapper.toModel(response.message())!!)
-                            else -> log.error("Unknown response type {}, could not save", response::class)
-                        }
-                    } else if (response.errorCode() == 429) {
-                        val retryAfter = min(response.parameters().retryAfter(), 1)
-                        log.warn("429 received, backing off for {} s", retryAfter)
-                        delay(retryAfter * 1_000L)
-                    } else {
-                        // todo: resolve 'Failed to send message to 383453661 (400): Bad Request: file of size 14317506 bytes is too big for a photo; the maximum size is 10485760 bytes'
-                        log.error(
-                            "Failed to send message or message part to {} ({}): {}",
-                            chatId,
-                            response.errorCode(),
-                            response.description()
-                        )
-                        throw ServiceException("Failed to send message or message part to $chatId: ${response.description()}")
-                    }
+        for (request in requests) {
+            var sent = false
+            while (!sent) {
+                rateLimiter.acquire()
+                val response = bot.execute(request)
+                if (response.isOk) {
+                    sent = true
+                    val messages = extractMessages(response).mapNotNull(mapper::toModel)
+                    messages.forEach { messageOrm.save(it) }
+                    sentMessages.addAll(messages)
+                } else if (response.errorCode() == 429) {
+                    val retryAfter = min(response.parameters()?.retryAfter() ?: 1, 1)
+                    log.warn("429 received, backing off for {} s", retryAfter)
+                    delay(retryAfter * 1_000L)
+                } else {
+                    log.error(
+                        "Failed to send message or message part to {} ({}): {}",
+                        chatId,
+                        response.errorCode(),
+                        response.description()
+                    )
+                    throw ServiceException("Failed to send message or message part to $chatId: ${response.description()}")
                 }
             }
         }
+        return sentMessages
     }
 
-    private suspend fun buildSendMessageRequests(
+    private fun buildSendRequests(
         chatId: Long,
         text: String,
         textEntities: List<TelegramMessageEntity>,
-        images: List<ByteArray>,
+        attachments: List<TelegramOutgoingAttachment>,
         replyMarkup: TelegramInlineKeyboardMarkup?,
         disableNotification: Boolean,
-        messageThreadId: Int? = null,
-        replyToMessageId: Int? = null
+        messageThreadId: Int?,
+        replyToMessageId: Int?
     ): List<BaseRequest<*, *>> {
-        val firstLimit = if (images.isNotEmpty()) MAX_CAPTION_LENGTH else MAX_MESSAGE_LENGTH
-        val slices     = splitTextVariableLimit(text, textEntities, firstLimit)
+        val firstLimit = if (attachments.isNotEmpty()) MAX_CAPTION_LENGTH else MAX_MESSAGE_LENGTH
+        val slices = splitTextVariableLimit(text, textEntities, firstLimit)
+            .ifEmpty { listOf(EntitySlice("", emptyList())) }
 
         return slices.mapIndexed { index, slice ->
-            buildSendMessageRequest(
+            buildSendRequest(
                 chatId              = chatId,
                 text                = slice.text,
                 textEntities        = slice.entities,
-                images              = if (index == 0) images else emptyList(),
+                attachments         = if (index == 0) attachments else emptyList(),
                 replyMarkup         = if (index == slices.lastIndex) replyMarkup else null,
                 disableNotification = disableNotification,
                 messageThreadId     = messageThreadId,
@@ -221,50 +220,85 @@ class TelegramService(
         }
     }
 
-    private suspend fun buildSendMessageRequest(
+    private fun buildSendRequest(
         chatId: Long,
         text: String,
         textEntities: List<TelegramMessageEntity>,
-        images: List<ByteArray>,
+        attachments: List<TelegramOutgoingAttachment>,
         replyMarkup: TelegramInlineKeyboardMarkup?,
         disableNotification: Boolean,
-        messageThreadId: Int? = null,
-        replyToMessageId: Int? = null
+        messageThreadId: Int?,
+        replyToMessageId: Int?
     ): BaseRequest<*, *> {
-        require(images.size <= MAX_MEDIA_GROUP_SIZE) { "Telegram allows up to 10 images per message" }
-        return when (images.size) {
-            0 -> SendMessage(chatId, text).apply {
-                if (textEntities.isNotEmpty()) {
-                    entities(*textEntities.map { mapper.toDto(it)!! }.toTypedArray())
-                }
-                replyMarkup?.let { replyMarkup(mapper.toDto(it)!!) }
+        require(attachments.size <= MAX_MEDIA_GROUP_SIZE) { "Telegram allows up to $MAX_MEDIA_GROUP_SIZE attachments per message" }
+
+        val hasDocuments = attachments.any { it is TelegramOutgoingAttachment.Document }
+        val hasPhotos = attachments.any { it is TelegramOutgoingAttachment.Photo }
+        require(!(hasDocuments && hasPhotos)) { "Telegram does not support mixing documents with photos in a single message" }
+
+        val entitiesDto = textEntities.mapNotNull { mapper.toDto(it) }.toTypedArray()
+        val replyParams = replyToMessageId?.let { ReplyParameters(it) }
+        val replyMarkupDto = replyMarkup?.let { mapper.toDto(it)!! }
+
+        return when {
+            attachments.isEmpty() -> SendMessage(chatId, text).apply {
+                if (entitiesDto.isNotEmpty()) entities(*entitiesDto)
+                replyMarkupDto?.let { replyMarkup(it) }
                 disableNotification(disableNotification)
                 messageThreadId?.let { messageThreadId(it) }
-                replyToMessageId?.let { replyParameters(ReplyParameters(it)) }
+                replyParams?.let { replyParameters(it) }
             }
 
-            1 -> SendPhoto(chatId, images.first()).apply {
-                caption(text)
-                if (textEntities.isNotEmpty()) {
-                    captionEntities(*textEntities.map { mapper.toDto(it)!! }.toTypedArray())
+            attachments.size == 1 -> when (val att = attachments.single()) {
+                is TelegramOutgoingAttachment.Photo -> SendPhoto(chatId, att.data).apply {
+                    caption(text)
+                    if (entitiesDto.isNotEmpty()) captionEntities(*entitiesDto)
+                    replyMarkupDto?.let { replyMarkup(it) }
+                    disableNotification(disableNotification)
+                    messageThreadId?.let { messageThreadId(it) }
+                    replyParams?.let { replyParameters(it) }
                 }
-                replyMarkup?.let { replyMarkup(mapper.toDto(it)!!) }
-                disableNotification(disableNotification)
-                messageThreadId?.let { messageThreadId(it) }
-                replyToMessageId?.let { replyParameters(ReplyParameters(it)) }
+
+                is TelegramOutgoingAttachment.Document -> SendDocument(chatId, att.data).apply {
+                    fileName(att.name)
+                    caption(text)
+                    if (entitiesDto.isNotEmpty()) captionEntities(*entitiesDto)
+                    replyMarkupDto?.let { replyMarkup(it) }
+                    disableNotification(disableNotification)
+                    messageThreadId?.let { messageThreadId(it) }
+                    replyParams?.let { replyParameters(it) }
+                }
             }
 
             else -> {
-                val media = images.mapIndexed { _, bytes -> InputMediaPhoto(bytes) }.toMutableList()
-                media.first().caption(text)
-                media.first().captionEntities(*textEntities.map { mapper.toDto(it)!! }.toTypedArray())
-
+                val media = attachments.mapIndexed { index, att ->
+                    when (att) {
+                        is TelegramOutgoingAttachment.Photo -> InputMediaPhoto(att.data)
+                        is TelegramOutgoingAttachment.Document -> InputMediaDocument(att.data).apply {
+                            fileName(att.name)
+                        }
+                    }.apply {
+                        if (index == 0) {
+                            caption(text)
+                            captionEntities(*entitiesDto)
+                        }
+                    }
+                }
                 SendMediaGroup(chatId, *media.toTypedArray()).apply {
                     disableNotification(disableNotification)
                     messageThreadId?.let { messageThreadId(it) }
-                    replyToMessageId?.let { replyParameters(ReplyParameters(it)) }
+                    replyParams?.let { replyParameters(it) }
                 }
             }
+        }
+    }
+
+    private fun extractMessages(resp: BaseResponse): List<Message> = when (resp) {
+        is SendResponse -> listOfNotNull(resp.message())
+        is MessagesResponse -> resp.messages()?.toList() ?: emptyList()
+        else -> {
+            log.error("Couldn't extract message from response of type ${resp::class}")
+            emptyList()
         }
     }
 

@@ -4,7 +4,7 @@ import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
 
 allprojects {
-    version = "1.7.0"
+    version = "1.8.0"
 }
 
 plugins {
@@ -120,6 +120,10 @@ dependencies {
     implementation("org.hibernate.orm:hibernate-vector:6.6.13.Final")
 
     implementation("org.jsoup:jsoup:1.19.1")
+
+    // SVG rendering (SVG to PNG via Apache Batik)
+    implementation("org.apache.xmlgraphics:batik-transcoder:1.18")
+    implementation("org.apache.xmlgraphics:batik-codec:1.18")
 
     // Tests
     testImplementation(kotlin("test"))

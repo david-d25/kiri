@@ -6,6 +6,7 @@ import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.app.image.ImageApp
 import space.davids_digital.kiri.agent.app.scratchpad.ScratchpadApp
+import space.davids_digital.kiri.agent.app.svg.SvgApp
 import space.davids_digital.kiri.agent.app.telegram.TelegramApp
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
@@ -21,6 +22,7 @@ class AppManager(
     private val telegramAppProvider: ObjectProvider<TelegramApp>,
     private val scratchpadAppProvider: ObjectProvider<ScratchpadApp>,
     private val imageAppProvider: ObjectProvider<ImageApp>,
+    private val svgAppProvider: ObjectProvider<SvgApp>,
 ) : AgentToolProvider {
     private val log = LoggerFactory.getLogger(this::class.java)
 
@@ -32,6 +34,7 @@ class AppManager(
         availableApps["telegram"] = { telegramAppProvider.getObject() }
         availableApps["notepad"] = { scratchpadAppProvider.getObject() }
         availableApps["image"] = { imageAppProvider.getObject() }
+        availableApps["svg"] = { svgAppProvider.getObject() }
     }
 
     override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close, ::render, ::restart)

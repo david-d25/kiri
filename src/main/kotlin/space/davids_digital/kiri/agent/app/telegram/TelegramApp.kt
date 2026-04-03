@@ -306,23 +306,41 @@ class TelegramApp(
         return "sent"
     }
 
+    /**
+     * Send a message with optional photo and/or document attachments.
+     * Note: Telegram does not allow mixing photos and documents in a single message —
+     * use either [images] or [documents], not both.
+     */
     @AgentToolMethod(
-        description = "Send message. " +
-                "Supported HTML tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, blockquote, " +
-                "blockquote[expandable]."
+        description = "Send message with optional attachments. " +
+                "Note: images and documents cannot be mixed in a single message."
     )
     suspend fun send(
+        @AgentToolParameter(
+            description = "message text; " +
+                    "Supported HTML tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, " +
+                    "blockquote, blockquote[expandable]."
+        )
         message: String,
 
         @AgentToolParameter(description = "id of message to reply to")
         replyTo: Int? = null,
 
-        @AgentToolParameter(description = "images as filenames")
-        images: List<String> = emptyList()
+        @AgentToolParameter(description = "photo filenames from temporary files; photos are compressed as JPEG")
+        images: List<String> = emptyList(),
+
+        @AgentToolParameter(description = "document filenames from temporary files (sent as-is, i.e. photos without compression)")
+        documents: List<String> = emptyList()
     ): String {
         val selectedChatId = selectedChatId ?: return "Chat not opened"
         val imageContents = images.map { files.getContent(it) ?: error("file '$it' not found") }
-        telegram.sendMessage(selectedChatId, message, replyToMessageId = replyTo, images = imageContents)
+        val documentContents = documents.map { it to (files.getContent(it) ?: error("file '$it' not found")) }
+        telegram.send(selectedChatId) {
+            html(message)
+            imageContents.forEach { photo(it) }
+            documentContents.forEach { (name, data) -> document(data, name) }
+            replyToMessageId = replyTo
+        }
         return "sent"
     }
 
