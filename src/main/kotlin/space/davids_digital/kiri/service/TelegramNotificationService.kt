@@ -82,7 +82,7 @@ class TelegramNotificationService (
         if (chatIsOpenedInApp) {
             // Current chat is opened in the agent app, just wake up the agent
             if (isPrivateChat || isAgentMentioned || isAgentMessageRepliedTo) {
-                sendNotification("New message in current chat")
+                sendNotification("New message in current chat", message.chatId)
                 return
             }
         }
@@ -96,7 +96,7 @@ class TelegramNotificationService (
             if (!chatEnabled) {
                 telegram.sendMessage(message.chatId, chatDisabledMessage)
             } else {
-                sendNotification("New message in private chat with $userDisplayName")
+                sendNotification("New message in private chat with $userDisplayName", message.chatId)
             }
             return
         }
@@ -115,7 +115,7 @@ class TelegramNotificationService (
             if (!chatEnabled) {
                 telegram.sendMessage(message.chatId, chatDisabledMessage)
             } else {
-                sendNotification("$userDisplayName mentioned you in chat $chatDisplayName")
+                sendNotification("$userDisplayName mentioned you in chat $chatDisplayName", message.chatId)
             }
             return
         }
@@ -123,17 +123,18 @@ class TelegramNotificationService (
             if (!chatEnabled) {
                 telegram.sendMessage(message.chatId, chatDisabledMessage)
             } else {
-                sendNotification("$userDisplayName replied to you in chat $chatDisplayName")
+                sendNotification("$userDisplayName replied to you in chat $chatDisplayName", message.chatId)
             }
             return
         }
     }
 
-    private suspend fun sendNotification(text: String) {
+    private suspend fun sendNotification(text: String, chatId: Long) {
         notificationManager.push(Notification(
             sentAt = ZonedDateTime.now(),
             metadata = mapOf(
-                "app" to "telegram"
+                "app" to "telegram",
+                "chatId" to chatId.toString()
             ),
             content = dataFrameContent {
                 text(text)

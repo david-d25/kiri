@@ -16,6 +16,8 @@ import space.davids_digital.kiri.agent.engine.event.EngineEvent
 import space.davids_digital.kiri.agent.engine.event.SleepEvent
 import space.davids_digital.kiri.agent.engine.event.TickEvent
 import space.davids_digital.kiri.agent.engine.event.WakeUpRequestEvent
+import space.davids_digital.kiri.agent.engine.lifecycle.EngineLifecycleHookExecutor
+import space.davids_digital.kiri.agent.engine.lifecycle.LifecycleHookProvider
 import space.davids_digital.kiri.agent.frame.DataFrameUtils.addCreatedAtNow
 import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.trackToolCall
@@ -38,6 +40,7 @@ import space.davids_digital.kiri.service.ChatCompletionService
 import space.davids_digital.kiri.service.ChatCompletionServiceRegistry
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Service
@@ -52,6 +55,8 @@ class AgentEngine(
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
     private val chatCompletionServiceRegistry: ChatCompletionServiceRegistry,
+    private val lifecycleHookExecutor: EngineLifecycleHookExecutor,
+    private val lifecycleHookProviders: List<LifecycleHookProvider>,
     settings: SettingOrmService
 ) : AgentToolProvider {
     companion object {
@@ -143,7 +148,7 @@ class AgentEngine(
             return
         } catch (e: Exception) {
             log.error("Tick error", e)
-            delay(10000)
+            delay(10.seconds)
             return
         } finally {
             tickMutex.unlock()
@@ -315,7 +320,7 @@ class AgentEngine(
         }
         mutableState.emit(EngineState.PAUSED)
         // Try to recover
-        delay(RECOVERY_TIMEOUT_MS)
+        delay(RECOVERY_TIMEOUT_MS.milliseconds)
         if (run.get()) {
             run.set(false)
             log.info("Recovering engine")
@@ -439,6 +444,12 @@ class AgentEngine(
         } finally {
             sleepJob = null
         }
+
+        val hookProviders = listOf(this, appManager) +
+            appManager.getSubProviders() +
+            lifecycleHookProviders
+        lifecycleHookExecutor.executeOnWake(hookProviders, frames)
+
         frames.trackToolCall(appManager::render)
     }
 }

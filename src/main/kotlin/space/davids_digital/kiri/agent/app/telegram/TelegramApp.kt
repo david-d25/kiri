@@ -11,10 +11,14 @@ import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.app.AgentApp
+import space.davids_digital.kiri.agent.engine.lifecycle.OnAgentWake
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.DataFrameUtils.PRETTY_DATE_TIME_PATTERN
 import space.davids_digital.kiri.agent.frame.DataFrameUtils.fromPrettyStringToZonedDateTime
+import space.davids_digital.kiri.agent.frame.FrameBuffer
+import space.davids_digital.kiri.agent.frame.StaticDataFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
+import space.davids_digital.kiri.agent.frame.trackToolCall
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolParameter
@@ -24,6 +28,7 @@ import space.davids_digital.kiri.orm.entity.telegram.TelegramMessageEntity
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications
+import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.service.TelegramNotificationService
 import space.davids_digital.kiri.service.TemporaryFilesService
 import kotlin.reflect.KFunction
@@ -37,7 +42,8 @@ class TelegramApp(
     private val telegramNotificationService: TelegramNotificationService,
     private val chatOrm: TelegramChatOrmService,
     private val messageOrm: TelegramMessageOrmService,
-    private val files: TemporaryFilesService
+    private val files: TemporaryFilesService,
+    settings: SettingOrmService
 ): AgentApp("telegram") {
 
     companion object {
@@ -46,6 +52,8 @@ class TelegramApp(
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
+
+    private val autoSwitchOnWake by settings.declareBoolean("apps.telegram.autoSwitchOnWake", true)
 
     private var selectedChatId: Long? = null
 
@@ -342,6 +350,20 @@ class TelegramApp(
             replyToMessageId = replyTo
         }
         return "sent"
+    }
+
+    @OnAgentWake
+    suspend fun autoSwitchOnNotification(frames: FrameBuffer) {
+        if (!autoSwitchOnWake) return
+
+        // Pick the most recent telegram notification — earlier ones remain for the LLM to handle
+        val chatId = frames.toList().asReversed()
+            .filterIsInstance<StaticDataFrame>()
+            .firstOrNull { it.tag == "notification" && it.attributes["app"] == "telegram" }
+            ?.attributes?.get("chatId")?.toLongOrNull() ?: return
+
+        log.info("Auto-switching to chat {} on wake", chatId)
+        frames.trackToolCall(this::switchToChatById, chatId)
     }
 
     override suspend fun onClose() {

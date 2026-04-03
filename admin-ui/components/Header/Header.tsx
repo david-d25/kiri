@@ -15,6 +15,7 @@ export default function Header() {
                 <HeaderNavButton url="/memory">Memory</HeaderNavButton>
                 <HeaderNavButton url="/tg-chats">Telegram Chats</HeaderNavButton>
                 <HeaderNavButton url="/files">Files</HeaderNavButton>
+                <HeaderNavButton url="/apps">Apps</HeaderNavButton>
                 <HeaderNavButton url="/integrations">Integrations</HeaderNavButton>
             </div>
             <div className={s.right}>
