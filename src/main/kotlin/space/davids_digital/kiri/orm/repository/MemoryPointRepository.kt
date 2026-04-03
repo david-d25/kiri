@@ -1,5 +1,7 @@
 package space.davids_digital.kiri.orm.repository
 
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import space.davids_digital.kiri.orm.entity.MemoryPointEntity
@@ -10,4 +12,5 @@ import java.util.UUID
 interface MemoryPointRepository: JpaRepository<MemoryPointEntity, UUID> {
     fun findByValue(value: String): MemoryPointEntity?
     fun findByIdIn(ids: Collection<UUID>): List<MemoryPointEntity>
+    fun findByValueContainingIgnoreCase(query: String, pageable: Pageable): Page<MemoryPointEntity>
 }

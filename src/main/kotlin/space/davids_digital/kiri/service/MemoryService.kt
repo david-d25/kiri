@@ -25,6 +25,17 @@ class MemoryService(
     val minWeight: Double = 0.01
     val maxWeight: Double = 2.0
 
+    /**
+     * Creates embeddings for the given texts without persisting any keys in the database.
+     * Use this for read-only operations like semantic search.
+     */
+    suspend fun createEmbeddings(texts: List<String>): List<FloatArray> {
+        if (texts.isEmpty()) return emptyList()
+        val modelName = "text-embedding-3-large"
+        val dimensionality = 2000
+        return openAiEmbeddingService.createEmbeddings(modelName, texts, dimensionality)
+    }
+
     @Transactional
     suspend fun getOrCreateKeys(texts: List<String>): List<MemoryKey> {
         if (texts.isEmpty()) {
@@ -87,6 +98,42 @@ class MemoryService(
             // We'll accumulate scores over all queryKeys
             for (queryKey in keys) {
                 val distance = cosineDistance(queryKey.embedding, linkedKey.embedding)
+                val score = calculateScore(distance, link.weight)
+                scoredPoints.merge(point, score) { old, new -> 2 * old * new / (old + new) }
+            }
+        }
+
+        return scoredPoints.entries
+            .sortedByDescending { it.value }
+            .take(limit)
+            .map { ScoredMemoryPoint(it.key, it.value) }
+    }
+
+    /**
+     * Retrieves memory points by raw embeddings without persisting any keys.
+     * Uses the same scoring algorithm as retrieve() but works with transient embeddings.
+     */
+    @Transactional(readOnly = true)
+    fun retrieveByEmbeddings(embeddings: List<FloatArray>, limit: Int): List<ScoredMemoryPoint> {
+        val scoredPoints = mutableMapOf<MemoryPoint, Double>()
+        val expandedLimit = ceil(limit * maxWeight).toInt()
+
+        val candidateKeyIds = mutableSetOf<java.util.UUID>()
+        for (queryEmbedding in embeddings) {
+            val nearestKeys = orm.findNearestMemoryKeys(queryEmbedding, expandedLimit)
+            candidateKeyIds.addAll(nearestKeys.map { it.id })
+        }
+        val allLinks = orm.getMemoryLinksByMemoryKeys(candidateKeyIds)
+        val pointIds = allLinks.map { it.memoryPointId }.toSet()
+        val pointsMap = orm.getMemoryPointsByIds(pointIds).associateBy { it.id }
+        val keysMap = orm.getMemoryKeysByIds(candidateKeyIds).associateBy { it.id }
+
+        for (link in allLinks) {
+            val point = pointsMap[link.memoryPointId] ?: continue
+            val linkedKey = keysMap[link.memoryKeyId] ?: continue
+
+            for (queryEmbedding in embeddings) {
+                val distance = cosineDistance(queryEmbedding, linkedKey.embedding)
                 val score = calculateScore(distance, link.weight)
                 scoredPoints.merge(point, score) { old, new -> 2 * old * new / (old + new) }
             }

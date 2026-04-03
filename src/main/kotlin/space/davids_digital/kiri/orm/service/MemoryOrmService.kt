@@ -1,8 +1,13 @@
 package space.davids_digital.kiri.orm.service
 
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.server.ResponseStatusException
 import space.davids_digital.kiri.model.MemoryKey
 import space.davids_digital.kiri.model.MemoryLink
 import space.davids_digital.kiri.model.MemoryPoint
@@ -128,5 +133,79 @@ class MemoryOrmService(
                 }
             )
         }
+    }
+
+    @Transactional(readOnly = true)
+    fun getMemoryPointsPaged(page: Int, size: Int): Page<MemoryPoint> {
+        val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        return memoryPointRepository.findAll(pageable).map { memoryPointMapper.toModel(it)!! }
+    }
+
+    @Transactional(readOnly = true)
+    fun searchMemoryPointsByText(query: String, page: Int, size: Int): Page<MemoryPoint> {
+        val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        return memoryPointRepository.findByValueContainingIgnoreCase(query, pageable)
+            .map { memoryPointMapper.toModel(it)!! }
+    }
+
+    @Transactional(readOnly = true)
+    fun getMemoryKeysPaged(page: Int, size: Int): Pair<List<MemoryKey>, Long> {
+        val keys = memoryKeyRepository.findAll(page * size, size).map { memoryKeyMapper.toModel(it)!! }
+        val total = memoryKeyRepository.count()
+        return keys to total
+    }
+
+    @Transactional(readOnly = true)
+    fun searchMemoryKeysByText(query: String, page: Int, size: Int): Pair<List<MemoryKey>, Long> {
+        val keys = memoryKeyRepository.findByKeyTextContainingIgnoreCase(query, page * size, size)
+            .map { memoryKeyMapper.toModel(it)!! }
+        val total = memoryKeyRepository.countByKeyTextContainingIgnoreCase(query)
+        return keys to total
+    }
+
+    @Transactional
+    fun deleteMemoryPoint(id: UUID) {
+        memoryLinkRepository.deleteByMemoryPointId(id)
+        memoryPointRepository.deleteById(id)
+    }
+
+    @Transactional
+    fun deleteMemoryKey(id: UUID) {
+        memoryKeyRepository.deleteById(id)
+    }
+
+    @Transactional
+    fun deleteMemoryLink(keyId: UUID, pointId: UUID) {
+        memoryLinkRepository.deleteByMemoryKeyIdAndMemoryPointId(keyId, pointId)
+    }
+
+    @Transactional
+    fun updateMemoryPointValue(id: UUID, value: String): MemoryPoint {
+        val entity = memoryPointRepository.findById(id).orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Memory point not found: $id") }
+        entity.value = value
+        return memoryPointMapper.toModel(memoryPointRepository.save(entity))!!
+    }
+
+    @Transactional(readOnly = true)
+    fun countMemoryPoints(): Long = memoryPointRepository.count()
+
+    @Transactional(readOnly = true)
+    fun countMemoryKeys(): Long = memoryKeyRepository.count()
+
+    @Transactional(readOnly = true)
+    fun countMemoryLinks(): Long = memoryLinkRepository.count()
+
+    @Transactional(readOnly = true)
+    fun countLinksByMemoryPoints(pointIds: Collection<UUID>): Map<UUID, Int> {
+        if (pointIds.isEmpty()) return emptyMap()
+        return memoryLinkRepository.countByMemoryPointIds(pointIds)
+            .associate { (it[0] as UUID) to (it[1] as Long).toInt() }
+    }
+
+    @Transactional(readOnly = true)
+    fun countLinksByMemoryKeys(keyIds: Collection<UUID>): Map<UUID, Int> {
+        if (keyIds.isEmpty()) return emptyMap()
+        return memoryLinkRepository.countByMemoryKeyIds(keyIds)
+            .associate { (it[0] as UUID) to (it[1] as Long).toInt() }
     }
 }

@@ -15,6 +15,31 @@ interface MemoryLinkRepository : JpaRepository<MemoryLinkEntity, MemoryLinkEntit
     fun findByMemoryPointId(memoryPointId: UUID): List<MemoryLinkEntity>
     fun findByMemoryKeyId(memoryKeyId: UUID): List<MemoryLinkEntity>
     fun findByMemoryKeyIdIn(keyIds: Collection<UUID>): List<MemoryLinkEntity>
+    fun deleteByMemoryKeyIdAndMemoryPointId(memoryKeyId: UUID, memoryPointId: UUID)
+    fun deleteByMemoryPointId(memoryPointId: UUID)
+    fun deleteByMemoryKeyId(memoryKeyId: UUID)
+    fun countByMemoryPointId(memoryPointId: UUID): Int
+    fun countByMemoryKeyId(memoryKeyId: UUID): Int
+
+    @Query(
+        """
+            select ml.memoryPointId as id, count(ml) as cnt
+            from MemoryLinkEntity ml
+            where ml.memoryPointId in :pointIds
+            group by ml.memoryPointId
+        """
+    )
+    fun countByMemoryPointIds(@Param("pointIds") pointIds: Collection<UUID>): List<Array<Any>>
+
+    @Query(
+        """
+            select ml.memoryKeyId as id, count(ml) as cnt
+            from MemoryLinkEntity ml
+            where ml.memoryKeyId in :keyIds
+            group by ml.memoryKeyId
+        """
+    )
+    fun countByMemoryKeyIds(@Param("keyIds") keyIds: Collection<UUID>): List<Array<Any>>
 
     @Modifying
     @Query(

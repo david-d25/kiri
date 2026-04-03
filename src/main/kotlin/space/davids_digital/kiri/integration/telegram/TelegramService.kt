@@ -35,6 +35,7 @@ import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramUserOrmService
 import space.davids_digital.kiri.service.exception.ServiceException
 import kotlin.math.min
+import kotlin.time.Duration.Companion.seconds
 
 @Service
 class TelegramService(
@@ -177,7 +178,7 @@ class TelegramService(
                 } else if (response.errorCode() == 429) {
                     val retryAfter = min(response.parameters()?.retryAfter() ?: 1, 1)
                     log.warn("429 received, backing off for {} s", retryAfter)
-                    delay(retryAfter * 1_000L)
+                    delay(retryAfter.seconds)
                 } else {
                     log.error(
                         "Failed to send message or message part to {} ({}): {}",

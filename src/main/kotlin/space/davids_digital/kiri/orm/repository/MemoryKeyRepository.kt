@@ -63,15 +63,63 @@ class MemoryKeyRepository(
         }
     }
 
+    fun findAll(offset: Int, limit: Int): List<MemoryKeyEntity> {
+        val sql = """
+            SELECT id, key_text, embedding_model_id, embedding
+            FROM main.memory_keys
+            ORDER BY key_text
+            LIMIT :limit OFFSET :offset
+        """.trimIndent()
+        val params = mapOf("offset" to offset, "limit" to limit)
+        return jdbcTemplate.query(sql, params) { rs, _ -> mapRowToEntity(rs) }
+    }
+
+    fun count(): Long {
+        val sql = "SELECT count(*) FROM main.memory_keys"
+        return jdbcTemplate.queryForObject(sql, emptyMap<String, Any>(), Long::class.java) ?: 0
+    }
+
+    fun findByKeyTextContainingIgnoreCase(query: String, offset: Int, limit: Int): List<MemoryKeyEntity> {
+        val sql = """
+            SELECT id, key_text, embedding_model_id, embedding
+            FROM main.memory_keys
+            WHERE LOWER(key_text) LIKE LOWER(:query)
+            ORDER BY key_text
+            LIMIT :limit OFFSET :offset
+        """.trimIndent()
+        val params = mapOf("query" to "%$query%", "offset" to offset, "limit" to limit)
+        return jdbcTemplate.query(sql, params) { rs, _ -> mapRowToEntity(rs) }
+    }
+
+    fun countByKeyTextContainingIgnoreCase(query: String): Long {
+        val sql = """
+            SELECT count(*) FROM main.memory_keys
+            WHERE LOWER(key_text) LIKE LOWER(:query)
+        """.trimIndent()
+        val params = mapOf("query" to "%$query%")
+        return jdbcTemplate.queryForObject(sql, params, Long::class.java) ?: 0
+    }
+
+    fun deleteById(id: UUID) {
+        jdbcTemplate.update(
+            "DELETE FROM main.memory_links WHERE memory_key_id = :id",
+            mapOf("id" to id)
+        )
+        jdbcTemplate.update(
+            "DELETE FROM main.memory_keys WHERE id = :id",
+            mapOf("id" to id)
+        )
+    }
+
     fun findNearest(embedding: FloatArray, limit: Int): List<MemoryKeyEntity> {
-        val embeddingObject = floatArrayToString(embedding)
         val sql = """
             select id, key_text, embedding_model_id, embedding
             from main.memory_keys
-            order by l2_distance(embedding, '$embeddingObject'::vector)
+            order by l2_distance(embedding, :embedding::vector)
             limit :limit
         """.trimIndent()
         val params = mapOf(
+            "embedding" to floatArrayToPgVector(embedding),
             "limit" to limit
         )
         return jdbcTemplate.query(sql, params) { rs, _ ->

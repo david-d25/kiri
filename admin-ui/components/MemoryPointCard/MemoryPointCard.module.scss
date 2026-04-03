@@ -1,0 +1,149 @@
+.card {
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  gap: 12px;
+
+  &:hover {
+    background: oklch(from var(--bg-secondary) calc(l + 0.03) c h);
+  }
+}
+
+.mainInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.score {
+  flex-shrink: 0;
+  background: oklch(from var(--accent-blue) calc(l * 0.4) 0.1 h);
+  color: var(--accent-blue);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editInputWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.editInput {
+  width: 100%;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.keysCount {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.date {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.details {
+  border-top: 1px solid var(--border-color);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.loading, .noLinks {
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.linkItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.keyText {
+  min-width: 120px;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--accent-cyan);
+}
+
+.weightContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.weightBar {
+  flex: 1;
+  height: 6px;
+  background: oklch(20% 0 0);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.weightFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+
+.weightInputContainer {
+  width: 75px;
+  flex-shrink: 0;
+}
+
+.weightInput {
+  font-size: 12px;
+  text-align: right;
+}
+
+.deleteLinkBtn {
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+
+  &:hover {
+    color: var(--accent-red);
+  }
+}

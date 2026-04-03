@@ -1,3 +1,62 @@
 .root {
   padding: 20px;
 }
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.statsBar {
+  display: flex;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.statItem {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.statValue {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.searchRow {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.searchInput {
+  flex: 1;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.pointList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.empty {
+  color: var(--text-secondary);
+  padding: 20px 0;
+  text-align: center;
+}
