@@ -310,7 +310,8 @@ class TelegramApp(
     @AgentToolMethod
     suspend fun sendSticker(fileId: String): String {
         val selectedChatId = selectedChatId ?: return "Chat not opened"
-        telegram.sendSticker(selectedChatId, fileId)
+        val sentMessage = telegram.sendSticker(selectedChatId, fileId)
+        advanceReadPointerIfSafe(selectedChatId, listOf(sentMessage.messageId))
         return "sent"
     }
 
@@ -343,12 +344,13 @@ class TelegramApp(
         val selectedChatId = selectedChatId ?: return "Chat not opened"
         val imageContents = images.map { files.getContent(it) ?: error("file '$it' not found") }
         val documentContents = documents.map { it to (files.getContent(it) ?: error("file '$it' not found")) }
-        telegram.send(selectedChatId) {
+        val sentMessages = telegram.send(selectedChatId) {
             html(message)
             imageContents.forEach { photo(it) }
             documentContents.forEach { (name, data) -> document(data, name) }
             replyToMessageId = replyTo
         }
+        advanceReadPointerIfSafe(selectedChatId, sentMessages.map { it.messageId })
         return "sent"
     }
 
@@ -364,12 +366,40 @@ class TelegramApp(
 
         log.info("Auto-switching to chat {} on wake", chatId)
         frames.trackToolCall(this::switchToChatById, chatId)
+
+        // Auto-list unread messages if the count fits in a single view
+        val unreadCount = withContext(Dispatchers.IO) {
+            val chat = chatOrm.findById(chatId) ?: return@withContext 0L
+            messageOrm.countMessagesAfterId(chatId, chat.metadata.lastReadMessageId ?: 0)
+        }
+        if (unreadCount in 1..<MAX_MESSAGES_PER_VIEW) {
+            log.info("Auto-listing {} unread messages in chat {}", unreadCount, chatId)
+            frames.trackToolCall(this::listLatestMessages, 0, false)
+        }
     }
 
     override suspend fun onClose() {
         val selectedChatId = selectedChatId
         if (selectedChatId != null) {
             telegramNotificationService.onChatClosedInAgentApp(selectedChatId)
+        }
+    }
+
+    /**
+     * After sending messages, advances the read pointer only if the ONLY unread messages
+     * are the ones we just sent. If someone else sent a message in between, the pointer
+     * is NOT advanced so the agent sees that message on the next listing.
+     */
+    private suspend fun advanceReadPointerIfSafe(chatId: Long, sentMessageIds: List<Int>) {
+        if (sentMessageIds.isEmpty()) return
+        val maxSentId = sentMessageIds.max()
+        withContext(Dispatchers.IO) {
+            val chat = chatOrm.findById(chatId) ?: return@withContext
+            val lastReadId = chat.metadata.lastReadMessageId ?: 0
+            val totalUnread = messageOrm.countMessagesAfterId(chatId, lastReadId)
+            if (totalUnread == sentMessageIds.size.toLong()) {
+                setLastReadMessageId(chatId, maxSentId)
+            }
         }
     }
 
