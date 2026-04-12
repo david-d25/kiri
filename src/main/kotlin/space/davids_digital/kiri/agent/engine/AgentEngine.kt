@@ -425,10 +425,10 @@ class AgentEngine(
         @AgentToolParameter(description = "Information to retain")
         @Suppress("unused") // Value stays in framebuffer
         summary: String,
-        @AgentToolParameter(description = "Number of most recent messages to keep unaltered")
+        @AgentToolParameter(description = "Number of most recent messages to keep unaltered, better to keep 6-12 to not lose context")
         keepLastN: Int = 10
     ): String {
-        frames.trim(keepLastN.coerceIn(1..frames.hardLimit))
+        frames.trim(keepLastN.coerceIn(3..frames.hardLimit))
         return "Memory compacted, kept last $keepLastN items."
     }
 
