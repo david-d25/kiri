@@ -401,6 +401,7 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
                     is ChatCompletionWebSearch.Search -> ContentBlockParam.ofServerToolUse(
                         ServerToolUseBlockParam.builder()
                             .id(contentItem.id ?: error("WebSearch Search content item must have an ID"))
+                            .name(ServerToolUseBlockParam.Name.WEB_SEARCH)
                             .input(
                                 ServerToolUseBlockParam.Input.builder()
                                     .putAdditionalProperty("query", JsonString.of(contentItem.query))
