@@ -23,12 +23,14 @@ import space.davids_digital.kiri.agent.frame.FrameBuffer
 import space.davids_digital.kiri.agent.frame.trackToolCall
 import space.davids_digital.kiri.agent.frame.FrameRenderer
 import space.davids_digital.kiri.agent.frame.NativeWebSearchFrame
+import space.davids_digital.kiri.agent.frame.ReasoningFrame
 import space.davids_digital.kiri.agent.frame.ToolCallFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Reasoning.Effort
 import space.davids_digital.kiri.llm.ChatCompletionResponse
+import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.AUTO
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
 import space.davids_digital.kiri.llm.ChatCompletionWebSearch
@@ -61,6 +63,8 @@ class AgentEngine(
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 10000L
+        private const val TEXT_ONLY_RESPONSE_WARN_THRESHOLD = 3
+        private const val TEXT_ONLY_RESPONSE_STOP_THRESHOLD = 5
     }
 
     private val log = LoggerFactory.getLogger(this::class.java)
@@ -79,6 +83,8 @@ class AgentEngine(
     @Volatile
     private var sleepJob: Job? = null
     private val tickMutex = Mutex()
+
+    private var consecutiveTextOnlyResponses = 0
 
     private val mutableState = MutableStateFlow(EngineState.PAUSED)
 
@@ -103,6 +109,7 @@ class AgentEngine(
             sleepJob?.cancelAndJoin()
         }
         if (run.compareAndSet(false, true)) {
+            consecutiveTextOnlyResponses = 0
             mainScope.launch {
                 try {
                     log.info("Starting agent engine")
@@ -199,7 +206,7 @@ class AgentEngine(
             maxOutputTokens = maxOutputTokensWithReasoning
             temperature = 1.0
             tools {
-                choice = REQUIRED
+                choice = if (reasoningEnabled) AUTO else REQUIRED
                 allowParallelUse = true
                 toolRegistry.iterate().forEach {
                     function {
@@ -236,15 +243,41 @@ class AgentEngine(
         for (item in response.content) {
             handleResponseItem(item)
         }
+        val hasToolAction = response.content.any {
+            it is ChatCompletionResponse.ContentItem.ToolUse || it is ChatCompletionWebSearch
+        }
+        if (hasToolAction) {
+            consecutiveTextOnlyResponses = 0
+        } else {
+            consecutiveTextOnlyResponses++
+            if (consecutiveTextOnlyResponses >= TEXT_ONLY_RESPONSE_STOP_THRESHOLD) {
+                log.error("Model produced $consecutiveTextOnlyResponses consecutive text-only responses, stopping to prevent credit drain")
+                addSimpleText("system", "Engine stopped: model is not calling tools (possible credit drain).")
+                consecutiveTextOnlyResponses = 0
+                softStop()
+            } else if (consecutiveTextOnlyResponses >= TEXT_ONLY_RESPONSE_WARN_THRESHOLD) {
+                log.warn("Model produced $consecutiveTextOnlyResponses consecutive text-only responses")
+                addSimpleText("system", "Warning: you MUST call tools. Text-only responses are not allowed in agent mode.")
+            }
+        }
     }
 
     private suspend fun handleResponseItem(item: ChatCompletionResponse.ContentItem) {
         when (item) {
             is ChatCompletionResponse.ContentItem.ToolUse -> handleResponseItem(item)
             is ChatCompletionWebSearch -> handleResponseItem(item)
-            else -> {
-                log.warn("Unexpected agent response part '${item::class}', skipping")
+            is ChatCompletionResponse.ContentItem.Reasoning -> handleResponseItem(item)
+            is ChatCompletionResponse.ContentItem.RedactedReasoning -> {} // No displayable content
+            is ChatCompletionResponse.ContentItem.Text -> {
+                log.warn("Model produced text response in agent mode: '${item.text.take(100)}'")
             }
+        }
+    }
+
+    private suspend fun handleResponseItem(item: ChatCompletionResponse.ContentItem.Reasoning) {
+        val content = item.content
+        if (!content.isNullOrBlank()) {
+            frames.add(ReasoningFrame(content, item.signature, item.id))
         }
     }
 
@@ -373,7 +406,11 @@ class AgentEngine(
         }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::think, ::pause, ::compact)
+    override fun getAvailableAgentToolMethods() = buildList {
+        if (!reasoningEnabled) add(::think)
+        add(::pause)
+        add(::compact)
+    }
 
     @AgentToolMethod(description = "Think to yourself and plan next moves.")
     fun think(

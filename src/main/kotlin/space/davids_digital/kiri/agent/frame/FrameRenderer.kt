@@ -13,6 +13,9 @@ class FrameRenderer {
                 is DataFrame -> userMessage { renderDataFrame(frame) }
                 is ToolCallFrame -> renderToolCallFrame(frame)
                 is NativeWebSearchFrame -> assistantMessage { webSearch(frame.webSearch) }
+                is ReasoningFrame -> assistantMessage {
+                    reasoning(frame.reasoningId, frame.content, frame.signature)
+                }
             }
         }
     }

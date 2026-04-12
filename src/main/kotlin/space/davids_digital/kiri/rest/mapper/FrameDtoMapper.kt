@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.Frame
 import space.davids_digital.kiri.agent.frame.NativeWebSearchFrame
+import space.davids_digital.kiri.agent.frame.ReasoningFrame
 import space.davids_digital.kiri.agent.frame.ToolCallFrame
 import space.davids_digital.kiri.llm.ChatCompletionToolUse
 import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
@@ -20,6 +21,7 @@ class FrameDtoMapper {
         is DataFrame -> mapDataFrame(frame)
         is ToolCallFrame -> mapToolCallFrame(frame)
         is NativeWebSearchFrame -> mapNativeWebSearchFrame(frame)
+        is ReasoningFrame -> ReasoningFrameDto(frame.id, frame.content)
     }
 
     private fun mapNativeWebSearchFrame(frame: NativeWebSearchFrame): FrameDto {

@@ -1,4 +1,10 @@
-export type FrameDto = DataFrameDto | ToolCallFrameDto | NativeWebSearchFrameDto;
+export type FrameDto = DataFrameDto | ToolCallFrameDto | NativeWebSearchFrameDto | ReasoningFrameDto;
+
+export type ReasoningFrameDto = {
+    id: string;
+    type: "reasoning";
+    content: string;
+};
 
 export type NativeWebSearchFrameDto = {
     id: string;

@@ -4,7 +4,7 @@ import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
 
 allprojects {
-    version = "1.11.0"
+    version = "1.12.0"
 }
 
 plugins {
@@ -63,7 +63,7 @@ dependencies {
     implementation("com.openai:openai-java:4.18.0")
 
     // Anthropic
-    implementation("com.anthropic:anthropic-java:2.11.1")
+    implementation("com.anthropic:anthropic-java:2.24.0")
 
     // Google GenAI
     implementation("com.google.genai:google-genai:1.38.0")

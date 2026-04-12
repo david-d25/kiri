@@ -12,6 +12,13 @@ sealed interface FrameDto {
     val type: String
 }
 
+data class ReasoningFrameDto(
+    override val id: String,
+    val content: String,
+) : FrameDto {
+    override val type: String = "reasoning"
+}
+
 data class NativeWebSearchFrameDto(
     override val id: String,
     val webSearch: WebSearchDto

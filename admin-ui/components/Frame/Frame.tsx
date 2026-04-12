@@ -1,13 +1,16 @@
 import {
     ContentPartDto,
     DataFrameDto, FindInPageDto,
-    FrameDto, NativeWebSearchFrameDto, OpenPageDto, SearchDto,
+    FrameDto, NativeWebSearchFrameDto, OpenPageDto, ReasoningFrameDto, SearchDto,
     ToolCallFrameDto,
     ToolInputDto,
     ToolOutputDto
 } from "@/lib/api/types/FrameDto";
 
+import {Fragment} from "react";
+
 import BracketsLiteralIcon from "@/icons/brackets-literal.svg";
+import BrainIcon from "@/icons/brain.svg";
 import FunctionIcon from "@/icons/function.svg";
 import GlobeIcon from "@/icons/globe.svg";
 
@@ -28,6 +31,8 @@ export default function Frame(props: Props) {
             return <ToolCallFrame frame={frame}/>
         case "nativeWebSearch":
             return <NativeWebSearchFrame frame={frame}/>
+        case "reasoning":
+            return <ReasoningFrame frame={frame}/>
     }
 }
 
@@ -77,6 +82,29 @@ function FindInPageFrame(props: { frame: FindInPageDto }) {
                 <div className={s.tag}>
                     Find In Page: "{props.frame.pattern}" in {props.frame.url}
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function ReasoningFrame(props: { frame: ReasoningFrameDto }) {
+    return (
+        <div className={s.frame}>
+            <div className={s.head}>
+                <BrainIcon className={classnames(s.icon, s.reasoning)}/>
+                <div className={s.tag}>
+                    Reasoning
+                </div>
+            </div>
+            <div className={s.content}>
+                <span className={s.textContentPart}>
+                    {props.frame.content.split('\n').map((line, index) => (
+                        <Fragment key={index}>
+                            { index > 0 && <br/> }
+                            <span>{line}</span>
+                        </Fragment>
+                    ))}
+                </span>
             </div>
         </div>
     );

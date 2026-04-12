@@ -17,6 +17,8 @@ import com.anthropic.models.messages.StopReason.Companion.STOP_SEQUENCE
 import com.anthropic.models.messages.StopReason.Companion.TOOL_USE
 import com.anthropic.models.messages.TextBlockParam
 import com.anthropic.models.messages.ThinkingBlockParam
+import com.anthropic.models.messages.ThinkingConfigEnabled
+import com.anthropic.models.messages.ThinkingConfigParam
 import com.anthropic.models.messages.Tool
 import com.anthropic.models.messages.ToolChoice
 import com.anthropic.models.messages.ToolChoiceAny
@@ -217,7 +219,12 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
         messages(buildMessages(request.messages))
         tools(buildTools(request.tools))
         if (request.reasoning.enabled) {
-            enabledThinking(request.reasoning.maxTokens)
+            thinking(ThinkingConfigParam.ofEnabled(
+                ThinkingConfigEnabled.builder()
+                    .budgetTokens(request.reasoning.maxTokens)
+                    .display(ThinkingConfigEnabled.Display.SUMMARIZED)
+                    .build()
+            ))
         }
         if (request.reasoning.enabled) {
             temperature(1.0)
