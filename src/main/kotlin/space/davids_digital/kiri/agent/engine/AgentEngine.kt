@@ -24,7 +24,6 @@ import space.davids_digital.kiri.agent.frame.trackToolCall
 import space.davids_digital.kiri.agent.frame.FrameRenderer
 import space.davids_digital.kiri.agent.frame.NativeWebSearchFrame
 import space.davids_digital.kiri.agent.frame.ReasoningFrame
-import space.davids_digital.kiri.agent.frame.StaticDataFrame
 import space.davids_digital.kiri.agent.frame.ToolCallFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
@@ -270,8 +269,8 @@ class AgentEngine(
             is ChatCompletionResponse.ContentItem.Reasoning -> handleResponseItem(item)
             is ChatCompletionResponse.ContentItem.RedactedReasoning -> {} // No displayable content
             is ChatCompletionResponse.ContentItem.Text -> {
-                addSimpleText("assistant", item.text)
                 log.warn("Model produced text response in agent mode: '${item.text.take(100)}'")
+                addSimpleText("assistant", item.text)
             }
         }
     }

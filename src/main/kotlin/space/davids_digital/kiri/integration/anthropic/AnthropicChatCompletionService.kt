@@ -109,7 +109,7 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
     @EvictCacheOnException(cacheNames = ["AnthropicChatCompletionService#getStatus"])
     override suspend fun request(request: ChatCompletionRequest): ChatCompletionResponse {
         val client = requireClient()
-        val params = buildParams(cleanup(optimize(request)))
+        val params = buildParams(mergeConsecutiveMessages(cleanup(optimize(request))))
         val response = client.messages().create(params)
         return parseResponse(response)
     }
@@ -137,6 +137,25 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
             }
         }
         return request.copy(messages = cleanedMessages)
+    }
+
+    /**
+     * Merges consecutive messages with the same role into a single message.
+     * Required because the Anthropic API does not allow consecutive messages with the same role,
+     * and in particular requires thinking blocks to be in the same assistant message as tool_use blocks.
+     */
+    private fun mergeConsecutiveMessages(request: ChatCompletionRequest): ChatCompletionRequest {
+        if (request.messages.size <= 1) return request
+        val merged = mutableListOf<Message>()
+        for (message in request.messages) {
+            val last = merged.lastOrNull()
+            if (last != null && last.role == message.role) {
+                merged[merged.lastIndex] = last.copy(content = last.content + message.content)
+            } else {
+                merged.add(message)
+            }
+        }
+        return request.copy(messages = merged)
     }
 
     private fun getReasoningType(modelId: String): ChatCompletionModel.ReasoningType {
