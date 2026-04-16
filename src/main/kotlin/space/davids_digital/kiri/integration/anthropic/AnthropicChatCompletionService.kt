@@ -169,6 +169,7 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
             "claude-opus-4-1-20250805",
             "claude-opus-4-5-20251101",
             "claude-opus-4-6",
+            "claude-opus-4-7",
             "claude-sonnet-4-6",
         )
         if (supported.contains(modelId)) {
@@ -193,6 +194,7 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
             "claude-opus-4-1-20250805",
             "claude-opus-4-5-20251101",
             "claude-opus-4-6",
+            "claude-opus-4-7",
             "claude-sonnet-4-6",
         )
         return supported.contains(modelId)
