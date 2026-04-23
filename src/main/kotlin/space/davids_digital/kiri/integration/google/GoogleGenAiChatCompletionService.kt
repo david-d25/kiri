@@ -13,11 +13,15 @@ import space.davids_digital.kiri.llm.dsl.GenericJsonInputBuilder
 import space.davids_digital.kiri.llm.dsl.chatCompletionResponse
 import space.davids_digital.kiri.model.ChatCompletionModel
 import space.davids_digital.kiri.model.ExternalServiceGatewayStatus
+import space.davids_digital.kiri.orm.service.LlmUsageStatOrmService
 import space.davids_digital.kiri.service.ChatCompletionService
 import kotlin.jvm.optionals.getOrNull
 
 @Service
-class GoogleGenAiChatCompletionService(private val clientHolder: GoogleGenAiClientHolder) : ChatCompletionService {
+class GoogleGenAiChatCompletionService(
+    private val clientHolder: GoogleGenAiClientHolder,
+    private val usageStats: LlmUsageStatOrmService,
+) : ChatCompletionService {
     override val serviceHandle = "google-genai-chat"
 
     private val log = LoggerFactory.getLogger(this::class.java)
@@ -35,8 +39,20 @@ class GoogleGenAiChatCompletionService(private val clientHolder: GoogleGenAiClie
         if (!isSupportedModelId(sdkModel)) {
             throw IllegalArgumentException("Unsupported model: $sdkModel")
         }
+        val startedAt = System.nanoTime()
         val response = client.models.generateContent(sdkModel, content, config)
-        return parseResponse(response)
+        val parsed = parseResponse(response)
+        val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+        usageStats.record(
+            provider = serviceHandle,
+            model = model,
+            inputTokens = parsed.usage.inputTokens,
+            outputTokens = parsed.usage.outputTokens,
+            cacheReadInputTokens = parsed.usage.cacheReadInputTokens,
+            cacheCreationInputTokens = parsed.usage.cacheCreationInputTokens,
+            durationMs = durationMs,
+        )
+        return parsed
     }
 
     @Cacheable(
@@ -181,7 +197,9 @@ class GoogleGenAiChatCompletionService(private val clientHolder: GoogleGenAiClie
     private fun buildTools(tool: ChatCompletionRequest.Tools): List<Tool> {
         return listOf(
             Tool.builder().functionDeclarations(
-                tool.functions.map { function ->
+                // Sort by name for deterministic ordering — Google's implicit caching hashes
+                // the request prefix, so any reshuffle invalidates the cached prefix.
+                tool.functions.sortedBy { it.name }.map { function ->
                     val builder = FunctionDeclaration.builder()
                         .name(function.name)
                         .description(function.description)
@@ -278,12 +296,27 @@ class GoogleGenAiChatCompletionService(private val clientHolder: GoogleGenAiClie
         }
         usage {
             response.usageMetadata().ifPresent {
-                inputTokens = it.promptTokenCount().orElse(-1).toLong()
+                val promptTokensKnown = it.promptTokenCount().isPresent
+                val promptTokens = it.promptTokenCount().orElse(-1).toLong()
+                val cachedTokens = it.cachedContentTokenCount().orElse(0).toLong()
+                // Google semantics: promptTokenCount includes cached content when cached_content is set.
+                // Normalize to the "fresh" portion so our Usage model is consistent across providers.
+                if (promptTokensKnown) {
+                    inputTokens = (promptTokens - cachedTokens).coerceAtLeast(0)
+                    cacheReadInputTokens = cachedTokens
+                } else {
+                    // Usage metadata missing — propagate "unknown" to all input-side metrics so that
+                    // downstream aggregation doesn't misinterpret a default 0 as "no cache hit".
+                    inputTokens = -1
+                    cacheReadInputTokens = -1
+                }
                 if (it.thoughtsTokenCount().isEmpty && it.candidatesTokenCount().isEmpty) {
                     outputTokens = -1
                 } else {
                     outputTokens = (it.thoughtsTokenCount().orElse(0) + it.candidatesTokenCount().orElse(0)).toLong()
                 }
+                // Google implicit caching doesn't expose a separate cache-write metric.
+                cacheCreationInputTokens = 0
             }
         }
     }

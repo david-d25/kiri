@@ -17,6 +17,7 @@ export default function Header() {
                 <HeaderNavButton url="/files">Files</HeaderNavButton>
                 <HeaderNavButton url="/apps">Apps</HeaderNavButton>
                 <HeaderNavButton url="/integrations">Integrations</HeaderNavButton>
+                <HeaderNavButton url="/stats">Stats</HeaderNavButton>
             </div>
             <div className={s.right}>
                 <HeaderUserCard />

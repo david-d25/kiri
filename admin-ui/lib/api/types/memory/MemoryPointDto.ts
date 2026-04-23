@@ -1,6 +1,6 @@
 export interface MemoryPointDto {
     id: string;
     value: string;
-    createdAt: string;
+    createdAt: number;
     linkedKeysCount: number;
 }

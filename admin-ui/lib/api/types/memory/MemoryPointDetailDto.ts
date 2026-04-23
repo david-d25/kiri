@@ -3,6 +3,6 @@ import {MemoryLinkDto} from "./MemoryLinkDto";
 export interface MemoryPointDetailDto {
     id: string;
     value: string;
-    createdAt: string;
+    createdAt: number;
     links: MemoryLinkDto[];
 }

@@ -67,33 +67,37 @@ export default function ReasoningSettingsCollapsibleInput(props: Props) {
             }
         >
             <div className={s.column}>
-                <NumberInput
-                    className={s.thin}
-                    value={reasoningMaxTokensSetting.value}
-                    minValue={0}
-                    maxValue={65536}
-                    disabled={disabled}
-                    onChange={value => reasoningMaxTokensSetting.setValue(value || 0)}
-                    label={
-                        <FormLabel changed={reasoningMaxTokensSetting.isChanged}>
-                            Reasoning tokens budget
-                        </FormLabel>
-                    }
-                    error={reasoningMaxTokensSetting.validationError}
-                    step={1}
-                />
-                <Dropdown
-                    className={s.thin}
-                    options={reasoningEffortOptions}
-                    selectedValue={reasoningEffortSetting.value}
-                    onChange={reasoningEffortSetting.setValue}
-                    disabled={disabled}
-                    label={
-                        <FormLabel changed={reasoningEffortSetting.isChanged}>
-                            Reasoning effort
-                        </FormLabel>
-                    }
-                />
+                {modelFeatures?.reasoningMaxTokens && (
+                    <NumberInput
+                        className={s.thin}
+                        value={reasoningMaxTokensSetting.value}
+                        minValue={0}
+                        maxValue={65536}
+                        disabled={disabled}
+                        onChange={value => reasoningMaxTokensSetting.setValue(value || 0)}
+                        label={
+                            <FormLabel changed={reasoningMaxTokensSetting.isChanged}>
+                                Reasoning tokens budget
+                            </FormLabel>
+                        }
+                        error={reasoningMaxTokensSetting.validationError}
+                        step={1}
+                    />
+                )}
+                {modelFeatures?.reasoningEffort && (
+                    <Dropdown
+                        className={s.thin}
+                        options={reasoningEffortOptions}
+                        selectedValue={reasoningEffortSetting.value}
+                        onChange={reasoningEffortSetting.setValue}
+                        disabled={disabled}
+                        label={
+                            <FormLabel changed={reasoningEffortSetting.isChanged}>
+                                Reasoning effort
+                            </FormLabel>
+                        }
+                    />
+                )}
             </div>
         </Collapsible>
     );

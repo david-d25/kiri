@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.JsonNodeType
 import com.openai.core.JsonObject
 import com.openai.core.JsonValue
+import com.openai.errors.OpenAIInvalidDataException
 import com.openai.models.Reasoning
 import com.openai.models.ReasoningEffort
 import com.openai.models.responses.*
@@ -23,6 +24,7 @@ import space.davids_digital.kiri.llm.dsl.GenericJsonInputBuilder
 import space.davids_digital.kiri.llm.dsl.chatCompletionResponse
 import space.davids_digital.kiri.model.ChatCompletionModel
 import space.davids_digital.kiri.model.ExternalServiceGatewayStatus
+import space.davids_digital.kiri.orm.service.LlmUsageStatOrmService
 import space.davids_digital.kiri.service.ChatCompletionService
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
@@ -30,7 +32,8 @@ import kotlin.jvm.optionals.getOrNull
 @Service
 class OpenaiChatCompletionService(
     private val clientHolder: OpenaiClientHolder,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val usageStats: LlmUsageStatOrmService,
 ) : ChatCompletionService {
     override val serviceHandle = "openai-chat-completion"
 
@@ -42,8 +45,20 @@ class OpenaiChatCompletionService(
         val optimizedRequest = optimize(request)
         val params = buildParams(optimizedRequest)
         log.info("Requesting OpenAI chat completion with model={}", params.model().getOrNull()?.asString())
+        val startedAt = System.nanoTime()
         val response = client.responses().create(params)
         val parsed = parseResponse(response)
+        val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+        val modelId = request.modelHandle.substringAfter('/')
+        usageStats.record(
+            provider = serviceHandle,
+            model = modelId,
+            inputTokens = parsed.usage.inputTokens,
+            outputTokens = parsed.usage.outputTokens,
+            cacheReadInputTokens = parsed.usage.cacheReadInputTokens,
+            cacheCreationInputTokens = parsed.usage.cacheCreationInputTokens,
+            durationMs = durationMs,
+        )
         return cleanUp(parsed)
     }
 
@@ -184,7 +199,9 @@ class OpenaiChatCompletionService(
 
     private fun buildTools(tools: ChatCompletionRequest.Tools, modelId: String): List<Tool> {
         return buildList {
-            tools.functions.forEach { tool ->
+            // Sort by name for deterministic ordering — OpenAI's automatic prompt caching hashes
+            // the request prefix, so any reshuffle invalidates the cached prefix.
+            tools.functions.sortedBy { it.name }.forEach { tool ->
                 this += Tool.ofFunction(
                     FunctionTool.builder()
                         .name(tool.name)
@@ -487,8 +504,25 @@ class OpenaiChatCompletionService(
             }
         }
         usage {
-            inputTokens = response.usage().getOrNull()?.inputTokens() ?: 0
-            outputTokens = response.usage().getOrNull()?.outputTokens() ?: 0
+            val usage = response.usage().getOrNull()
+            val totalInput = usage?.inputTokens() ?: 0
+            // `inputTokensDetails()` and `cachedTokens()` are `getRequired`-backed in the SDK and
+            // throw OpenAIInvalidDataException if absent from the response (e.g. older models or
+            // schema drift). We treat that narrowly as "cache info unavailable" and fall back to 0;
+            // any other exception is a real bug and must propagate.
+            val cachedInput = try {
+                usage?.inputTokensDetails()?.cachedTokens() ?: 0
+            } catch (e: OpenAIInvalidDataException) {
+                log.debug("OpenAI response did not include input_tokens_details.cached_tokens: {}", e.message)
+                0
+            }
+            // OpenAI semantics: inputTokens includes cached tokens. Normalize to the "fresh" portion
+            // so that our Usage model stays consistent across providers.
+            inputTokens = (totalInput - cachedInput).coerceAtLeast(0)
+            outputTokens = usage?.outputTokens() ?: 0
+            cacheReadInputTokens = cachedInput
+            // OpenAI caching is automatic on the server side — there's no explicit cache-write metric.
+            cacheCreationInputTokens = 0
         }
     }
 

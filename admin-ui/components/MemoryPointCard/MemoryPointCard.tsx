@@ -68,7 +68,7 @@ export default function MemoryPointCard({ point, score, onDeleted }: Props) {
         });
     }
 
-    const createdDate = new Date(point.createdAt).toLocaleString();
+    const createdDate = new Date(Number(point.createdAt) * 1000).toLocaleString();
 
     return (
         <div className={s.card}>

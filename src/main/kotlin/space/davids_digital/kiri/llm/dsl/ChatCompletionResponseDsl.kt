@@ -93,8 +93,10 @@ class ChatCompletionReasoningBuilder {
 class ChatCompletionResponseUsageBuilder {
     var inputTokens: Long = 0
     var outputTokens: Long = 0
+    var cacheReadInputTokens: Long = 0
+    var cacheCreationInputTokens: Long = 0
 
     fun build(): Usage {
-        return Usage(inputTokens, outputTokens)
+        return Usage(inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens)
     }
 }

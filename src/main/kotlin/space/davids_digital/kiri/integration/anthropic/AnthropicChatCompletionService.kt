@@ -5,6 +5,7 @@ import com.anthropic.client.okhttp.AnthropicOkHttpClient
 import com.anthropic.core.*
 import com.anthropic.models.*
 import com.anthropic.models.messages.Base64ImageSource
+import com.anthropic.models.messages.CacheControlEphemeral
 import com.anthropic.models.messages.ContentBlockParam
 import com.anthropic.models.messages.ImageBlockParam
 import com.anthropic.models.messages.MessageCreateParams
@@ -17,6 +18,7 @@ import com.anthropic.models.messages.StopReason.Companion.STOP_SEQUENCE
 import com.anthropic.models.messages.StopReason.Companion.TOOL_USE
 import com.anthropic.models.messages.TextBlockParam
 import com.anthropic.models.messages.ThinkingBlockParam
+import com.anthropic.models.messages.ThinkingConfigAdaptive
 import com.anthropic.models.messages.ThinkingConfigEnabled
 import com.anthropic.models.messages.ThinkingConfigParam
 import com.anthropic.models.messages.Tool
@@ -54,6 +56,7 @@ import space.davids_digital.kiri.llm.dsl.chatCompletionResponse
 import space.davids_digital.kiri.model.ChatCompletionModel
 import space.davids_digital.kiri.model.ExternalServiceGatewayStatus
 import space.davids_digital.kiri.model.Setting
+import space.davids_digital.kiri.orm.service.LlmUsageStatOrmService
 import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.service.ChatCompletionService
 import java.util.*
@@ -61,7 +64,10 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.jvm.optionals.getOrNull
 
 @Service
-class AnthropicChatCompletionService(private val settings: SettingOrmService) : ChatCompletionService {
+class AnthropicChatCompletionService(
+    private val settings: SettingOrmService,
+    private val usageStats: LlmUsageStatOrmService,
+) : ChatCompletionService {
     object SettingKeys {
         const val API_KEY = "integration.anthropic.apiKey"
     }
@@ -110,8 +116,21 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
     override suspend fun request(request: ChatCompletionRequest): ChatCompletionResponse {
         val client = requireClient()
         val params = buildParams(mergeConsecutiveMessages(cleanup(optimize(request))))
+        val startedAt = System.nanoTime()
         val response = client.messages().create(params)
-        return parseResponse(response)
+        val parsed = parseResponse(response)
+        val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+        val modelId = request.modelHandle.substringAfter('/')
+        usageStats.record(
+            provider = serviceHandle,
+            model = modelId,
+            inputTokens = parsed.usage.inputTokens,
+            outputTokens = parsed.usage.outputTokens,
+            cacheReadInputTokens = parsed.usage.cacheReadInputTokens,
+            cacheCreationInputTokens = parsed.usage.cacheCreationInputTokens,
+            durationMs = durationMs,
+        )
+        return parsed
     }
 
     @Cacheable(value = ["AnthropicChatCompletionService#getModels"])
@@ -179,7 +198,11 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
     }
 
     private fun getReasoningMaxTokensSupported(modelId: String): Boolean {
-        return getReasoningType(modelId) != ChatCompletionModel.ReasoningType.NONE
+        if (getReasoningType(modelId) == ChatCompletionModel.ReasoningType.NONE) return false
+        // Adaptive thinking models decide the budget themselves — `budget_tokens` is either
+        // ignored (Opus/Sonnet 4.6) or rejected (Opus 4.7).
+        if (useAdaptiveThinking(modelId)) return false
+        return true
     }
 
     private fun getWebSearchSupported(modelId: String): Boolean {
@@ -226,6 +249,38 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
         return modelId.startsWith("claude-")
     }
 
+    /**
+     * True for models that should use `thinking.type=adaptive` instead of the legacy
+     * `thinking.type=enabled` with `budget_tokens`.
+     *
+     * - On Claude Opus 4.7, adaptive is the ONLY supported mode (enabled → 400).
+     * - On Claude Opus 4.6 and Sonnet 4.6, enabled is deprecated but still works;
+     *   we migrate proactively per Anthropic's recommendation.
+     * - Older models (Sonnet 4.5, Opus 4.5, Sonnet 3.5/3.7, …) do not support adaptive
+     *   and must continue using `enabled` with `budget_tokens`.
+     *
+     * See: https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking
+     */
+    private fun useAdaptiveThinking(modelId: String): Boolean {
+        val adaptiveCapable = listOf(
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-sonnet-4-6",
+        )
+        return adaptiveCapable.any { modelId.startsWith(it) }
+    }
+
+    /**
+     * True for models that reject any `temperature` other than 1.0 (returns 400).
+     * Currently Opus 4.7+; older models including Opus/Sonnet 4.6 still accept temperature.
+     */
+    private fun rejectsNonDefaultTemperature(modelId: String): Boolean {
+        val rejectsTemperature = listOf(
+            "claude-opus-4-7",
+        )
+        return rejectsTemperature.any { modelId.startsWith(it) }
+    }
+
     private fun buildParams(request: ChatCompletionRequest) = MessageCreateParams.builder().apply {
         val (provider, model) = request.modelHandle.split("/", limit = 2)
         require(provider == serviceHandle) { "Unsupported model provider: $provider" }
@@ -239,18 +294,31 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
         maxTokens(request.maxOutputTokens)
         messages(buildMessages(request.messages))
         tools(buildTools(request.tools))
+        // Automatic prompt caching: SDK applies a cache_control marker to the last cacheable block.
+        // See https://platform.claude.com/docs/en/build-with-claude/prompt-caching#automatic-caching
+        cacheControl(CacheControlEphemeral.builder().build())
+        val adaptiveThinking = useAdaptiveThinking(model)
         if (request.reasoning.enabled) {
-            thinking(ThinkingConfigParam.ofEnabled(
-                ThinkingConfigEnabled.builder()
-                    .budgetTokens(request.reasoning.maxTokens)
-                    .display(ThinkingConfigEnabled.Display.SUMMARIZED)
-                    .build()
-            ))
+            thinking(
+                if (adaptiveThinking) {
+                    ThinkingConfigParam.ofAdaptive(
+                        ThinkingConfigAdaptive.builder()
+                            .display(ThinkingConfigAdaptive.Display.SUMMARIZED)
+                            .build()
+                    )
+                } else {
+                    ThinkingConfigParam.ofEnabled(
+                        ThinkingConfigEnabled.builder()
+                            .budgetTokens(request.reasoning.maxTokens)
+                            .display(ThinkingConfigEnabled.Display.SUMMARIZED)
+                            .build()
+                    )
+                }
+            )
         }
-        if (request.reasoning.enabled) {
-            temperature(1.0)
-        } else {
-            temperature(request.temperature)
+        if (!rejectsNonDefaultTemperature(model)) {
+            @Suppress("DEPRECATION")
+            temperature(if (request.reasoning.enabled) 1.0 else request.temperature)
         }
         toolChoice(
             when (request.tools.choice) {
@@ -344,6 +412,8 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
         usage {
             inputTokens = response.usage().inputTokens()
             outputTokens = response.usage().outputTokens()
+            cacheReadInputTokens = response.usage().cacheReadInputTokens().orElse(0L)
+            cacheCreationInputTokens = response.usage().cacheCreationInputTokens().orElse(0L)
         }
     }
 
@@ -456,7 +526,9 @@ class AnthropicChatCompletionService(private val settings: SettingOrmService) : 
     }
 
     private fun buildTools(tools: ChatCompletionRequest.Tools) = buildList {
-        tools.functions.forEach { function ->
+        // Sort by name for deterministic ordering — necessary for prompt caching stability,
+        // since any tool-list reshuffle invalidates the cached [tools+system] prefix.
+        tools.functions.sortedBy { it.name }.forEach { function ->
             this += ToolUnion.ofTool(
                 Tool.builder()
                     .name(function.name)
