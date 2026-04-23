@@ -13,7 +13,6 @@ import space.davids_digital.kiri.agent.tool.AgentToolParameter
 import space.davids_digital.kiri.integration.google.GoogleGenAiImageService
 import space.davids_digital.kiri.integration.openai.OpenaiImageService
 import space.davids_digital.kiri.service.TemporaryFilesService
-import kotlin.collections.map
 
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
@@ -23,12 +22,26 @@ class ImageApp(
     private val googleGenAiImageService: GoogleGenAiImageService,
     private val temporaryFiles: TemporaryFilesService,
 ) : AgentApp("image") {
-    @AgentToolMethod(description = "Generate an image using gpt-image-1.5 model. Generation may take several minutes.")
+    @AgentToolMethod(description = "Generate or edit an image using gpt-image-2 model (current SOTA, best quality). " +
+            "If referenceImages is empty, generates from scratch; otherwise edits/combines the given reference " +
+            "images according to the prompt (up to 16 images, each must be png/webp/jpg, less than 50 MB). " +
+            "Cannot reference images from the internet (use geminiGenerate if you need that). " +
+            "Generation may take several minutes.")
     suspend fun openaiGenerate(
         @AgentToolParameter(description = "Input prompt, max 32000 characters.")
-        prompt: String
+        prompt: String,
+        @AgentToolParameter(description = "List of image filenames to edit/combine as reference. " +
+                "Leave empty for pure text-to-image generation.")
+        referenceImages: List<String>
     ): List<DataFrame.ContentPart> {
-        val bytes = openaiImageService.generate(prompt)
+        val bytes = if (referenceImages.isEmpty()) {
+            openaiImageService.generate(prompt)
+        } else {
+            val imageContents = referenceImages.map {
+                temporaryFiles.getContent(it) ?: error("file '$it' not found")
+            }
+            openaiImageService.edit(imageContents, prompt).first()
+        }
         val fileName = "img${System.currentTimeMillis()}.png"
         temporaryFiles.create(fileName, bytes)
 
@@ -43,7 +56,9 @@ class ImageApp(
         }
     }
 
-    @AgentToolMethod(description = "Generate an image using Gemini model. Generation may take several minutes.")
+    @AgentToolMethod(description = "Generate an image using Gemini model. Can google and reference images from " +
+            "the internet (unlike openaiGenerate), but overall quality is lower than gpt-image-2 (current SOTA). " +
+            "Generation may take several minutes.")
     suspend fun geminiGenerate(
         @AgentToolParameter(description = "Input prompt to feed into model, " +
                 "prefer to describe the whole scene rather than individual tags")
@@ -72,42 +87,6 @@ class ImageApp(
             }
         }
     }
-
-//    @AgentToolMethod(
-//        description = "Creates an edited or extended image given one or more source images and a prompt, " +
-//                "uses gpt-image-1.5 model"
-//    )
-//    suspend fun openaiEdit(
-//        @AgentToolParameter(description = "The image to edit as filename, less than 50 MB")
-//        image: String,
-
-//        @AgentToolParameter(description = "A text description of the desired image, max 32000 characters. " +
-//                "For example: 'Create a lovely gift basket with these four items in it'")
-//
-//        prompt: String,
-//
-//        @AgentToolParameter(description = "The number of images to generate, between 1 and 10, recommended to not exceed 4")
-//        n: Long = 1
-//    ): List<DataFrame.ContentPart> {
-//        val file = temporaryFiles.getContent(image)
-//            ?: throw IllegalArgumentException("File '$image' not found, maybe it has been expired")
-//        val editedImages = service.edit(file, prompt, n)
-//        val createdFiles = editedImages.map { bytes ->
-//            val fileName = "img${System.currentTimeMillis()}.png"
-//            temporaryFiles.create(fileName, bytes)
-//        }
-//        return dataFrameContent {
-//            line("Edited images saved as temporary files: ${createdFiles.joinToString(", ")}")
-//            for (bytes in editedImages) {
-//                val imageType = bytes.getImageType()
-//                if (imageType == null) {
-//                    line("Error: Unable to determine image type")
-//                } else {
-//                    image(bytes, imageType)
-//                }
-//            }
-//        }
-//    }
 
     override fun render() = dataFrameContent {
         line("Image toolbox is open")
