@@ -77,6 +77,25 @@ class LlmUsageStatOrmService(
         }
     }
 
+    /**
+     * Aggregated buckets for a [from, to) time range, grouped by (hour, model, provider).
+     */
+    @Transactional(readOnly = true)
+    fun aggregateByHourAndModel(from: ZonedDateTime, to: ZonedDateTime): List<DailyModelAggregate> {
+        return repository.aggregateByHourAndModel(from.toOffsetDateTime(), to.toOffsetDateTime()).map {
+            DailyModelAggregate(
+                day = toZonedDateTime(it[0]),
+                model = it[1] as String,
+                provider = it[2] as String,
+                inputTokens = (it[3] as Number).toLong(),
+                outputTokens = (it[4] as Number).toLong(),
+                cacheReadInputTokens = (it[5] as Number).toLong(),
+                cacheCreationInputTokens = (it[6] as Number).toLong(),
+                requestCount = (it[7] as Number).toLong(),
+            )
+        }
+    }
+
     @Transactional(readOnly = true)
     fun aggregateByModel(from: ZonedDateTime, to: ZonedDateTime): List<ModelAggregate> {
         return repository.aggregateByModel(from.toOffsetDateTime(), to.toOffsetDateTime()).map {

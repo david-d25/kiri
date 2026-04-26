@@ -63,15 +63,6 @@ class TelegramBotService (
         if (!isCommand(textOrCaption, chat.type, telegram.getSelf().username ?: "")) {
             return
         }
-        val fromId = message.fromId ?: return
-        val userRole = withContext(Dispatchers.IO) {
-            users.findById(fromId)
-        }?.role
-        // Should probably refactor for something more clever
-        if (userRole != User.Role.ADMIN && userRole != User.Role.OWNER) {
-            telegram.sendMessage(message.chatId, "👮‍♂️ No permissions")
-            return
-        }
         if (message.forwardOrigin != null) {
             return // Ignore forwarded messages
         }
@@ -84,6 +75,16 @@ class TelegramBotService (
         if (command == null) {
             telegram.sendMessage(message.chatId, "Command not found")
             return
+        }
+        if (!command.isPublic) {
+            val fromId = message.fromId ?: return
+            val userRole = withContext(Dispatchers.IO) {
+                users.findById(fromId)
+            }?.role
+            if (userRole != User.Role.ADMIN && userRole != User.Role.OWNER) {
+                telegram.sendMessage(message.chatId, "👮‍♂️ No permissions")
+                return
+            }
         }
         scope.launch {
             try {

@@ -146,4 +146,9 @@ class TelegramMessageOrmService(
     fun search(spec: Specification<TelegramMessageEntity>, pageable: PageRequest): Page<TelegramMessage> {
         return repo.findAll(spec, pageable).map(mapper::toModel)
     }
+
+    @Transactional(readOnly = true)
+    fun count(spec: Specification<TelegramMessageEntity>): Long {
+        return repo.count(spec)
+    }
 }

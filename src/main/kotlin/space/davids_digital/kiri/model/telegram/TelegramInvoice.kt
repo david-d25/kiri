@@ -28,4 +28,9 @@ data class TelegramInvoice (
      * the number of digits past the decimal point for each currency (2 for the majority of currencies).
      */
     val totalAmount: Long,
+    /**
+     * Bot-specified invoice payload. Only known to the bot that sent the invoice; null for invoices
+     * received from other bots, since Telegram does not expose foreign payloads.
+     */
+    val payload: String? = null,
 )

@@ -42,6 +42,32 @@ interface LlmUsageStatRepository : JpaRepository<LlmUsageStatEntity, UUID> {
         @Param("toTs") toTs: OffsetDateTime,
     ): List<Array<Any>>
 
+    /**
+     * Aggregate per hour × model within [from, to].
+     * Returns rows of (bucket: hour-start UTC, model, provider, ...sums..., requestCount).
+     */
+    @Query(
+        """
+            select date_trunc('hour', timestamp at time zone 'UTC') as bucket,
+                   model,
+                   provider,
+                   coalesce(sum(input_tokens), 0)                as input_tokens,
+                   coalesce(sum(output_tokens), 0)               as output_tokens,
+                   coalesce(sum(cache_read_input_tokens), 0)     as cache_read_input_tokens,
+                   coalesce(sum(cache_creation_input_tokens), 0) as cache_creation_input_tokens,
+                   count(*)                                      as request_count
+            from main.llm_usage_stats
+            where timestamp >= :fromTs and timestamp < :toTs
+            group by bucket, model, provider
+            order by bucket asc, model asc
+        """,
+        nativeQuery = true
+    )
+    fun aggregateByHourAndModel(
+        @Param("fromTs") fromTs: OffsetDateTime,
+        @Param("toTs") toTs: OffsetDateTime,
+    ): List<Array<Any>>
+
     @Query(
         """
             select model,

@@ -38,10 +38,16 @@ class LlmUsageController(
     fun aggregate(
         @RequestParam(required = false) from: String?,
         @RequestParam(required = false) to: String?,
+        @RequestParam(defaultValue = "day") bucket: String,
     ): List<LlmUsageDailyAggregateDto> {
         val toTs = to?.let { ZonedDateTime.parse(it) } ?: ZonedDateTime.now()
         val fromTs = from?.let { ZonedDateTime.parse(it) } ?: toTs.minusDays(30)
-        return usageStats.aggregateByDayAndModel(fromTs, toTs).map { agg ->
+        val buckets = when (bucket.lowercase()) {
+            "hour" -> usageStats.aggregateByHourAndModel(fromTs, toTs)
+            "day" -> usageStats.aggregateByDayAndModel(fromTs, toTs)
+            else -> throw IllegalArgumentException("Unsupported bucket: $bucket (expected 'day' or 'hour')")
+        }
+        return buckets.map { agg ->
             LlmUsageDailyAggregateDto(
                 day = agg.day,
                 model = agg.model,

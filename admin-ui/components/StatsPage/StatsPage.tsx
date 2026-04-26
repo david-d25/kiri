@@ -63,6 +63,10 @@ function formatDate(value: string | number): string {
     return toDate(value).toISOString().slice(5, 10); // MM-DD
 }
 
+function formatHour(value: string | number): string {
+    return toDate(value).toISOString().slice(11, 16); // HH:MM (UTC)
+}
+
 function formatDateTime(value: string | number): string {
     return toDate(value).toISOString().slice(0, 19).replace("T", " ");
 }
@@ -70,13 +74,27 @@ function formatDateTime(value: string | number): string {
 export default function StatsPage() {
     const [windowId, setWindowId] = useState<WindowId>("24h");
     const summary = useLlmUsageSummary();
-    const aggregate = useLlmUsageAggregate();
     const recent = useLlmUsageRecent(50);
 
+    const aggregateRange = useMemo(() => {
+        if (windowId !== "24h") return {from: undefined, to: undefined, bucket: "day" as const};
+        const to = new Date();
+        const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+        return {from: from.toISOString(), to: to.toISOString(), bucket: "hour" as const};
+    }, [windowId]);
+    const aggregate = useLlmUsageAggregate(aggregateRange.from, aggregateRange.to, aggregateRange.bucket);
+
     const dailyChartData = useMemo(
-        () => buildDailyChartData(aggregate.data ?? [], WINDOW_DAYS[windowId]),
+        () => {
+            if (windowId === "24h") {
+                return buildHourlyChartData(aggregate.data ?? []);
+            }
+            return buildDailyChartData(aggregate.data ?? [], WINDOW_DAYS[windowId]);
+        },
         [aggregate.data, windowId],
     );
+
+    const xAxisKey = windowId === "24h" ? "hour" : "day";
 
     const selectedWindow = useMemo<LlmUsageSummaryWindowDto | undefined>(
         () => summary.data?.windows.find((w) => w.name === windowId),
@@ -107,14 +125,14 @@ export default function StatsPage() {
             </Panel>
 
             <Panel>
-                <div className={s.panelTitle}>Tokens per day (last {windowId})</div>
+                <div className={s.panelTitle}>Tokens per {windowId === "24h" ? "hour" : "day"} (last {windowId})</div>
                 {dailyChartData.length === 0 ? (
                     <div className={s.chartEmpty}>No data</div>
                 ) : (
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={dailyChartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)"/>
-                            <XAxis dataKey="day" stroke="var(--text-secondary)"/>
+                            <XAxis dataKey={xAxisKey} stroke="var(--text-secondary)"/>
                             <YAxis stroke="var(--text-secondary)" tickFormatter={formatTokens}/>
                             <Tooltip
                                 contentStyle={{background: "var(--bg-secondary)", border: "1px solid var(--border-color)"}}
@@ -131,14 +149,14 @@ export default function StatsPage() {
             </Panel>
 
             <Panel>
-                <div className={s.panelTitle}>Cache hit rate per day (last {windowId})</div>
+                <div className={s.panelTitle}>Cache hit rate per {windowId === "24h" ? "hour" : "day"} (last {windowId})</div>
                 {dailyChartData.length === 0 ? (
                     <div className={s.chartEmpty}>No data</div>
                 ) : (
                     <ResponsiveContainer width="100%" height={260}>
                         <LineChart data={dailyChartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)"/>
-                            <XAxis dataKey="day" stroke="var(--text-secondary)"/>
+                            <XAxis dataKey={xAxisKey} stroke="var(--text-secondary)"/>
                             <YAxis
                                 stroke="var(--text-secondary)"
                                 domain={[0, 1]}
@@ -202,6 +220,7 @@ function Metric({label, value}: {label: string; value: string}) {
 
 interface DailyChartPoint {
     day: string;
+    hour?: string;
     input: number;
     cacheRead: number;
     cacheWrite: number;
@@ -236,4 +255,60 @@ function buildDailyChartData(rows: LlmUsageDailyAggregateDto[], windowDays: numb
     }
     out.sort((a, b) => a.day.localeCompare(b.day));
     return out;
+}
+
+function buildHourlyChartData(rows: LlmUsageDailyAggregateDto[]): DailyChartPoint[] {
+    const cutoff = new Date();
+    cutoff.setUTCMinutes(0, 0, 0);
+    cutoff.setUTCHours(cutoff.getUTCHours() - 23);
+    const map = new Map<string, DailyChartPoint>();
+    for (const r of rows) {
+        const rowDate = toDate(r.day);
+        if (rowDate < cutoff) continue;
+        const hourKey = rowDate.toISOString().slice(0, 13); // YYYY-MM-DDTHH
+        let p = map.get(hourKey);
+        if (!p) {
+            p = {
+                day: hourKey,
+                hour: formatHour(r.day),
+                input: 0,
+                cacheRead: 0,
+                cacheWrite: 0,
+                output: 0,
+                rawInput: 0,
+                cacheHitRate: 0,
+            };
+            map.set(hourKey, p);
+        }
+        p.input += r.inputTokens;
+        p.cacheRead += r.cacheReadInputTokens;
+        p.cacheWrite += r.cacheCreationInputTokens;
+        p.output += r.outputTokens;
+    }
+    // Fill missing hours so the bar chart shows one column per hour.
+    const filled: DailyChartPoint[] = [];
+    for (let i = 0; i < 24; i++) {
+        const d = new Date(cutoff.getTime() + i * 60 * 60 * 1000);
+        const hourKey = d.toISOString().slice(0, 13);
+        const existing = map.get(hourKey);
+        if (existing) {
+            filled.push(existing);
+        } else {
+            filled.push({
+                day: hourKey,
+                hour: d.toISOString().slice(11, 16),
+                input: 0,
+                cacheRead: 0,
+                cacheWrite: 0,
+                output: 0,
+                rawInput: 0,
+                cacheHitRate: 0,
+            });
+        }
+    }
+    for (const p of filled) {
+        p.rawInput = p.input + p.cacheRead + p.cacheWrite;
+        p.cacheHitRate = p.rawInput > 0 ? p.cacheRead / p.rawInput : 0;
+    }
+    return filled;
 }

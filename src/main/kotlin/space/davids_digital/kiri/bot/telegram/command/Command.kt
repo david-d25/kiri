@@ -15,6 +15,12 @@ abstract class Command {
     abstract val name: String
 
     /**
+     * If true, the command can be executed by any Telegram user, not only admins/owner.
+     * Required for `/terms`, `/support`, `/paysupport` per Telegram Stars payments policy.
+     */
+    open val isPublic: Boolean = false
+
+    /**
      * Executes the command with the provided arguments.
      *
      * @param context The context for command execution, containing arguments, message details, and maybe other data.

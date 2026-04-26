@@ -29,6 +29,7 @@ import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications
 import space.davids_digital.kiri.orm.service.SettingOrmService
+import space.davids_digital.kiri.service.TelegramDonationService
 import space.davids_digital.kiri.service.TelegramNotificationService
 import space.davids_digital.kiri.service.TemporaryFilesService
 import kotlin.reflect.KFunction
@@ -40,6 +41,7 @@ class TelegramApp(
     private val telegram: TelegramService,
     private val renderer: TelegramAppRenderer,
     private val telegramNotificationService: TelegramNotificationService,
+    private val telegramDonationService: TelegramDonationService,
     private val chatOrm: TelegramChatOrmService,
     private val messageOrm: TelegramMessageOrmService,
     private val files: TemporaryFilesService,
@@ -54,6 +56,10 @@ class TelegramApp(
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val autoSwitchOnWake by settings.declareBoolean("apps.telegram.autoSwitchOnWake", true)
+    private val minHoursBetweenDonationInvoicesPerChat by settings.declareLong(
+        "payments.minHoursBetweenInvoicesPerChat",
+        24
+    )
 
     private var selectedChatId: Long? = null
 
@@ -84,6 +90,8 @@ class TelegramApp(
             add(::closeChat)
             add(::getChatInfo)
             add(::download)
+            add(::sendDonationInvoice)
+            add(::refundDonation)
         }
     }
 
@@ -313,6 +321,70 @@ class TelegramApp(
         val sentMessage = telegram.sendSticker(selectedChatId, fileId)
         advanceReadPointerIfSafe(selectedChatId, listOf(sentMessage.messageId))
         return "sent"
+    }
+
+    @AgentToolMethod(
+        description = "Send a Telegram Stars donation invoice to the current chat. " +
+                "Use ONLY when contextually appropriate (e.g. user expresses gratitude or asks how to support). " +
+                "NEVER pressure the user. If declined or ignored, do NOT retry. " +
+                "A fixed disclaimer about voluntariness and refunds is appended automatically — do not duplicate it."
+    )
+    suspend fun sendDonationInvoice(
+        @AgentToolParameter(description = "amount of Telegram Stars (XTR), 1..2500")
+        starAmount: Int,
+        @AgentToolParameter(
+            description = "invoice title shown on the card and confirmation modal " +
+                    "(≤32 chars, should mention donation/support, e.g. 'Support the bot')"
+        )
+        title: String,
+        @AgentToolParameter(
+            description = "short description (≤180 chars). System auto-appends a voluntary-donation disclaimer."
+        )
+        description: String
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        val cooldownHours = minHoursBetweenDonationInvoicesPerChat
+        if (cooldownHours > 0) {
+            val recent = telegram.countRecentDonationInvoices(chatId, cooldownHours)
+            if (recent > 0) {
+                return "Cooldown active: a donation invoice was already sent to this chat within the last " +
+                        "$cooldownHours hour(s). Do not retry."
+            }
+        }
+        return try {
+            val sent = telegram.sendDonationInvoice(chatId, title, description, starAmount)
+            advanceReadPointerIfSafe(chatId, listOf(sent.messageId))
+            "Donation invoice sent (${starAmount}⭐)"
+        } catch (e: IllegalArgumentException) {
+            "Invalid invoice arguments: ${e.message}"
+        }
+    }
+
+    @AgentToolMethod(
+        description = "Refund a Telegram Stars donation made in the currently selected chat. " +
+                "Use only if the user clearly asks for a refund or if the payment was a clear mistake. " +
+                "Available for 21 days after the original payment."
+    )
+    suspend fun refundDonation(
+        @AgentToolParameter(description = "telegramPaymentChargeId from the successful_payment of the original message")
+        telegramPaymentChargeId: String
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        val donation = withContext(Dispatchers.IO) {
+            telegramDonationService.findDonationByChargeId(telegramPaymentChargeId)
+        } ?: return "No donation found with charge id $telegramPaymentChargeId"
+        if (donation.chatId != chatId) {
+            return "Donation $telegramPaymentChargeId belongs to a different chat — refunds are scoped to the open chat."
+        }
+        val userId = donation.fromId
+            ?: return "Donation $telegramPaymentChargeId has no associated user — cannot refund."
+        return try {
+            telegram.refundStarPayment(userId, telegramPaymentChargeId)
+            "Refund issued for charge $telegramPaymentChargeId"
+        } catch (e: Exception) {
+            log.error("Refund failed for charge $telegramPaymentChargeId", e)
+            "Refund failed: ${e.message}"
+        }
     }
 
     /**

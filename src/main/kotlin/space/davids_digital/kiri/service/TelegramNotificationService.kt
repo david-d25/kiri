@@ -12,6 +12,7 @@ import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.model.telegram.TelegramUpdate
+import space.davids_digital.kiri.model.telegram.TelegramUser
 import java.time.ZonedDateTime
 import java.util.concurrent.ConcurrentSkipListSet
 import javax.annotation.PostConstruct
@@ -57,9 +58,36 @@ class TelegramNotificationService (
     }
 
     private suspend fun onUpdate(update: TelegramUpdate) {
+        if (update.message?.successfulPayment != null) {
+            onSuccessfulPayment(update.message)
+            return
+        }
+        if (update.message?.refundedPayment != null) {
+            // Refunds are issued either by the agent itself (via tool / admin UI) or by the user
+            // through Telegram's built-in receipt; in both cases the agent does not need a wake-up.
+            return
+        }
         when {
             update.message != null -> onMessage(update.message)
         }
+    }
+
+    private suspend fun onSuccessfulPayment(message: TelegramMessage) {
+        val payment = message.successfulPayment ?: return
+        val chat = telegram.fetchAndSaveChatById(message.chatId) ?: return
+        val user = message.fromId?.let { telegram.getUser(it) }
+        val payer = when {
+            user != null -> formatUser(user, message.fromId)
+            chat.type == TelegramChat.Type.PRIVATE -> formatPrivateChatUser(chat)
+            else -> formatUser(null, message.fromId)
+        }
+        val starSymbol = if (payment.currency == "XTR") "⭐" else payment.currency
+        val location = if (chat.type == TelegramChat.Type.PRIVATE) "" else " in ${formatChat(chat)}"
+        sendNotification(
+            "$payer sent ${payment.totalAmount} $starSymbol donation$location. " +
+                    "Charge id: ${payment.telegramPaymentChargeId}",
+            message.chatId
+        )
     }
 
     private suspend fun onMessage(message: TelegramMessage) {
@@ -87,35 +115,21 @@ class TelegramNotificationService (
             }
         }
         if (isPrivateChat) {
-            val userDisplayName = when {
-                chat.username != null && chat.firstName != null -> chat.firstName + " (@${chat.username})"
-                chat.username != null -> "@" + chat.username
-                chat.firstName != null -> chat.firstName + " (${chat.id})"
-                else -> "(unknown user id ${chat.id})"
-            }
             if (!chatEnabled) {
                 telegram.sendMessage(message.chatId, chatDisabledMessage)
             } else {
-                sendNotification("New message in private chat with $userDisplayName", message.chatId)
+                sendNotification("New message in private chat with ${formatPrivateChatUser(chat)}", message.chatId)
             }
             return
         }
         val user = message.fromId?.let { telegram.getUser(it) }
-        val chatDisplayName = when {
-            chat.username != null -> "@" + chat.username
-            chat.title != null -> "'${chat.title}'"
-            else -> "(unknown chat id ${chat.id})"
-        }
-        val userDisplayName = when {
-            user == null -> "(unknown user)"
-            user.username != null -> "@" + user.username
-            else -> user.firstName + " (${user.id})"
-        }
+        val chatLabel = formatChat(chat)
+        val userLabel = formatUser(user, message.fromId)
         if (isAgentMentioned) {
             if (!chatEnabled) {
                 telegram.sendMessage(message.chatId, chatDisabledMessage)
             } else {
-                sendNotification("$userDisplayName mentioned you in chat $chatDisplayName", message.chatId)
+                sendNotification("$userLabel mentioned you in chat $chatLabel", message.chatId)
             }
             return
         }
@@ -123,10 +137,28 @@ class TelegramNotificationService (
             if (!chatEnabled) {
                 telegram.sendMessage(message.chatId, chatDisabledMessage)
             } else {
-                sendNotification("$userDisplayName replied to you in chat $chatDisplayName", message.chatId)
+                sendNotification("$userLabel replied to you in chat $chatLabel", message.chatId)
             }
             return
         }
+    }
+
+    private fun formatUser(user: TelegramUser?, fallbackId: Long?): String {
+        if (user == null) {
+            return if (fallbackId != null) "user (id $fallbackId)" else "unknown user"
+        }
+        val handle = user.username?.let { "@$it" } ?: user.firstName
+        return "$handle (id ${user.id})"
+    }
+
+    private fun formatChat(chat: TelegramChat): String {
+        val handle = chat.username?.let { "@$it" } ?: chat.title ?: chat.firstName ?: "chat"
+        return "$handle (id ${chat.id})"
+    }
+
+    private fun formatPrivateChatUser(chat: TelegramChat): String {
+        val handle = chat.username?.let { "@$it" } ?: chat.firstName ?: chat.title ?: "user"
+        return "$handle (id ${chat.id})"
     }
 
     private suspend fun sendNotification(text: String, chatId: Long) {

@@ -9,6 +9,7 @@ import com.pengrad.telegrambot.model.User
 import com.pengrad.telegrambot.model.Message
 import com.pengrad.telegrambot.model.request.InputMediaDocument
 import com.pengrad.telegrambot.model.request.InputMediaPhoto
+import com.pengrad.telegrambot.model.request.LabeledPrice
 import com.pengrad.telegrambot.model.request.ReplyParameters
 import com.pengrad.telegrambot.request.*
 import com.pengrad.telegrambot.response.BaseResponse
@@ -27,13 +28,17 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.context.annotation.Lazy
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.model.telegram.*
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramUserOrmService
+import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications
 import space.davids_digital.kiri.service.exception.ServiceException
+import java.time.OffsetDateTime
+import java.util.UUID
 import kotlin.math.min
 import kotlin.time.Duration.Companion.seconds
 
@@ -51,6 +56,15 @@ class TelegramService(
         private const val MAX_MEDIA_GROUP_SIZE = 10
         private const val MAX_MESSAGES_PER_SECOND_FREE = 30
         //private const val MAX_MESSAGES_PER_SECOND_PAID = 1000
+
+        const val DONATION_PAYLOAD_PREFIX = "donation:"
+        const val DONATION_CURRENCY = "XTR"
+        const val MAX_DONATION_TITLE_LENGTH = 32
+        const val MAX_DONATION_DESCRIPTION_LENGTH = 180
+        const val MIN_DONATION_STARS = 1
+        const val MAX_DONATION_STARS = 2_500
+        const val DONATION_DESCRIPTION_SUFFIX =
+            "\n\n— Voluntary donation. No goods or services are provided in return. See /terms."
 
         private val SUPPORTED_TAGS = setOf(
             "b",
@@ -303,6 +317,177 @@ class TelegramService(
         }
     }
 
+    /**
+     * Send a Telegram Stars donation invoice to the chat.
+     *
+     * The system enforces three guarantees mandated by Telegram's Stars policy and our internal rules:
+     *  - Currency is forced to XTR with empty provider token (Stars donation).
+     *  - A fixed suffix is appended to the description making it unmistakably clear that the payment is voluntary
+     *    and no goods or services are provided in return.
+     *  - The payload is always generated server-side with a fixed `donation:` prefix so the pre-checkout handler
+     *    can recognize and auto-approve it.
+     */
+    suspend fun sendDonationInvoice(
+        chatId: Long,
+        title: String,
+        description: String,
+        starAmount: Int
+    ): TelegramMessage {
+        require(starAmount in MIN_DONATION_STARS..MAX_DONATION_STARS) {
+            "Donation amount must be between $MIN_DONATION_STARS and $MAX_DONATION_STARS Stars, got $starAmount"
+        }
+        val trimmedTitle = title.trim()
+        require(trimmedTitle.isNotEmpty()) { "Invoice title must not be empty" }
+        require(trimmedTitle.length <= MAX_DONATION_TITLE_LENGTH) {
+            "Invoice title must be ≤ $MAX_DONATION_TITLE_LENGTH characters, got ${trimmedTitle.length}"
+        }
+        val trimmedDescription = description.trim()
+        require(trimmedDescription.isNotEmpty()) { "Invoice description must not be empty" }
+        require(trimmedDescription.length <= MAX_DONATION_DESCRIPTION_LENGTH) {
+            "Invoice description must be ≤ $MAX_DONATION_DESCRIPTION_LENGTH characters, got ${trimmedDescription.length}"
+        }
+        val titleMatchesDonationKeyword = Regex("(?i)donat|support|tip|contribut").containsMatchIn(trimmedTitle)
+        if (!titleMatchesDonationKeyword) {
+            log.warn(
+                "Donation invoice title '{}' does not contain a donation-related keyword; consider rewording.",
+                trimmedTitle
+            )
+        }
+
+        val payload = "$DONATION_PAYLOAD_PREFIX$chatId:${UUID.randomUUID()}"
+        val fullDescription = trimmedDescription + DONATION_DESCRIPTION_SUFFIX
+        val request = SendInvoice(
+            chatId,
+            trimmedTitle,
+            fullDescription,
+            payload,
+            DONATION_CURRENCY,
+            listOf(LabeledPrice("Stars", starAmount))
+        )
+        rateLimiter.acquire()
+        val sent = bot.execute(request)
+            .checkNoErrors("Failed to send donation invoice to chat $chatId")
+            .message()
+        val model = mapper.toModel(sent) ?: error("Mapper returned null for sent invoice in chat $chatId")
+        val invoice = model.invoice
+            ?: error("Sent donation invoice message has no invoice field; chat=$chatId, messageId=${model.messageId}")
+        val withPayload = model.copy(invoice = invoice.copy(payload = payload))
+        return messageOrm.save(withPayload)
+    }
+
+    /**
+     * Counts donation invoices issued by the bot itself in [chatId] within the last [withinHours] hours.
+     * Used to throttle how often the agent can re-issue donation invoices in the same chat.
+     */
+    suspend fun countRecentDonationInvoices(chatId: Long, withinHours: Long): Long {
+        val botId = appProperties.integration.telegram.botId
+        val since = OffsetDateTime.now().minusHours(withinHours)
+        val spec = TelegramMessageSpecifications.chatId(chatId)
+            .and(TelegramMessageSpecifications.fromUser(botId))
+            .and(TelegramMessageSpecifications.dateAfter(since))
+            .and(TelegramMessageSpecifications.invoiceNotNull())
+        return withContext(Dispatchers.IO) { messageOrm.count(spec) }
+    }
+
+    /**
+     * Confirms or rejects a Telegram pre-checkout query. Telegram requires this answer within 10 seconds,
+     * otherwise the payment is automatically cancelled.
+     */
+    suspend fun answerPreCheckoutQuery(id: String, ok: Boolean = true, errorMessage: String? = null) {
+        val request = if (ok) {
+            AnswerPreCheckoutQuery(id)
+        } else {
+            AnswerPreCheckoutQuery(id, errorMessage ?: "Payment was rejected")
+        }
+        bot.execute(request).checkNoErrors("Failed to answer pre-checkout query $id")
+    }
+
+    /**
+     * Refunds a successful Telegram Stars payment. Available for 21 days after payment per Telegram's policy.
+     */
+    suspend fun refundStarPayment(userId: Long, telegramPaymentChargeId: String) {
+        bot.execute(RefundStarPayment(userId, telegramPaymentChargeId))
+            .checkNoErrors("Failed to refund Stars payment $telegramPaymentChargeId for user $userId")
+    }
+
+    private suspend fun handlePreCheckoutQuery(query: TelegramPreCheckoutQuery) {
+        try {
+            val isDonationPayload = query.invoicePayload.startsWith(DONATION_PAYLOAD_PREFIX)
+            val isStarsCurrency = query.currency == DONATION_CURRENCY
+            val invoiceKnown: Boolean
+            val alreadyPaid: Boolean
+            if (isDonationPayload) {
+                val (known, paid) = withContext(Dispatchers.IO) {
+                    val k = messageOrm.count(
+                        TelegramMessageSpecifications.invoicePayloadEquals(query.invoicePayload)
+                    ) > 0
+                    val p = messageOrm.count(
+                        TelegramMessageSpecifications.successfulPaymentInvoicePayloadEquals(query.invoicePayload)
+                    ) > 0
+                    k to p
+                }
+                invoiceKnown = known
+                alreadyPaid = paid
+            } else {
+                invoiceKnown = false
+                alreadyPaid = false
+            }
+            if (isDonationPayload && isStarsCurrency && invoiceKnown && !alreadyPaid) {
+                answerPreCheckoutQuery(query.id, ok = true)
+                log.info(
+                    "Approved pre-checkout query {} for {} {} (payload: {})",
+                    query.id, query.totalAmount, query.currency, query.invoicePayload
+                )
+            } else {
+                log.warn(
+                    "Rejecting pre-checkout query {}: payload='{}', currency='{}', invoiceKnown={}, alreadyPaid={}",
+                    query.id, query.invoicePayload, query.currency, invoiceKnown, alreadyPaid
+                )
+                answerPreCheckoutQuery(
+                    query.id,
+                    ok = false,
+                    errorMessage = "This invoice is no longer valid. Please contact support."
+                )
+            }
+        } catch (e: Exception) {
+            log.error("Failed to handle pre-checkout query ${query.id}", e)
+        }
+    }
+
+    suspend fun deleteMessage(chatId: Long, messageId: Int) {
+        val response = bot.execute(DeleteMessage(chatId, messageId))
+        if (!response.isOk) {
+            val description = response.description() ?: ""
+            if (response.errorCode() == 400 &&
+                (description.contains("message to delete not found") ||
+                        description.contains("message can't be deleted"))
+            ) {
+                log.debug("Message $messageId in chat $chatId could not be deleted: $description")
+                return
+            }
+            response.checkNoErrors("Failed to delete message $messageId in chat $chatId")
+        }
+    }
+
+    private suspend fun cleanupDonationInvoiceOnPayment(message: TelegramMessage) {
+        val payment = message.successfulPayment ?: return
+        val invoiceMessage = withContext(Dispatchers.IO) {
+            messageOrm.search(
+                TelegramMessageSpecifications.invoicePayloadEquals(payment.invoicePayload),
+                PageRequest.of(0, 1)
+            ).content.firstOrNull()
+        } ?: return
+        try {
+            deleteMessage(invoiceMessage.chatId, invoiceMessage.messageId)
+        } catch (e: Exception) {
+            log.warn(
+                "Failed to delete donation invoice message ${invoiceMessage.messageId} " +
+                        "in chat ${invoiceMessage.chatId} after payment",
+                e
+            )
+        }
+    }
+
     suspend fun editMessage(
         chatId: Long,
         messageId: Int,
@@ -470,6 +655,12 @@ class TelegramService(
                     if (update.message().from() != null) {
                         refreshUser(update.message().from())
                     }
+                }
+                if (updateModel.preCheckoutQuery != null) {
+                    handlePreCheckoutQuery(updateModel.preCheckoutQuery)
+                }
+                if (updateModel.message?.successfulPayment != null) {
+                    cleanupDonationInvoiceOnPayment(updateModel.message)
                 }
                 updatesInternal.emit(updateModel)
             }

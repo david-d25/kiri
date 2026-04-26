@@ -138,7 +138,7 @@ abstract class TelegramIntegrationMapper {
             it.currency,
             it.totalAmount,
             it.invoicePayload,
-            integerToZonedDateTime(it.subscriptionExpirationDate)!!,
+            integerToZonedDateTime(it.subscriptionExpirationDate),
             booleanOrFalse(it.isRecurring),
             booleanOrFalse(it.isFirstRecurring),
             it.shippingOptionId,

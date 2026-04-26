@@ -11,7 +11,9 @@
   }
 
   > .center {
+    white-space: nowrap;
     scrollbar-color: var(--border-color) transparent;
+    overflow-x: auto;
   }
 
   > .right {

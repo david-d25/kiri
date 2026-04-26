@@ -39,4 +39,39 @@ object TelegramMessageSpecifications {
         Specification { root, _, cb ->
             cb.equal(root.get<Long>("fromId"), userId)
         }
+
+    fun invoiceNotNull(): Specification<TelegramMessageEntity> =
+        Specification { root, _, cb ->
+            cb.isNotNull(root.get<Any>("invoice"))
+        }
+
+    fun successfulPaymentNotNull(): Specification<TelegramMessageEntity> =
+        Specification { root, _, cb ->
+            cb.isNotNull(root.get<Any>("successfulPayment"))
+        }
+
+    fun refundedPaymentChargeIdIn(chargeIds: Collection<String>): Specification<TelegramMessageEntity> =
+        Specification { root, _, _ ->
+            root.get<Any>("refundedPayment").get<String>("telegramPaymentChargeId").`in`(chargeIds)
+        }
+
+    fun successfulPaymentChargeIdEquals(chargeId: String): Specification<TelegramMessageEntity> =
+        Specification { root, _, cb ->
+            cb.equal(root.get<Any>("successfulPayment").get<String>("telegramPaymentChargeId"), chargeId)
+        }
+
+    fun successfulPaymentCurrency(currency: String): Specification<TelegramMessageEntity> =
+        Specification { root, _, cb ->
+            cb.equal(root.get<Any>("successfulPayment").get<String>("currency"), currency)
+        }
+
+    fun invoicePayloadEquals(payload: String): Specification<TelegramMessageEntity> =
+        Specification { root, _, cb ->
+            cb.equal(root.get<Any>("invoice").get<String>("payload"), payload)
+        }
+
+    fun successfulPaymentInvoicePayloadEquals(payload: String): Specification<TelegramMessageEntity> =
+        Specification { root, _, cb ->
+            cb.equal(root.get<Any>("successfulPayment").get<String>("invoicePayload"), payload)
+        }
 }

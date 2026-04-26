@@ -24,4 +24,7 @@ class TelegramInvoiceEntity {
 
     @Column(name = "total_amount")
     var totalAmount: Long = 0
+
+    @Column(name = "payload")
+    var payload: String? = null
 }

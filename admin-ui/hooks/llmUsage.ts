@@ -13,13 +13,20 @@ export function useLlmUsageRecent(limit: number = 50): UseQueryResult<LlmUsageSt
     );
 }
 
-export function useLlmUsageAggregate(from?: string, to?: string): UseQueryResult<LlmUsageDailyAggregateDto[], Error> {
+export type LlmUsageAggregateBucket = 'day' | 'hour';
+
+export function useLlmUsageAggregate(
+    from?: string,
+    to?: string,
+    bucket: LlmUsageAggregateBucket = 'day',
+): UseQueryResult<LlmUsageDailyAggregateDto[], Error> {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
+    if (bucket !== 'day') params.set('bucket', bucket);
     const qs = params.toString();
     return useFetch<LlmUsageDailyAggregateDto[]>(
-        ['llm-usage', 'aggregate', from, to],
+        ['llm-usage', 'aggregate', from, to, bucket],
         qs ? `/llm-usage/aggregate?${qs}` : '/llm-usage/aggregate',
         undefined,
         { staleTime: 10_000 }

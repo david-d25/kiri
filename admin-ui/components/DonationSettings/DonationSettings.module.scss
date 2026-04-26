@@ -1,0 +1,30 @@
+.root {
+  box-sizing: border-box;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.thin {
+  max-width: 480px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hint {
+  font-size: 0.85em;
+  color: var(--text-secondary);
+}
