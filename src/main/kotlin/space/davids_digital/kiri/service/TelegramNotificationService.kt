@@ -13,6 +13,7 @@ import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.model.telegram.TelegramMessage
 import space.davids_digital.kiri.model.telegram.TelegramUpdate
 import space.davids_digital.kiri.model.telegram.TelegramUser
+import space.davids_digital.kiri.orm.service.SettingOrmService
 import java.time.ZonedDateTime
 import java.util.concurrent.ConcurrentSkipListSet
 import javax.annotation.PostConstruct
@@ -20,12 +21,15 @@ import javax.annotation.PostConstruct
 @Service
 class TelegramNotificationService (
     private val telegram: TelegramService,
-    private val notificationManager: NotificationManager
+    private val notificationManager: NotificationManager,
+    settings: SettingOrmService
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val chatsOpenedInAgentApp = ConcurrentSkipListSet<Long>()
+
+    private val respondToKiriPrefix by settings.declareBoolean("apps.telegram.respondToKiriPrefix", false)
 
     @PostConstruct
     private fun init() {
@@ -74,7 +78,11 @@ class TelegramNotificationService (
 
     private suspend fun onSuccessfulPayment(message: TelegramMessage) {
         val payment = message.successfulPayment ?: return
-        val chat = telegram.fetchAndSaveChatById(message.chatId) ?: return
+        // Telegram delivers successful_payment in the user's PRIVATE chat with the bot, even when the invoice
+        // was sent to a group. Recover the original chat from the payload so the agent wakes up in the right
+        // place (and the chat label in the notification text matches reality).
+        val originalChatId = TelegramService.extractDonationChatId(payment.invoicePayload) ?: message.chatId
+        val chat = telegram.fetchAndSaveChatById(originalChatId) ?: return
         val user = message.fromId?.let { telegram.getUser(it) }
         val payer = when {
             user != null -> formatUser(user, message.fromId)
@@ -86,7 +94,7 @@ class TelegramNotificationService (
         sendNotification(
             "$payer sent ${payment.totalAmount} $starSymbol donation$location. " +
                     "Charge id: ${payment.telegramPaymentChargeId}",
-            message.chatId
+            originalChatId
         )
     }
 
@@ -106,10 +114,11 @@ class TelegramNotificationService (
         val isAgentMentioned = textOrCaption?.contains("@" + self.username) == true
         val isPrivateChat = chat.type == TelegramChat.Type.PRIVATE
         val isAgentMessageRepliedTo = message.replyToMessage?.fromId == self.id
+        val isKiriPrefixed = respondToKiriPrefix && textOrCaption?.startsWithKiriPrefix() == true
         val chatIsOpenedInApp = message.chatId in chatsOpenedInAgentApp
         if (chatIsOpenedInApp) {
             // Current chat is opened in the agent app, just wake up the agent
-            if (isPrivateChat || isAgentMentioned || isAgentMessageRepliedTo) {
+            if (isPrivateChat || isAgentMentioned || isAgentMessageRepliedTo || isKiriPrefixed) {
                 sendNotification("New message in current chat", message.chatId)
                 return
             }
@@ -141,6 +150,19 @@ class TelegramNotificationService (
             }
             return
         }
+        if (isKiriPrefixed) {
+            if (!chatEnabled) {
+                telegram.sendMessage(message.chatId, chatDisabledMessage)
+            } else {
+                sendNotification("$userLabel addressed you by name in chat $chatLabel", message.chatId)
+            }
+            return
+        }
+    }
+
+    private fun String.startsWithKiriPrefix(): Boolean {
+        val trimmed = trimStart()
+        return trimmed.startsWith("кири", ignoreCase = true) || trimmed.startsWith("kiri", ignoreCase = true)
     }
 
     private fun formatUser(user: TelegramUser?, fallbackId: Long?): String {

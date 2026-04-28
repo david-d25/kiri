@@ -290,7 +290,12 @@ class AnthropicChatCompletionService(
             "Reasoning max tokens must be greater than zero when reasoning is enabled"
         }
         model(model)
-        system(request.instructions)
+        systemOfTextBlockParams(listOf(
+            TextBlockParam.builder()
+                .text(request.instructions)
+                .cacheControl(CacheControlEphemeral.builder().build())
+                .build()
+        ))
         maxTokens(request.maxOutputTokens)
         messages(buildMessages(request.messages))
         tools(buildTools(request.tools))

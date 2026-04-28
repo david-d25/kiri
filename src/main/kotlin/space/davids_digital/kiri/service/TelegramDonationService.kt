@@ -30,7 +30,8 @@ class TelegramDonationService(
         val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"))
         val messages = messageOrm.search(spec, pageable)
         val refunds = findRefundsFor(messages.content)
-        val chats = chatOrm.findByIds(messages.content.map { it.chatId }.distinct()).associateBy { it.id }
+        val originalChatIds = messages.content.map { originalChatIdFor(it) }.distinct()
+        val chats = chatOrm.findByIds(originalChatIds).associateBy { it.id }
         val users = userOrm.findAllById(messages.content.mapNotNull { it.fromId }.distinct()).associateBy { it.id }
         return messages.map { toDto(it, refunds[it.successfulPayment!!.telegramPaymentChargeId], chats, users) }
     }
@@ -75,7 +76,7 @@ class TelegramDonationService(
     @Transactional(readOnly = true)
     fun buildDtoForChargeId(donation: TelegramMessage): TelegramDonationDto {
         val refunds = findRefundsFor(listOf(donation))
-        val chats = chatOrm.findByIds(listOf(donation.chatId)).associateBy { it.id }
+        val chats = chatOrm.findByIds(listOf(originalChatIdFor(donation))).associateBy { it.id }
         val users = donation.fromId?.let { userOrm.findAllById(listOf(it)).associateBy { u -> u.id } } ?: emptyMap()
         return toDto(
             donation,
@@ -83,6 +84,11 @@ class TelegramDonationService(
             chats,
             users,
         )
+    }
+
+    private fun originalChatIdFor(donation: TelegramMessage): Long {
+        val payload = donation.successfulPayment?.invoicePayload ?: return donation.chatId
+        return TelegramService.extractDonationChatId(payload) ?: donation.chatId
     }
 
     private fun baseSpec(chatId: Long?) =
@@ -105,12 +111,13 @@ class TelegramDonationService(
         users: Map<Long, TelegramUser>,
     ): TelegramDonationDto {
         val payment = donation.successfulPayment!!
-        val chat = chats[donation.chatId]
+        val originalChatId = originalChatIdFor(donation)
+        val chat = chats[originalChatId]
         val user = donation.fromId?.let { users[it] }
         return TelegramDonationDto(
             telegramPaymentChargeId = payment.telegramPaymentChargeId,
             providerPaymentChargeId = payment.providerPaymentChargeId,
-            chatId = donation.chatId,
+            chatId = originalChatId,
             chatTitle = chat?.title,
             chatUsername = chat?.username,
             userId = donation.fromId,

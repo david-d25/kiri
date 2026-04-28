@@ -59,6 +59,20 @@ class TelegramService(
 
         const val DONATION_PAYLOAD_PREFIX = "donation:"
         const val DONATION_CURRENCY = "XTR"
+
+        /**
+         * Telegram delivers `successful_payment` updates inside the user's PRIVATE chat with the bot, even when
+         * the invoice was sent to a group. The original chat is encoded into the payload at send time so we can
+         * recover it here for notification routing and admin-UI display.
+         */
+        fun extractDonationChatId(invoicePayload: String): Long? {
+            if (!invoicePayload.startsWith(DONATION_PAYLOAD_PREFIX)) return null
+            val rest = invoicePayload.substring(DONATION_PAYLOAD_PREFIX.length)
+            val sep = rest.indexOf(':')
+            if (sep <= 0) return null
+            return rest.substring(0, sep).toLongOrNull()
+        }
+
         const val MAX_DONATION_TITLE_LENGTH = 32
         const val MAX_DONATION_DESCRIPTION_LENGTH = 180
         const val MIN_DONATION_STARS = 1
@@ -477,6 +491,25 @@ class TelegramService(
                 PageRequest.of(0, 1)
             ).content.firstOrNull()
         } ?: return
+        val isGroup = withContext(Dispatchers.IO) {
+            chatOrm.findById(invoiceMessage.chatId)
+        }?.let { it.type != TelegramChat.Type.PRIVATE } ?: false
+        if (isGroup) {
+            // Keep the invoice message visible as a record of the donation, but strip the Pay button so
+            // other group members can't keep clicking it (each click after the first would just produce
+            // an "already paid" rejection from our pre-checkout handler). The agent will follow up with
+            // a thank-you message that serves as the visible "paid" status.
+            try {
+                clearMessageReplyMarkup(invoiceMessage.chatId, invoiceMessage.messageId)
+                return
+            } catch (e: Exception) {
+                log.warn(
+                    "Failed to clear donation invoice buttons on message ${invoiceMessage.messageId} " +
+                            "in chat ${invoiceMessage.chatId}; falling back to delete",
+                    e
+                )
+            }
+        }
         try {
             deleteMessage(invoiceMessage.chatId, invoiceMessage.messageId)
         } catch (e: Exception) {
@@ -485,6 +518,24 @@ class TelegramService(
                         "in chat ${invoiceMessage.chatId} after payment",
                 e
             )
+        }
+    }
+
+    private suspend fun clearMessageReplyMarkup(chatId: Long, messageId: Int) {
+        // Calling editMessageReplyMarkup without `reply_markup` removes the inline keyboard. For invoice
+        // messages this strips the auto-generated "Pay X" button.
+        val response = bot.execute(EditMessageReplyMarkup(chatId, messageId))
+        if (!response.isOk) {
+            val description = response.description() ?: ""
+            if (response.errorCode() == 400 &&
+                (description.contains("message to edit not found") ||
+                        description.contains("message can't be edited") ||
+                        description.contains("exactly the same"))
+            ) {
+                log.debug("Reply markup of message $messageId in chat $chatId not edited: $description")
+                return
+            }
+            response.checkNoErrors("Failed to clear reply markup of message $messageId in chat $chatId")
         }
     }
 

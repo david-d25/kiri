@@ -18,6 +18,7 @@ export default function AppsSettings() {
         reset
     } = useSettingsFormState({
         tgAutoSwitchOnWake: { key: "apps.telegram.autoSwitchOnWake", defaultValue: true },
+        tgRespondToKiriPrefix: { key: "apps.telegram.respondToKiriPrefix", defaultValue: false },
     });
 
     function onSave() {
@@ -48,6 +49,17 @@ export default function AppsSettings() {
                                 label={
                                     <FormLabel changed={settings.tgAutoSwitchOnWake.isChanged}>
                                         Auto-switch Telegram chat on wake
+                                    </FormLabel>
+                                }
+                            />
+                            <Checkbox
+                                className={s.thin}
+                                disabled={loading || !!anyError}
+                                checked={settings.tgRespondToKiriPrefix.value}
+                                onChange={settings.tgRespondToKiriPrefix.setValue}
+                                label={
+                                    <FormLabel changed={settings.tgRespondToKiriPrefix.isChanged}>
+                                        Respond when message starts with &quot;Kiri&quot; / &quot;Кири&quot;
                                     </FormLabel>
                                 }
                             />
