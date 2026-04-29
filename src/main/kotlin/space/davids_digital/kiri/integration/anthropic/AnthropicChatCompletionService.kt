@@ -59,9 +59,15 @@ import space.davids_digital.kiri.model.Setting
 import space.davids_digital.kiri.orm.service.LlmUsageStatOrmService
 import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.service.ChatCompletionService
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
+import javax.imageio.ImageIO
 import kotlin.jvm.optionals.getOrNull
+import kotlin.math.sqrt
 
 @Service
 class AnthropicChatCompletionService(
@@ -573,28 +579,88 @@ class AnthropicChatCompletionService(
                     TextBlockParam.builder().text(item.text).build()
                 )
 
-                is ChatCompletionToolUseResult.Output.Image -> ToolResultBlockParam.Content.Block.ofImage(
-                    ImageBlockParam.builder()
-                        .source(
-                            Base64ImageSource.builder()
-                                .data(Base64.getEncoder().encodeToString(item.data))
-                                .mediaType(mapImageMediaType(item.mediaType))
-                                .build()
-                        )
-                        .build()
-                )
+                is ChatCompletionToolUseResult.Output.Image -> {
+                    val (data, mediaType) = clampImageForAnthropic(item.data, item.mediaType)
+                    ToolResultBlockParam.Content.Block.ofImage(
+                        ImageBlockParam.builder()
+                            .source(
+                                Base64ImageSource.builder()
+                                    .data(Base64.getEncoder().encodeToString(data))
+                                    .mediaType(mapImageMediaType(mediaType))
+                                    .build()
+                            )
+                            .build()
+                    )
+                }
             }
         }
     }
 
-    private fun buildImageBlock(imageContentItem: Message.ContentItem.Image) = ImageBlockParam.builder().apply {
-        source(
-            Base64ImageSource.builder()
-                .data(Base64.getEncoder().encodeToString(imageContentItem.data))
-                .mediaType(mapImageMediaType(imageContentItem.mediaType))
-                .build()
+    private fun buildImageBlock(imageContentItem: Message.ContentItem.Image): ImageBlockParam {
+        val (data, mediaType) = clampImageForAnthropic(imageContentItem.data, imageContentItem.mediaType)
+        return ImageBlockParam.builder().apply {
+            source(
+                Base64ImageSource.builder()
+                    .data(Base64.getEncoder().encodeToString(data))
+                    .mediaType(mapImageMediaType(mediaType))
+                    .build()
+            )
+        }.build()
+    }
+
+    // Anthropic rejects images whose base64 payload exceeds 5 MiB. Base64 expands by ~4/3,
+    // so raw bytes must stay under ~3.93 MB; we use a slightly tighter cap for safety.
+    private val maxAnthropicImageRawBytes = 3_700_000
+
+    private fun clampImageForAnthropic(
+        data: ByteArray,
+        mediaType: ChatCompletionImageType,
+    ): Pair<ByteArray, ChatCompletionImageType> {
+        if (data.size <= maxAnthropicImageRawBytes) return data to mediaType
+        val original = try {
+            ImageIO.read(ByteArrayInputStream(data))
+        } catch (e: Exception) {
+            log.warn("Failed to decode oversized image (${data.size} bytes), sending as-is", e)
+            return data to mediaType
+        }
+        if (original == null) {
+            log.warn("ImageIO returned null for oversized image (${data.size} bytes), sending as-is")
+            return data to mediaType
+        }
+        var scale = sqrt(maxAnthropicImageRawBytes.toDouble() / data.size).coerceAtMost(1.0)
+        repeat(6) {
+            val newWidth = (original.width * scale).toInt().coerceAtLeast(64)
+            val newHeight = (original.height * scale).toInt().coerceAtLeast(64)
+            val resized = BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB)
+            val g = resized.createGraphics()
+            try {
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+                // TYPE_INT_RGB has no alpha; fill white so transparent pixels don't render as black.
+                g.color = java.awt.Color.WHITE
+                g.fillRect(0, 0, newWidth, newHeight)
+                g.drawImage(original, 0, 0, newWidth, newHeight, null)
+            } finally {
+                g.dispose()
+            }
+            val baos = ByteArrayOutputStream()
+            ImageIO.write(resized, "jpeg", baos)
+            val out = baos.toByteArray()
+            if (out.size <= maxAnthropicImageRawBytes) {
+                log.info(
+                    "Downscaled image from {} bytes ({}x{}) to {} bytes ({}x{}) for Anthropic 5MB limit",
+                    data.size, original.width, original.height, out.size, newWidth, newHeight
+                )
+                return out to ChatCompletionImageType.JPEG
+            }
+            scale *= 0.8
+        }
+        log.warn(
+            "Failed to fit image under {} bytes after downscaling attempts; sending original ({} bytes)",
+            maxAnthropicImageRawBytes, data.size
         )
-    }.build()
+        return data to mediaType
+    }
 
     private fun mapImageMediaType(mediaType: ChatCompletionImageType) = when (mediaType) {
         ChatCompletionImageType.JPEG -> Base64ImageSource.MediaType.IMAGE_JPEG
