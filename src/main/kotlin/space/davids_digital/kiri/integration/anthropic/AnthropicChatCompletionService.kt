@@ -305,9 +305,6 @@ class AnthropicChatCompletionService(
         maxTokens(request.maxOutputTokens)
         messages(buildMessages(request.messages))
         tools(buildTools(request.tools))
-        // Automatic prompt caching: SDK applies a cache_control marker to the last cacheable block.
-        // See https://platform.claude.com/docs/en/build-with-claude/prompt-caching#automatic-caching
-        cacheControl(CacheControlEphemeral.builder().build())
         val adaptiveThinking = useAdaptiveThinking(model)
         if (request.reasoning.enabled) {
             thinking(
@@ -458,82 +455,159 @@ class AnthropicChatCompletionService(
         }
     }
 
-    private fun buildMessages(messages: List<Message>) = messages.map { message ->
-        val builder = MessageParam.builder()
-        when (message.role) {
-            Message.Role.USER -> builder.role(MessageParam.Role.USER)
-            Message.Role.ASSISTANT -> builder.role(MessageParam.Role.ASSISTANT)
-        }
-        builder.content(MessageParam.Content.ofBlockParams(
-            message.content.map { contentItem ->
-                when (contentItem) {
-                    is Message.ContentItem.Text -> ContentBlockParam.ofText(
-                        TextBlockParam.builder().text(contentItem.text).build()
-                    )
-                    is Message.ContentItem.Image -> ContentBlockParam.ofImage(
-                        buildImageBlock(contentItem)
-                    )
-                    is Message.ContentItem.ToolUse -> ContentBlockParam.ofToolUse(
-                        ToolUseBlockParam.builder()
-                            .id(contentItem.toolUse.id)
-                            .name(contentItem.toolUse.name)
-                            .input(JsonValue.fromJsonNode(toolUseInputToJson(contentItem.toolUse.input)))
-                            .build()
-                    )
-                    is Message.ContentItem.ToolResult -> ContentBlockParam.ofToolResult(
-                        ToolResultBlockParam.builder()
-                            .toolUseId(contentItem.toolResult.toolUseId)
-                            .contentOfBlocks(toolUseResultOutputToContentBlockList(contentItem.toolResult.output))
-                            .build()
-                    )
-                    is Message.ContentItem.Reasoning -> ContentBlockParam.ofThinking(
-                        ThinkingBlockParam.builder()
-                            .thinking(
-                                contentItem.content
-                                    ?: error("Reasoning content cannot be null for Anthropic integration")
-                            )
-                            .signature(contentItem.signature)
-                            .build()
-                    )
-                    is Message.ContentItem.RedactedReasoning -> ContentBlockParam.ofRedactedThinking(
-                        RedactedThinkingBlockParam.builder()
-                            .data(contentItem.data)
-                            .build()
-                    )
-                    is ChatCompletionWebSearch.Search -> ContentBlockParam.ofServerToolUse(
-                        ServerToolUseBlockParam.builder()
-                            .id(contentItem.id ?: error("WebSearch Search content item must have an ID"))
-                            .name(ServerToolUseBlockParam.Name.WEB_SEARCH)
-                            .input(
-                                ServerToolUseBlockParam.Input.builder()
-                                    .putAdditionalProperty("query", JsonString.of(contentItem.query))
-                                    .build()
-                            )
-                            .build()
-                    )
-                    is ChatCompletionWebSearch.OpenPage -> ContentBlockParam.ofWebSearchToolResult(
-                        WebSearchToolResultBlockParam.builder()
-                            .toolUseId(contentItem.id ?: error("WebSearch Search content item must have an ID"))
-                            .content(
-                                WebSearchToolResultBlockContent.ofResultBlocks(
-                                    contentItem.content.map { page ->
-                                        WebSearchResultBlock.builder()
-                                            .url(page.url)
-                                            .title(page.title)
-                                            .encryptedContent(page.encryptedContent)
-                                            .pageAge(page.pageAge)
-                                            .build()
-                                    }
-                                )
-                            )
-                            .build()
-                    )
-                    is ChatCompletionWebSearch.FindInPage ->
-                        error("Anthropic integration does not support WebSearch FindInPage content item")
-                }
+    // Minimum gap, in RAW content blocks, between the tail breakpoint and the intermediate
+    // one. Anthropic's prefix-lookback window is ~20 total content blocks per breakpoint
+    // (thinking/redacted/server-tool/web-search blocks all count, not just cacheable ones),
+    // so 10 leaves headroom for ticks that append several raw blocks (reasoning + parallel
+    // tool calls + tool results).
+    private val intermediateCacheBlockGap = 10
+
+    private fun buildMessages(messages: List<Message>): List<MessageParam> {
+        val breakpoints = pickCacheBreakpoints(messages)
+        return messages.mapIndexed { mi, message ->
+            val builder = MessageParam.builder()
+            when (message.role) {
+                Message.Role.USER -> builder.role(MessageParam.Role.USER)
+                Message.Role.ASSISTANT -> builder.role(MessageParam.Role.ASSISTANT)
             }
-        ))
-        builder.build()
+            builder.content(MessageParam.Content.ofBlockParams(
+                message.content.mapIndexed { bi, contentItem ->
+                    val cache = (mi to bi) in breakpoints
+                    when (contentItem) {
+                        is Message.ContentItem.Text -> ContentBlockParam.ofText(
+                            TextBlockParam.builder().text(contentItem.text).apply {
+                                if (cache) cacheControl(CacheControlEphemeral.builder().build())
+                            }.build()
+                        )
+                        is Message.ContentItem.Image -> ContentBlockParam.ofImage(
+                            buildImageBlock(contentItem, cache)
+                        )
+                        is Message.ContentItem.ToolUse -> ContentBlockParam.ofToolUse(
+                            ToolUseBlockParam.builder()
+                                .id(contentItem.toolUse.id)
+                                .name(contentItem.toolUse.name)
+                                .input(JsonValue.fromJsonNode(toolUseInputToJson(contentItem.toolUse.input)))
+                                .apply { if (cache) cacheControl(CacheControlEphemeral.builder().build()) }
+                                .build()
+                        )
+                        is Message.ContentItem.ToolResult -> ContentBlockParam.ofToolResult(
+                            ToolResultBlockParam.builder()
+                                .toolUseId(contentItem.toolResult.toolUseId)
+                                .contentOfBlocks(toolUseResultOutputToContentBlockList(contentItem.toolResult.output))
+                                .apply { if (cache) cacheControl(CacheControlEphemeral.builder().build()) }
+                                .build()
+                        )
+                        is Message.ContentItem.Reasoning -> ContentBlockParam.ofThinking(
+                            ThinkingBlockParam.builder()
+                                .thinking(
+                                    contentItem.content
+                                        ?: error("Reasoning content cannot be null for Anthropic integration")
+                                )
+                                .signature(contentItem.signature)
+                                .build()
+                        )
+                        is Message.ContentItem.RedactedReasoning -> ContentBlockParam.ofRedactedThinking(
+                            RedactedThinkingBlockParam.builder()
+                                .data(contentItem.data)
+                                .build()
+                        )
+                        is ChatCompletionWebSearch.Search -> ContentBlockParam.ofServerToolUse(
+                            ServerToolUseBlockParam.builder()
+                                .id(contentItem.id ?: error("WebSearch Search content item must have an ID"))
+                                .name(ServerToolUseBlockParam.Name.WEB_SEARCH)
+                                .input(
+                                    ServerToolUseBlockParam.Input.builder()
+                                        .putAdditionalProperty("query", JsonString.of(contentItem.query))
+                                        .build()
+                                )
+                                .build()
+                        )
+                        is ChatCompletionWebSearch.OpenPage -> ContentBlockParam.ofWebSearchToolResult(
+                            WebSearchToolResultBlockParam.builder()
+                                .toolUseId(contentItem.id ?: error("WebSearch Search content item must have an ID"))
+                                .content(
+                                    WebSearchToolResultBlockContent.ofResultBlocks(
+                                        contentItem.content.map { page ->
+                                            WebSearchResultBlock.builder()
+                                                .url(page.url)
+                                                .title(page.title)
+                                                .encryptedContent(page.encryptedContent)
+                                                .pageAge(page.pageAge)
+                                                .build()
+                                        }
+                                    )
+                                )
+                                .build()
+                        )
+                        is ChatCompletionWebSearch.FindInPage ->
+                            error("Anthropic integration does not support WebSearch FindInPage content item")
+                    }
+                }
+            ))
+            builder.build()
+        }
+    }
+
+    private fun isMessageCacheable(item: Message.ContentItem): Boolean = when (item) {
+        is Message.ContentItem.Text -> true
+        is Message.ContentItem.Image -> true
+        is Message.ContentItem.ToolUse -> true
+        is Message.ContentItem.ToolResult -> true
+        is Message.ContentItem.Reasoning -> false
+        is Message.ContentItem.RedactedReasoning -> false
+        is ChatCompletionWebSearch.Search -> false
+        is ChatCompletionWebSearch.OpenPage -> false
+        is ChatCompletionWebSearch.FindInPage -> false
+    }
+
+    /**
+     * Picks up to two cache breakpoints in the message history:
+     *  - tail: last cacheable block (caches the current state for the next tick to read);
+     *  - intermediate: last cacheable block sitting ≥[intermediateCacheBlockGap] RAW blocks
+     *    before the tail. Survives both the ~20-block prefix lookback and tail rewrites
+     *    (retries, last-frame edits).
+     *
+     * Skipped when the intermediate would land on the very first cacheable block of the
+     * history — that prefix is already covered by the system prompt's breakpoint, so the
+     * slot would yield no incremental cache benefit.
+     */
+    private fun pickCacheBreakpoints(messages: List<Message>): Set<Pair<Int, Int>> {
+        var tailMsg = -1
+        var tailBlock = -1
+        var tailRaw = -1
+        var firstCacheableRaw = -1
+        var raw = 0
+        messages.forEachIndexed { mi, msg ->
+            msg.content.forEachIndexed { bi, item ->
+                if (isMessageCacheable(item)) {
+                    if (firstCacheableRaw < 0) firstCacheableRaw = raw
+                    tailMsg = mi; tailBlock = bi; tailRaw = raw
+                }
+                raw++
+            }
+        }
+        if (tailMsg < 0) return emptySet()
+        val out = HashSet<Pair<Int, Int>>(2).apply { add(tailMsg to tailBlock) }
+        val cutoff = tailRaw - intermediateCacheBlockGap
+        if (cutoff < 0) return out
+        var interMsg = -1
+        var interBlock = -1
+        var interRaw = -1
+        raw = 0
+        outer@ for (mi in messages.indices) {
+            val content = messages[mi].content
+            for (bi in content.indices) {
+                if (raw > cutoff) break@outer
+                if (isMessageCacheable(content[bi])) {
+                    interMsg = mi; interBlock = bi; interRaw = raw
+                }
+                raw++
+            }
+        }
+        if (interMsg >= 0 && interRaw > firstCacheableRaw) {
+            out.add(interMsg to interBlock)
+        }
+        return out
     }
 
     private fun buildTools(tools: ChatCompletionRequest.Tools) = buildList {
@@ -596,7 +670,10 @@ class AnthropicChatCompletionService(
         }
     }
 
-    private fun buildImageBlock(imageContentItem: Message.ContentItem.Image): ImageBlockParam {
+    private fun buildImageBlock(
+        imageContentItem: Message.ContentItem.Image,
+        cache: Boolean = false,
+    ): ImageBlockParam {
         val (data, mediaType) = clampImageForAnthropic(imageContentItem.data, imageContentItem.mediaType)
         return ImageBlockParam.builder().apply {
             source(
@@ -605,6 +682,7 @@ class AnthropicChatCompletionService(
                     .mediaType(mapImageMediaType(mediaType))
                     .build()
             )
+            if (cache) cacheControl(CacheControlEphemeral.builder().build())
         }.build()
     }
 

@@ -30,6 +30,11 @@ class TelegramNotificationService (
     private val chatsOpenedInAgentApp = ConcurrentSkipListSet<Long>()
 
     private val respondToKiriPrefix by settings.declareBoolean("apps.telegram.respondToKiriPrefix", false)
+    private val agentEnabled by settings.declareBoolean("agent.enabled", true)
+    private val agentDisabledMessage by settings.declareString(
+        "agent.disabledMessage",
+        "Agent is disabled, please reach to admin"
+    )
 
     @PostConstruct
     private fun init() {
@@ -116,6 +121,12 @@ class TelegramNotificationService (
         val isAgentMessageRepliedTo = message.replyToMessage?.fromId == self.id
         val isKiriPrefixed = respondToKiriPrefix && textOrCaption?.startsWithKiriPrefix() == true
         val chatIsOpenedInApp = message.chatId in chatsOpenedInAgentApp
+        if (!agentEnabled) {
+            if (isPrivateChat || isAgentMentioned || isAgentMessageRepliedTo || isKiriPrefixed) {
+                telegram.sendMessage(message.chatId, agentDisabledMessage)
+            }
+            return
+        }
         if (chatIsOpenedInApp) {
             // Current chat is opened in the agent app, just wake up the agent
             if (isPrivateChat || isAgentMentioned || isAgentMessageRepliedTo || isKiriPrefixed) {

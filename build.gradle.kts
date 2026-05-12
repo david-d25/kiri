@@ -4,7 +4,7 @@ import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
 
 allprojects {
-    version = "1.17.1"
+    version = "1.18.0"
 }
 
 plugins {

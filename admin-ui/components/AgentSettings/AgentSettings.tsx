@@ -12,13 +12,19 @@ import LlmMaxTokensInput from "@/components/AgentSettings/common/LlmMaxTokensInp
 import ReasoningSettingsCollapsibleInput from "@/components/AgentSettings/common/ReasoningSettingsCollapsibleInput";
 import Checkbox from "@/components/Checkbox/Checkbox";
 import InstructionsInput from "@/components/AgentSettings/common/InstructionsInput";
+import SettingToggle from "@/components/SettingToggle/SettingToggle";
 
 
 export default function AgentSettings() {
     return (
         <div className={s.root}>
             <Container>
-                <DiscussionChatSettings/>
+                <div className={s.column}>
+                    <div className={s.thin}>
+                        <SettingToggle settingKey="agent.enabled" label="Agent enabled"/>
+                    </div>
+                    <DiscussionChatSettings/>
+                </div>
             </Container>
         </div>
     );

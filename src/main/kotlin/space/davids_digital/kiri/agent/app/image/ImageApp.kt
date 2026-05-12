@@ -23,7 +23,7 @@ class ImageApp(
     private val temporaryFiles: TemporaryFilesService,
 ) : AgentApp("image") {
     @AgentToolMethod(description = "Generate or edit an image using gpt-image-2 model (current SOTA, best quality). " +
-            "If referenceImages is empty, generates from scratch; otherwise edits/combines the given reference " +
+            "If referenceImages is empty, generates from scratch; otherwise uses the given reference " +
             "images according to the prompt (up to 16 images, each must be png/webp/jpg, less than 50 MB). " +
             "Cannot reference images from the internet (use geminiGenerate if you need that). " +
             "Generation may take several minutes.")
@@ -57,8 +57,8 @@ class ImageApp(
     }
 
     @AgentToolMethod(description = "Generate an image using Gemini model. Can google and reference images from " +
-            "the internet (unlike openaiGenerate), but overall quality is lower than gpt-image-2 (current SOTA). " +
-            "Generation may take several minutes.")
+            "the internet (unlike openaiGenerate), but overall quality is lower than gpt-image-2. " +
+            "Generation may take about a minute.")
     suspend fun geminiGenerate(
         @AgentToolParameter(description = "Input prompt to feed into model, " +
                 "prefer to describe the whole scene rather than individual tags")
