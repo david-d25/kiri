@@ -8,7 +8,6 @@ import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
-import space.davids_digital.kiri.agent.tool.AgentToolParameter
 import space.davids_digital.kiri.llm.ChatCompletionImageType
 import space.davids_digital.kiri.service.TemporaryFilesService
 import kotlin.reflect.KFunction
@@ -21,64 +20,29 @@ class SvgApp(
     private val temporaryFiles: TemporaryFilesService,
 ) : AgentApp("svg") {
 
-    private val names = mutableSetOf<String>()
-
     @AgentToolMethod(
-        description = "Write SVG, render it to PNG, save both as temporary files, and return a preview image. " +
-                "Files are saved as {name}.svg and {name}.png. " +
-                "Use different names to work on multiple SVGs in parallel."
+        description = "Render an existing SVG file to PNG. " +
+                "Reads <sourceName>, writes <pngName>, returns preview. " +
+                "Create the SVG with files_write first."
     )
-    suspend fun write(
-        @AgentToolParameter(description = "Name for this SVG, e.g. 'diagram', 'logo'. Also used as filename prefix.")
-        name: String,
-        @AgentToolParameter(description = "Full SVG content as XML string")
-        svgContent: String
+    suspend fun render(
+        sourceName: String,
+        pngName: String,
     ): List<DataFrame.ContentPart> {
-        temporaryFiles.create("$name.svg", svgContent.toByteArray(Charsets.UTF_8))
-        names.add(name)
+        val svgBytes = temporaryFiles.getContent(sourceName)
+            ?: return dataFrameContent { line("File '$sourceName' not found.") }
+        val svgContent = svgBytes.toString(Charsets.UTF_8)
         return try {
             val pngBytes = svgRenderService.renderToPng(svgContent)
-            temporaryFiles.create("$name.png", pngBytes)
+            temporaryFiles.create(pngName, pngBytes)
             dataFrameContent {
-                line("Saved $name.svg and $name.png. Preview:")
+                line("Rendered '$sourceName' → '$pngName'. Preview:")
                 image(pngBytes, ChatCompletionImageType.PNG)
             }
         } catch (e: Exception) {
-            dataFrameContent {
-                line("Saved $name.svg but render to PNG failed: ${e.message}")
-                line("SVG source (first 500 chars):")
-                text(svgContent.take(500))
-            }
+            dataFrameContent { line("Render failed: ${e.message}") }
         }
     }
 
-    @AgentToolMethod(description = "Show the SVG source code for a given name")
-    suspend fun showSource(
-        @AgentToolParameter(description = "SVG name")
-        name: String
-    ): String {
-        val content = temporaryFiles.getContent("$name.svg")
-            ?: return "SVG '$name' not found."
-        return String(content, Charsets.UTF_8)
-    }
-
-    @AgentToolMethod(description = "List all SVG names created in this session")
-    fun list(): String {
-        if (names.isEmpty()) return "No SVGs. Use svg_write to create one."
-        return names.joinToString("\n") { "- $it ($it.svg, $it.png)" }
-    }
-
-    override fun render(): List<DataFrame.ContentPart> = dataFrameContent {
-        if (names.isEmpty()) {
-            text("SVG app is open. No SVGs yet.")
-        } else {
-            line("SVG app is open. Files:")
-            for (name in names) {
-                line("  - $name.svg, $name.png")
-            }
-        }
-    }
-
-    override fun getAvailableAgentToolMethods(): Collection<KFunction<*>> =
-        listOf(::write, ::showSource, ::list)
+    override fun getAvailableAgentToolMethods(): Collection<KFunction<*>> = listOf(::render)
 }

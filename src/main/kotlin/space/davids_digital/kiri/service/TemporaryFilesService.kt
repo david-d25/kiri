@@ -34,6 +34,28 @@ class TemporaryFilesService {
         }
     }
 
+    suspend fun has(name: String): Boolean {
+        mutex.withLock {
+            return files.containsKey(name)
+        }
+    }
+
+    suspend fun delete(name: String): Boolean {
+        mutex.withLock {
+            return files.remove(name) != null
+        }
+    }
+
+    suspend fun list(): List<NamedFile> {
+        mutex.withLock {
+            return files.entries
+                .sortedBy { it.value.createdAt }
+                .map { NamedFile(it.key, it.value.content.size, it.value.createdAt) }
+        }
+    }
+
+    data class NamedFile(val name: String, val size: Int, val createdAt: Long)
+
     @Scheduled(fixedDelay = 60 * 60 * 1000)
     fun cleanup() {
         runBlocking {

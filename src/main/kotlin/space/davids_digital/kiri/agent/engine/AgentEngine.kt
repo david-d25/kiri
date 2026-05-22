@@ -18,20 +18,15 @@ import space.davids_digital.kiri.agent.engine.event.TickEvent
 import space.davids_digital.kiri.agent.engine.event.WakeUpRequestEvent
 import space.davids_digital.kiri.agent.engine.lifecycle.EngineLifecycleHookExecutor
 import space.davids_digital.kiri.agent.engine.lifecycle.LifecycleHookProvider
+import space.davids_digital.kiri.agent.frame.*
 import space.davids_digital.kiri.agent.frame.DataFrameUtils.addCreatedAtNow
-import space.davids_digital.kiri.agent.frame.FrameBuffer
-import space.davids_digital.kiri.agent.frame.trackToolCall
-import space.davids_digital.kiri.agent.frame.FrameRenderer
-import space.davids_digital.kiri.agent.frame.NativeWebSearchFrame
-import space.davids_digital.kiri.agent.frame.ReasoningFrame
-import space.davids_digital.kiri.agent.frame.ToolCallFrame
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Reasoning.Effort
-import space.davids_digital.kiri.llm.ChatCompletionResponse
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.AUTO
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.REQUIRED
+import space.davids_digital.kiri.llm.ChatCompletionResponse
 import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
 import space.davids_digital.kiri.llm.ChatCompletionWebSearch
 import space.davids_digital.kiri.llm.dsl.chatCompletionRequest
@@ -487,7 +482,5 @@ class AgentEngine(
             appManager.getSubProviders() +
             lifecycleHookProviders
         lifecycleHookExecutor.executeOnWake(hookProviders, frames)
-
-        frames.trackToolCall(appManager::render)
     }
 }

@@ -88,9 +88,5 @@ class ImageApp(
         }
     }
 
-    override fun render() = dataFrameContent {
-        line("Image toolbox is open")
-    }
-
     override fun getAvailableAgentToolMethods() = listOf(::openaiGenerate, ::geminiGenerate)
 }

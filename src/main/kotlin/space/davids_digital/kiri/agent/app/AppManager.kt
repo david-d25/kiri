@@ -4,11 +4,11 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Component
+import space.davids_digital.kiri.agent.app.files.FilesApp
 import space.davids_digital.kiri.agent.app.image.ImageApp
 import space.davids_digital.kiri.agent.app.scratchpad.ScratchpadApp
 import space.davids_digital.kiri.agent.app.svg.SvgApp
 import space.davids_digital.kiri.agent.app.telegram.TelegramApp
-import space.davids_digital.kiri.agent.frame.DataFrame
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import space.davids_digital.kiri.agent.tool.AgentToolProvider
@@ -23,6 +23,7 @@ class AppManager(
     private val scratchpadAppProvider: ObjectProvider<ScratchpadApp>,
     private val imageAppProvider: ObjectProvider<ImageApp>,
     private val svgAppProvider: ObjectProvider<SvgApp>,
+    private val filesAppProvider: ObjectProvider<FilesApp>,
 ) : AgentToolProvider {
     private val log = LoggerFactory.getLogger(this::class.java)
 
@@ -35,9 +36,10 @@ class AppManager(
         availableApps["notepad"] = { scratchpadAppProvider.getObject() }
         availableApps["image"] = { imageAppProvider.getObject() }
         availableApps["svg"] = { svgAppProvider.getObject() }
+        availableApps["files"] = { filesAppProvider.getObject() }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close, ::render, ::restart)
+    override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close, ::restart)
     override fun getSubProviders() = openedApps
 
     @AgentToolMethod(name = "list")
@@ -48,21 +50,6 @@ class AppManager(
                 appendLine("- $id")
             }
         }
-    }
-
-    @AgentToolMethod(description = "Render current state of all opened apps")
-    suspend fun render(): List<DataFrame.ContentPart> {
-        if (openedApps.isEmpty()) {
-            return listOf(DataFrame.Text("<info>Currently, no apps are opened.</info>"))
-        }
-        val contents = mutableListOf<DataFrame.ContentPart>()
-        for (app in openedApps) {
-            val appContent = app.render()
-            contents.add(DataFrame.Text("""<app id="${app.id}">"""))
-            contents.addAll(appContent)
-            contents.add(DataFrame.Text("</app>"))
-        }
-        return contents
     }
 
     @AgentToolMethod(description = "Opens an app and makes its tools available")

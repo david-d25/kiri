@@ -1,7 +1,6 @@
 package space.davids_digital.kiri.agent.app.telegram
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
@@ -63,26 +62,13 @@ class TelegramApp(
 
     private var selectedChatId: Long? = null
 
-    override fun render(): List<DataFrame.ContentPart> = dataFrameContent {
-        text("Telegram App opened.")
-        val chatId = selectedChatId
-        if (chatId != null) {
-            val chat = runBlocking(Dispatchers.IO) { chatOrm.findById(chatId) }
-            val title = chat?.title ?: chat?.firstName ?: chatId.toString()
-            val unreadCount = runBlocking(Dispatchers.IO) {
-                messageOrm.countMessagesAfterId(chatId, chat?.metadata?.lastReadMessageId ?: 0)
-            }
-            line("")
-            text("Selected chat: $title (id $chatId). Unread messages: $unreadCount")
-        }
-    }
-
     override fun getAvailableAgentToolMethods(): List<KFunction<*>> = buildList {
         add(::getUserProfile)
         add(::listChats)
         add(::switchToChatById)
         add(::switchToChatByUsername)
         if (selectedChatId != null) {
+            add(::getCurrentChat)
             add(::listLatestMessages)
             add(::searchMessages)
             add(::send)
@@ -93,6 +79,17 @@ class TelegramApp(
             add(::sendDonationInvoice)
             add(::refundDonation)
         }
+    }
+
+    @AgentToolMethod(description = "Return the currently selected chat title, id, and unread message count")
+    suspend fun getCurrentChat(): String {
+        val chatId = selectedChatId ?: return "No chat is currently selected."
+        val chat = withContext(Dispatchers.IO) { chatOrm.findById(chatId) }
+        val title = chat?.title ?: chat?.firstName ?: chatId.toString()
+        val unreadCount = withContext(Dispatchers.IO) {
+            messageOrm.countMessagesAfterId(chatId, chat?.metadata?.lastReadMessageId ?: 0)
+        }
+        return "Selected chat: $title (id $chatId). Unread messages: $unreadCount"
     }
 
     @AgentToolMethod

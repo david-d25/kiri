@@ -4,8 +4,6 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import space.davids_digital.kiri.agent.app.AgentApp
-import space.davids_digital.kiri.agent.frame.DataFrame
-import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.tool.AgentToolMethod
 import space.davids_digital.kiri.agent.tool.AgentToolNamespace
 import kotlin.reflect.KFunction
@@ -15,6 +13,11 @@ import kotlin.reflect.KFunction
 @AgentToolNamespace("scratchpad")
 class ScratchpadApp : AgentApp("scratchpad") {
     val content = StringBuilder()
+
+    @AgentToolMethod(description = "Return the full current scratchpad content")
+    fun read(): String {
+        return content.toString()
+    }
 
     @AgentToolMethod
     fun append(text: String) {
@@ -32,13 +35,7 @@ class ScratchpadApp : AgentApp("scratchpad") {
         content.append(text)
     }
 
-    override fun render(): List<DataFrame.ContentPart> {
-        return dataFrameContent {
-            text(content.toString())
-        }
-    }
-
     override fun getAvailableAgentToolMethods(): Collection<KFunction<*>> {
-        return listOf(::append, ::clear, ::replace)
+        return listOf(::read, ::append, ::clear, ::replace)
     }
 }
