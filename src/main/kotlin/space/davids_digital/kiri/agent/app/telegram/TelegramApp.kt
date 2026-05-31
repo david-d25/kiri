@@ -68,7 +68,7 @@ class TelegramApp(
         add(::switchToChatById)
         add(::switchToChatByUsername)
         if (selectedChatId != null) {
-            add(::getCurrentChat)
+            add(::getCurrentChatInfo)
             add(::listLatestMessages)
             add(::searchMessages)
             add(::send)
@@ -81,14 +81,12 @@ class TelegramApp(
         }
     }
 
-    @AgentToolMethod(description = "Return the currently selected chat title, id, and unread message count")
-    suspend fun getCurrentChat(): String {
+    @AgentToolMethod
+    suspend fun getCurrentChatInfo(): String {
         val chatId = selectedChatId ?: return "No chat is currently selected."
         val chat = withContext(Dispatchers.IO) { chatOrm.findById(chatId) }
         val title = chat?.title ?: chat?.firstName ?: chatId.toString()
-        val unreadCount = withContext(Dispatchers.IO) {
-            messageOrm.countMessagesAfterId(chatId, chat?.metadata?.lastReadMessageId ?: 0)
-        }
+        val unreadCount = withContext(Dispatchers.IO) { messageOrm.countUnseen(chatId) }
         return "Selected chat: $title (id $chatId). Unread messages: $unreadCount"
     }
 
@@ -101,9 +99,7 @@ class TelegramApp(
             chatOrm.findAllEnabled(PageRequest.of(page, CHATS_PAGE_SIZE))
         }
         val unreadCounts = withContext(Dispatchers.IO) {
-            chats.associate { chat ->
-                chat.id to messageOrm.countMessagesAfterId(chat.id, chat.metadata.lastReadMessageId ?: 0)
-            }
+            chats.associate { chat -> chat.id to messageOrm.countUnseen(chat.id) }
         }
 
         return dataFrameContent {
@@ -136,9 +132,7 @@ class TelegramApp(
         }
         telegramNotificationService.onChatOpenedInAgentApp(chat.id)
         val title = chat.title ?: chat.firstName
-        val unreadCount = withContext(Dispatchers.IO) {
-            messageOrm.countMessagesAfterId(chat.id, chat.metadata.lastReadMessageId ?: 0)
-        }
+        val unreadCount = withContext(Dispatchers.IO) { messageOrm.countUnseen(chat.id) }
         return if (unreadCount > 0) {
             "Chat selected. Title: $title. Unread messages: $unreadCount"
         } else {
@@ -154,7 +148,7 @@ class TelegramApp(
         return "Chat closed."
     }
 
-    @AgentToolMethod(description = "Get brief or full information about the currently selected chat")
+    @AgentToolMethod
     suspend fun getChatInfo(
         @AgentToolParameter(description = "show all info, i.e. avatar and description")
         full: Boolean = false
@@ -172,67 +166,65 @@ class TelegramApp(
         }
     }
 
-    @AgentToolMethod(description = "show chat latest messages; can show up to $MAX_MESSAGES_PER_VIEW")
+    @AgentToolMethod
     suspend fun listLatestMessages(
-        @AgentToolParameter(description = "Number of messages to list; 0 = show only unread, but no more than $MAX_MESSAGES_PER_VIEW")
+        @AgentToolParameter(
+            description = "Number of messages to list; 0 = show only unread, but no more than $MAX_MESSAGES_PER_VIEW"
+        )
         n: Int = 0,
-        @AgentToolParameter(description = "if true, show full XML with nested replies, all metadata, thumbnails. Default: compact plain-text.")
+        @AgentToolParameter(
+            description = "if true, show full XML with nested replies, all metadata, thumbnails. " +
+                    "Default: compact plain-text."
+        )
         detailed: Boolean = false
     ): List<DataFrame.ContentPart> {
         require(n >= 0) { "Number of messages must not be negative, got $n" }
         val nSafe = if (n > 0) n.coerceAtMost(MAX_MESSAGES_PER_VIEW) else MAX_MESSAGES_PER_VIEW
         val chatId = selectedChatId ?: error("No chat is currently selected.")
         val chat = telegram.fetchAndSaveChatById(chatId) ?: error("Chat with id $chatId not found.")
-        val lastReadMessageId = chat.metadata.lastReadMessageId
         val messages = withContext(Dispatchers.IO) {
-            if (n == 0 && lastReadMessageId != null) {
-                messageOrm.findAfterMessageIdOrderedByMessageIdDesc(chatId, lastReadMessageId, nSafe)
+            if (n == 0) {
+                messageOrm.findUnseenOrderedByMessageIdDesc(chatId, nSafe)
             } else {
                 messageOrm.findOrderedByMessageIdDesc(chatId, nSafe)
             }
         }
-        val lastMessage = messages.maxByOrNull { it.messageId }
-        val laterMessagesRemaining = withContext(Dispatchers.IO) {
-            lastMessage?.let { messageOrm.countMessagesAfterId(chatId, it.messageId) } ?: 0
-        }
-        val laterNewMessagesRemaining = withContext(Dispatchers.IO) {
-            messageOrm.countMessagesAfterId(chatId, lastReadMessageId ?: 0)
-        }
+        val totalUnseenBefore = withContext(Dispatchers.IO) { messageOrm.countUnseen(chatId) }
+        val unseenIds = messages.content.filter { !it.seen }.map { it.messageId }
+        val laterNewMessagesRemaining = (totalUnseenBefore - unseenIds.size).coerceAtLeast(0)
         withContext(Dispatchers.IO) {
-            lastMessage?.let { setLastReadMessageId(chatId, it.messageId) }
+            messageOrm.markSeen(chatId, unseenIds)
         }
         return dataFrameContent {
             with (renderer) {
                 if (detailed) {
                     renderMessages(
                         chat.title, chatId,
-                        chat.metadata.lastReadMessageId,
                         messages,
-                        laterMessagesRemaining,
-                        laterNewMessagesRemaining
+                        laterMessagesRemaining = 0,
+                        laterNewMessagesRemaining = laterNewMessagesRemaining
                     )
                 } else {
                     renderMessagesCompact(
                         chat.title, chatId,
-                        chat.metadata.lastReadMessageId,
                         messages,
-                        laterMessagesRemaining,
-                        laterNewMessagesRemaining
+                        laterMessagesRemaining = 0,
+                        laterNewMessagesRemaining = laterNewMessagesRemaining
                     )
                 }
             }
         }
     }
 
-    @AgentToolMethod(description = "search/filter messages in the current chat; returns newest-first by default")
+    @AgentToolMethod(description = "search/filter messages in the current chat")
     suspend fun searchMessages(
-        @AgentToolParameter(description = "filter by text (case-insensitive substring match)")
+        @AgentToolParameter(description = "case-insensitive substring match")
         textContains: String? = null,
         @AgentToolParameter(description = "filter by sender user id")
         fromUserId: Long? = null,
-        @AgentToolParameter(description = "only messages before this date; format: $PRETTY_DATE_TIME_PATTERN")
+        @AgentToolParameter(description = "format: $PRETTY_DATE_TIME_PATTERN")
         beforeDate: String? = null,
-        @AgentToolParameter(description = "only messages after this date; format: $PRETTY_DATE_TIME_PATTERN")
+        @AgentToolParameter(description = "format: $PRETTY_DATE_TIME_PATTERN")
         afterDate: String? = null,
         @AgentToolParameter(description = "only messages before this message id (exclusive)")
         beforeId: Int? = null,
@@ -272,7 +264,6 @@ class TelegramApp(
                 if (detailed) {
                     renderMessages(
                         chat.title, chatId,
-                        chat.metadata.lastReadMessageId,
                         messages,
                         laterMessagesRemaining = 0,
                         laterNewMessagesRemaining = 0
@@ -280,7 +271,6 @@ class TelegramApp(
                 } else {
                     renderMessagesCompact(
                         chat.title, chatId,
-                        chat.metadata.lastReadMessageId,
                         messages,
                         laterMessagesRemaining = 0,
                         laterNewMessagesRemaining = 0
@@ -315,8 +305,7 @@ class TelegramApp(
     @AgentToolMethod
     suspend fun sendSticker(fileId: String): String {
         val selectedChatId = selectedChatId ?: return "Chat not opened"
-        val sentMessage = telegram.sendSticker(selectedChatId, fileId)
-        advanceReadPointerIfSafe(selectedChatId, listOf(sentMessage.messageId))
+        telegram.sendSticker(selectedChatId, fileId)
         return "sent"
     }
 
@@ -349,8 +338,7 @@ class TelegramApp(
             }
         }
         return try {
-            val sent = telegram.sendDonationInvoice(chatId, title, description, starAmount)
-            advanceReadPointerIfSafe(chatId, listOf(sent.messageId))
+            telegram.sendDonationInvoice(chatId, title, description, starAmount)
             "Donation invoice sent (${starAmount}⭐)"
         } catch (e: IllegalArgumentException) {
             "Invalid invoice arguments: ${e.message}"
@@ -391,7 +379,7 @@ class TelegramApp(
      */
     @AgentToolMethod(
         description = "Send message with optional attachments. " +
-                "Note: images and documents cannot be mixed in a single message."
+                "Images and documents cannot be mixed in a single message."
     )
     suspend fun send(
         @AgentToolParameter(
@@ -401,7 +389,7 @@ class TelegramApp(
         )
         message: String,
 
-        @AgentToolParameter(description = "id of message to reply to")
+        @AgentToolParameter(description = "id of message to reply to, useful if message is old")
         replyTo: Int? = null,
 
         @AgentToolParameter(description = "photo filenames from temporary files; photos are compressed as JPEG")
@@ -413,13 +401,12 @@ class TelegramApp(
         val selectedChatId = selectedChatId ?: return "Chat not opened"
         val imageContents = images.map { files.getContent(it) ?: error("file '$it' not found") }
         val documentContents = documents.map { it to (files.getContent(it) ?: error("file '$it' not found")) }
-        val sentMessages = telegram.send(selectedChatId) {
+        telegram.send(selectedChatId) {
             html(message)
             imageContents.forEach { photo(it) }
             documentContents.forEach { (name, data) -> document(data, name) }
             replyToMessageId = replyTo
         }
-        advanceReadPointerIfSafe(selectedChatId, sentMessages.map { it.messageId })
         return "sent"
     }
 
@@ -437,10 +424,7 @@ class TelegramApp(
         frames.trackToolCall(this::switchToChatById, chatId)
 
         // Auto-list unread messages if the count fits in a single view
-        val unreadCount = withContext(Dispatchers.IO) {
-            val chat = chatOrm.findById(chatId) ?: return@withContext 0L
-            messageOrm.countMessagesAfterId(chatId, chat.metadata.lastReadMessageId ?: 0)
-        }
+        val unreadCount = withContext(Dispatchers.IO) { messageOrm.countUnseen(chatId) }
         if (unreadCount in 1..<MAX_MESSAGES_PER_VIEW) {
             log.info("Auto-listing {} unread messages in chat {}", unreadCount, chatId)
             frames.trackToolCall(this::listLatestMessages, 0, false)
@@ -452,35 +436,5 @@ class TelegramApp(
         if (selectedChatId != null) {
             telegramNotificationService.onChatClosedInAgentApp(selectedChatId)
         }
-    }
-
-    /**
-     * After sending messages, advances the read pointer only if the ONLY unread messages
-     * are the ones we just sent. If someone else sent a message in between, the pointer
-     * is NOT advanced so the agent sees that message on the next listing.
-     */
-    private suspend fun advanceReadPointerIfSafe(chatId: Long, sentMessageIds: List<Int>) {
-        if (sentMessageIds.isEmpty()) return
-        val maxSentId = sentMessageIds.max()
-        withContext(Dispatchers.IO) {
-            val chat = chatOrm.findById(chatId) ?: return@withContext
-            val lastReadId = chat.metadata.lastReadMessageId ?: 0
-            val totalUnread = messageOrm.countMessagesAfterId(chatId, lastReadId)
-            if (totalUnread == sentMessageIds.size.toLong()) {
-                setLastReadMessageId(chatId, maxSentId)
-            }
-        }
-    }
-
-    private fun setLastReadMessageId(chatId: Long, messageId: Int) {
-        val openedChat = chatOrm.findById(chatId) ?: error("chat with id $chatId not found")
-        if (openedChat.metadata.lastReadMessageId != null && messageId <= openedChat.metadata.lastReadMessageId) {
-            return // Don't move up read cursor
-        }
-        chatOrm.save(openedChat.copy(
-            metadata = openedChat.metadata.copy(
-                lastReadMessageId = messageId
-            )
-        ))
     }
 }

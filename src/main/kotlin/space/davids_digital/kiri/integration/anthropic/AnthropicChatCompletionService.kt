@@ -195,6 +195,7 @@ class AnthropicChatCompletionService(
             "claude-opus-4-5-20251101",
             "claude-opus-4-6",
             "claude-opus-4-7",
+            "claude-opus-4-8",
             "claude-sonnet-4-6",
         )
         if (supported.contains(modelId)) {
@@ -224,6 +225,7 @@ class AnthropicChatCompletionService(
             "claude-opus-4-5-20251101",
             "claude-opus-4-6",
             "claude-opus-4-7",
+            "claude-opus-4-8",
             "claude-sonnet-4-6",
         )
         return supported.contains(modelId)
@@ -259,7 +261,7 @@ class AnthropicChatCompletionService(
      * True for models that should use `thinking.type=adaptive` instead of the legacy
      * `thinking.type=enabled` with `budget_tokens`.
      *
-     * - On Claude Opus 4.7, adaptive is the ONLY supported mode (enabled → 400).
+     * - On Claude Opus 4.7 and 4.8, adaptive is the ONLY supported mode (enabled → 400).
      * - On Claude Opus 4.6 and Sonnet 4.6, enabled is deprecated but still works;
      *   we migrate proactively per Anthropic's recommendation.
      * - Older models (Sonnet 4.5, Opus 4.5, Sonnet 3.5/3.7, …) do not support adaptive
@@ -271,6 +273,7 @@ class AnthropicChatCompletionService(
         val adaptiveCapable = listOf(
             "claude-opus-4-6",
             "claude-opus-4-7",
+            "claude-opus-4-8",
             "claude-sonnet-4-6",
         )
         return adaptiveCapable.any { modelId.startsWith(it) }
@@ -283,6 +286,7 @@ class AnthropicChatCompletionService(
     private fun rejectsNonDefaultTemperature(modelId: String): Boolean {
         val rejectsTemperature = listOf(
             "claude-opus-4-7",
+            "claude-opus-4-8",
         )
         return rejectsTemperature.any { modelId.startsWith(it) }
     }

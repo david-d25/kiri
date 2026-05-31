@@ -112,11 +112,6 @@ class TelegramChatOrmService(
         val request = MetadataUpdateRequest()
         request.requestBlock()
         metadata = metadata.copy(
-            lastReadMessageId = if (request.lastReadMessageId == null) {
-                metadata.lastReadMessageId
-            } else {
-                request.lastReadMessageId?.getOrNull()
-            },
             notificationMode = request.notificationMode ?: metadata.notificationMode,
             mutedUntil = if (request.mutedUntil == null) metadata.mutedUntil else request.mutedUntil?.getOrNull(),
             archived = request.archived ?: metadata.archived,
@@ -141,7 +136,6 @@ class TelegramChatOrmService(
     }
 
     class MetadataUpdateRequest {
-        var lastReadMessageId: Optional<Int>? = null
         var notificationMode: NotificationMode? = null
         var mutedUntil: Optional<ZonedDateTime>? = null
         var archived: Boolean? = null

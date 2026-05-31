@@ -15,9 +15,6 @@ class TelegramChatMetadataEntity {
     @Column(name = "chat_id")
     var chatId: Long = 0
 
-    @Column(name = "last_read_message_id")
-    var lastReadMessageId: Int? = null
-
     @Enumerated(EnumType.STRING)
     @Column(name = "notification_mode")
     var notificationMode: NotificationMode = NotificationMode.ALL

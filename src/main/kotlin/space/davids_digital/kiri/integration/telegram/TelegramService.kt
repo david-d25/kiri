@@ -142,7 +142,7 @@ class TelegramService(
         val message = bot.forwardMessage(chatId, fromChatId, messageId) {
             disableNotification(disableNotification)
         }.checkNoErrors("Failed to forward message $messageId from chat $fromChatId to chat $chatId").message()
-        messageOrm.save(mapper.toModel(message)!!)
+        messageOrm.save(mapper.toModel(message)!!.copy(seen = true))
     }
 
     suspend fun send(chatId: Long, block: TelegramMessageBuilder.() -> Unit): List<TelegramMessage> {
@@ -173,6 +173,7 @@ class TelegramService(
         val file = getFile(fileId) ?: throw IllegalArgumentException("File ID $fileId not found")
         return messageOrm.save(
             mapper.toModel(bot.execute(SendSticker(chatId, file.fileUniqueId)).checkNoErrors().message())!!
+                .copy(seen = true)
         )
     }
 
@@ -200,7 +201,7 @@ class TelegramService(
                 val response = bot.execute(request)
                 if (response.isOk) {
                     sent = true
-                    val messages = extractMessages(response).mapNotNull(mapper::toModel)
+                    val messages = extractMessages(response).mapNotNull(mapper::toModel).map { it.copy(seen = true) }
                     messages.forEach { messageOrm.save(it) }
                     sentMessages.addAll(messages)
                 } else if (response.errorCode() == 429) {
@@ -385,7 +386,7 @@ class TelegramService(
         val model = mapper.toModel(sent) ?: error("Mapper returned null for sent invoice in chat $chatId")
         val invoice = model.invoice
             ?: error("Sent donation invoice message has no invoice field; chat=$chatId, messageId=${model.messageId}")
-        val withPayload = model.copy(invoice = invoice.copy(payload = payload))
+        val withPayload = model.copy(invoice = invoice.copy(payload = payload), seen = true)
         return messageOrm.save(withPayload)
     }
 

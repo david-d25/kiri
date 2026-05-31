@@ -19,7 +19,6 @@ class TelegramChatMetadataService (private val telegramChatMetadataOrmService: T
                 TelegramChat.NotificationMode.ONLY_MENTIONS
             }
         return TelegramChat.Metadata(
-            lastReadMessageId = null,
             notificationMode = notificationMode,
             mutedUntil = null,
             archived = false,

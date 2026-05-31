@@ -362,4 +362,9 @@ data class TelegramMessage (
      * Inline keyboard attached to the message. `login_url` buttons are represented as ordinary `url` buttons.
      */
     val replyMarkup: TelegramInlineKeyboardMarkup? = null,
+    /**
+     * True if the message has been seen by the agent (or was sent by the bot itself).
+     * Replaces the chat-level last-read cursor with a per-message flag.
+     */
+    val seen: Boolean = false,
 ): TelegramMaybeInaccessibleMessage(chatId, messageId)

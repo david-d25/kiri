@@ -77,7 +77,7 @@ class TelegramAppRenderer (
             }
             if (chat.pinnedMessage != null) {
                 line("<pinned-message>")
-                renderMessage(chat.pinnedMessage, null)
+                renderMessage(chat.pinnedMessage)
                 line("</pinned-message>")
             }
         }
@@ -166,7 +166,6 @@ class TelegramAppRenderer (
     fun FrameContentBuilder.renderMessages(
         chatTitle: String?,
         chatId: Long,
-        lastReadMessageId: Int?,
         messagesPage: Page<TelegramMessage>,
         laterMessagesRemaining: Long = 0,
         laterNewMessagesRemaining: Long = 0
@@ -179,7 +178,7 @@ class TelegramAppRenderer (
                 sentAt = message.date
                 line("<!-- ${sentAt.asPrettyString()} -->")
             }
-            renderMessage(message, lastReadMessageId)
+            renderMessage(message)
         }
         if (laterMessagesRemaining > 0) {
             line(buildString {
@@ -201,7 +200,6 @@ class TelegramAppRenderer (
     fun FrameContentBuilder.renderMessagesCompact(
         chatTitle: String?,
         chatId: Long,
-        lastReadMessageId: Int?,
         messagesPage: Page<TelegramMessage>,
         laterMessagesRemaining: Long = 0,
         laterNewMessagesRemaining: Long = 0
@@ -210,7 +208,7 @@ class TelegramAppRenderer (
         line("Chat: $label")
         line("")
         for (message in messagesPage.sortedBy { it.messageId }) {
-            renderMessageCompact(message, lastReadMessageId)
+            renderMessageCompact(message)
             line("")
         }
         if (messagesPage.isEmpty) {
@@ -222,14 +220,11 @@ class TelegramAppRenderer (
         }
     }
 
-    private fun FrameContentBuilder.renderMessageCompact(
-        message: TelegramMessage,
-        lastReadMessageId: Int?
-    ) {
+    private fun FrameContentBuilder.renderMessageCompact(message: TelegramMessage) {
         // Header: [14:32] #42 Author [flags]:
         val time = message.date.toLocalTime().format(HH_MM)
         val from = getUserDisplayNameOrNull(message.fromId)
-        val flags = buildCompactFlags(message, lastReadMessageId)
+        val flags = buildCompactFlags(message)
         val viaBot = message.viaBot?.let { bot ->
             " (via ${bot.username?.let { "@$it" } ?: "bot"})"
         } ?: ""
@@ -322,9 +317,9 @@ class TelegramAppRenderer (
         }
     }
 
-    private fun buildCompactFlags(message: TelegramMessage, lastReadMessageId: Int?): String {
+    private fun buildCompactFlags(message: TelegramMessage): String {
         return buildList {
-            if (lastReadMessageId != null && message.messageId > lastReadMessageId) add("new")
+            if (!message.seen) add("new")
             if (message.editDate != null) add("edited")
             message.forwardOrigin?.let { origin ->
                 val name = when (origin) {
@@ -351,11 +346,11 @@ class TelegramAppRenderer (
 
     // ==================== Full rendering ====================
 
-    private fun FrameContentBuilder.renderMessage(message: TelegramMessage, lastReadMessageId: Int? = null) {
+    private fun FrameContentBuilder.renderMessage(message: TelegramMessage) {
         val forwarded = message.forwardOrigin != null
 
         text("<message")
-        renderMessageAttributes(message, lastReadMessageId)
+        renderMessageAttributes(message)
         line(">")
 
         if (forwarded) {
@@ -372,7 +367,7 @@ class TelegramAppRenderer (
         line("</message>")
     }
 
-    private fun FrameContentBuilder.renderMessageAttributes(message: TelegramMessage, lastReadMessageId: Int?) {
+    private fun FrameContentBuilder.renderMessageAttributes(message: TelegramMessage) {
         val from = getUserDisplayNameOrNull(message.fromId)
         text(" id=\"${message.messageId}\"")
         if (from != null) {
@@ -398,7 +393,7 @@ class TelegramAppRenderer (
         if (message.isFromOffline) {
             text(" sent-automatically")
         }
-        if (lastReadMessageId != null && message.messageId > lastReadMessageId) {
+        if (!message.seen) {
             text(" new")
         }
     }

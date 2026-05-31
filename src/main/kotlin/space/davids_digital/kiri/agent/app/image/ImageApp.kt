@@ -22,16 +22,16 @@ class ImageApp(
     private val googleGenAiImageService: GoogleGenAiImageService,
     private val temporaryFiles: TemporaryFilesService,
 ) : AgentApp("image") {
-    @AgentToolMethod(description = "Generate or edit an image using gpt-image-2 model (current SOTA, best quality). " +
-            "If referenceImages is empty, generates from scratch; otherwise uses the given reference " +
-            "images according to the prompt (up to 16 images, each must be png/webp/jpg, less than 50 MB). " +
-            "Cannot reference images from the internet (use geminiGenerate if you need that). " +
+    @AgentToolMethod(description = "Generate or edit an image using gpt-image-2 model. " +
+            "Cannot reference images from the internet. " +
             "Generation may take several minutes.")
     suspend fun openaiGenerate(
         @AgentToolParameter(description = "Input prompt, max 32000 characters.")
         prompt: String,
-        @AgentToolParameter(description = "List of image filenames to edit/combine as reference. " +
-                "Leave empty for pure text-to-image generation.")
+
+        @AgentToolParameter(
+            description = "Optional visual references; up to 16 images, each must be png/webp/jpg, less than 50 MB"
+        )
         referenceImages: List<String>
     ): List<DataFrame.ContentPart> {
         val bytes = if (referenceImages.isEmpty()) {
@@ -56,14 +56,13 @@ class ImageApp(
         }
     }
 
-    @AgentToolMethod(description = "Generate an image using Gemini model. Can google and reference images from " +
-            "the internet (unlike openaiGenerate), but overall quality is lower than gpt-image-2. " +
+    @AgentToolMethod(description = "Generate an image using Gemini model. Can reference images from the internet. " +
             "Generation may take about a minute.")
     suspend fun geminiGenerate(
         @AgentToolParameter(description = "Input prompt to feed into model, " +
                 "prefer to describe the whole scene rather than individual tags")
         prompt: String,
-        @AgentToolParameter(description = "List of image filenames to feed into model as reference, if needed")
+        @AgentToolParameter(description = "Optional visual references")
         referenceImages: List<String>
     ): List<DataFrame.ContentPart> {
         val imageContents = referenceImages.map { temporaryFiles.getContent(it) ?: error("file '$it' not found") }

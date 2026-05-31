@@ -90,10 +90,9 @@ class TelegramMessageOrmService(
     }
 
     @Transactional(readOnly = true)
-    fun findAfterMessageIdOrderedByMessageIdDesc(chatId: Long, messageId: Int, limit: Int): Page<TelegramMessage> {
-        return repo.findByIdChatIdAndIdMessageIdGreaterThan(
+    fun findUnseenOrderedByMessageIdDesc(chatId: Long, limit: Int): Page<TelegramMessage> {
+        return repo.findByIdChatIdAndSeenFalse(
             chatId,
-            messageId,
             PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "id.messageId"))
         ).map(mapper::toModel)
     }
@@ -138,8 +137,14 @@ class TelegramMessageOrmService(
     }
 
     @Transactional(readOnly = true)
-    fun countMessagesAfterId(chatId: Long, afterMessageId: Int): Long {
-        return repo.countByIdChatIdAndIdMessageIdGreaterThan(chatId, afterMessageId)
+    fun countUnseen(chatId: Long): Long {
+        return repo.countByIdChatIdAndSeenFalse(chatId)
+    }
+
+    @Transactional
+    fun markSeen(chatId: Long, messageIds: Collection<Int>): Int {
+        if (messageIds.isEmpty()) return 0
+        return repo.markSeen(chatId, messageIds)
     }
 
     @Transactional(readOnly = true)

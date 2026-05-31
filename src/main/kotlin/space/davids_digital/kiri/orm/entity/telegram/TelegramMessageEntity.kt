@@ -358,4 +358,7 @@ class TelegramMessageEntity {
     @OneToOne(orphanRemoval = true, fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     @JoinColumn(name = "reply_markup_id", referencedColumnName = "internal_id")
     var replyMarkup: TelegramInlineKeyboardMarkupEntity? = null
+
+    @Column(name = "seen")
+    var seen: Boolean = false
 }

@@ -1,5 +1,4 @@
 export type TelegramChatMetadataDto = {
-    lastReadMessageId: number | null;
     notificationMode: TelegramChatMetadataDto.NotificationMode;
     mutedUntil: number | null;
     archived: boolean;

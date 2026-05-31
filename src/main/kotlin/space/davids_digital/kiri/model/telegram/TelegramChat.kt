@@ -81,7 +81,6 @@ data class TelegramChat (
     }
 
     data class Metadata (
-        val lastReadMessageId: Int?,
         val notificationMode: NotificationMode,
         val mutedUntil: ZonedDateTime?,
         val archived: Boolean,
