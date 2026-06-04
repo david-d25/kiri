@@ -420,8 +420,10 @@ class TelegramApp(
             .firstOrNull { it.tag == "notification" && it.attributes["app"] == "telegram" }
             ?.attributes?.get("chatId")?.toLongOrNull() ?: return
 
-        log.info("Auto-switching to chat {} on wake", chatId)
-        frames.trackToolCall(this::switchToChatById, chatId)
+        if (selectedChatId != chatId) {
+            log.info("Auto-switching to chat {} on wake", chatId)
+            frames.trackToolCall(this::switchToChatById, chatId)
+        }
 
         // Auto-list unread messages if the count fits in a single view
         val unreadCount = withContext(Dispatchers.IO) { messageOrm.countUnseen(chatId) }

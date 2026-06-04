@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Component
+import space.davids_digital.kiri.agent.app.calendar.CalendarApp
 import space.davids_digital.kiri.agent.app.files.FilesApp
 import space.davids_digital.kiri.agent.app.image.ImageApp
 import space.davids_digital.kiri.agent.app.scratchpad.ScratchpadApp
@@ -24,6 +25,7 @@ class AppManager(
     private val imageAppProvider: ObjectProvider<ImageApp>,
     private val svgAppProvider: ObjectProvider<SvgApp>,
     private val filesAppProvider: ObjectProvider<FilesApp>,
+    private val calendarAppProvider: ObjectProvider<CalendarApp>,
 ) : AgentToolProvider {
     private val log = LoggerFactory.getLogger(this::class.java)
 
@@ -37,6 +39,7 @@ class AppManager(
         availableApps["image"] = { imageAppProvider.getObject() }
         availableApps["svg"] = { svgAppProvider.getObject() }
         availableApps["files"] = { filesAppProvider.getObject() }
+        availableApps["calendar"] = { calendarAppProvider.getObject() }
     }
 
     override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close, ::restart)

@@ -6,8 +6,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.selects.onTimeout
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -19,7 +17,6 @@ import space.davids_digital.kiri.agent.engine.event.WakeUpRequestEvent
 import space.davids_digital.kiri.agent.engine.lifecycle.EngineLifecycleHookExecutor
 import space.davids_digital.kiri.agent.engine.lifecycle.LifecycleHookProvider
 import space.davids_digital.kiri.agent.frame.*
-import space.davids_digital.kiri.agent.frame.DataFrameUtils.addCreatedAtNow
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
@@ -79,6 +76,14 @@ class AgentEngine(
     private var sleepJob: Job? = null
     private val tickMutex = Mutex()
 
+    /**
+     * Level-triggered wake-up flag. Set when a wake-up is requested (e.g. an incoming notification)
+     * and cleared at the start of each tick when the agent re-reads the frame buffer. Guards against
+     * the race where a wake-up arrives after the agent decides to sleep but before [sleepJob] exists:
+     * in that window [wakeUp] has nothing to cancel, so [pause] consults this flag and skips sleeping.
+     */
+    private val wakePending = AtomicBoolean(false)
+
     private var consecutiveTextOnlyResponses = 0
 
     private val mutableState = MutableStateFlow(EngineState.PAUSED)
@@ -130,6 +135,7 @@ class AgentEngine(
         }
         try {
             mutableState.emit(EngineState.RUNNING)
+            wakePending.set(false)
             val modelHandle = modelHandle
             if (modelHandle.isNullOrBlank()) {
                 log.error("No model handle configured")
@@ -372,6 +378,7 @@ class AgentEngine(
     }
 
     private suspend fun wakeUp() {
+        wakePending.set(true)
         if (sleepJob != null) {
             log.debug("Interrupting agent sleep due to event")
             sleepJob?.cancelAndJoin()
@@ -394,7 +401,6 @@ class AgentEngine(
 
     private fun addSimpleText(tagName: String, text: String) {
         frames.addStatic {
-            addCreatedAtNow()
             tag = tagName
             content = dataFrameContent {
                 text(text)
@@ -426,7 +432,6 @@ class AgentEngine(
         return "Memory compacted, kept last $keepLastN items."
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @AgentToolMethod(
         description = "Wait for a specified amount of time. " +
                 "Notifications (i.e. chat mentions) will wake you up. "
@@ -442,27 +447,22 @@ class AgentEngine(
         }
 
         val newSleepJob = mainScope.launch {
-            val wake = CompletableDeferred<Unit>()
             try {
                 mutableState.emit(EngineState.PAUSED)
-                eventBus.events.emit(SleepEvent(effectiveSeconds, wake))
+                eventBus.events.emit(SleepEvent(effectiveSeconds))
 
-                // Wait either timeout or external sleep prevention
-                select {
-                    onTimeout(effectiveSeconds.seconds) {
-                        log.debug("Agent woke up after sleeping for $effectiveSeconds seconds")
-                        addSimpleText("sleep", "Slept for $effectiveSeconds seconds.")
-                    }
-                    wake.onAwait {
-                        val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
-                        log.debug("Agent was woken up from sleep")
-                        if (sleptFor == 0L) {
-                            addSimpleText("sleep", "Something prevents you from sleeping")
-                        } else {
-                            addSimpleText("sleep", "Slept for $sleptFor seconds")
-                        }
-                    }
+                // A wake-up requested after this tick started (e.g. a notification that arrived
+                // while the agent was deciding to sleep) means there's something new to look at,
+                // so skip sleeping entirely instead of dropping the wake-up.
+                if (wakePending.get()) {
+                    log.debug("Agent skipped sleep due to pending wake-up")
+                    addSimpleText("sleep", "Something prevents you from sleeping")
+                    return@launch
                 }
+
+                delay(effectiveSeconds.seconds)
+                log.debug("Agent woke up after sleeping for $effectiveSeconds seconds")
+                addSimpleText("sleep", "Slept for $effectiveSeconds seconds.")
             } catch (_: CancellationException) {
                 val sleptFor = (System.currentTimeMillis() - sleptAt) / 1000
                 log.debug("Agent was woken up from sleep (job cancelled)")

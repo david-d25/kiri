@@ -4,7 +4,7 @@ import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
 
 allprojects {
-    version = "1.20.0"
+    version = "1.21.0"
 }
 
 plugins {
@@ -124,6 +124,9 @@ dependencies {
     // SVG rendering (SVG to PNG via Apache Batik)
     implementation("org.apache.xmlgraphics:batik-transcoder:1.18")
     implementation("org.apache.xmlgraphics:batik-codec:1.18")
+
+    // RFC 5545 RRULE (recurring calendar events)
+    implementation("org.mnode.ical4j:ical4j:4.0.6")
 
     // Tests
     testImplementation(kotlin("test"))

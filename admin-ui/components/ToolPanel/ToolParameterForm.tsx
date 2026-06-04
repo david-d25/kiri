@@ -1,3 +1,4 @@
+import {useEffect, useRef, useState} from "react";
 import TextInput from "@/components/TextInput/TextInput";
 import NumberInput from "@/components/NumberInput/NumberInput";
 import Checkbox from "@/components/Checkbox/Checkbox";
@@ -89,21 +90,8 @@ function ParameterField({schema, value, onChange}: {
                     onChange={(v) => onChange({type: "boolean", boolean: v})}
                 />
             );
-        case "array": {
-            const jsonStr = value ? JSON.stringify(value, null, 2) : "[]";
-            return (
-                <TextArea
-                    value={jsonStr}
-                    onChange={(v) => {
-                        try {
-                            onChange(jsonToToolInput(JSON.parse(v)));
-                        } catch { /* ignore parse errors while typing */ }
-                    }}
-                    rows={3}
-                    placeholder='["item1", "item2"]'
-                />
-            );
-        }
+        case "array":
+            return <ArrayField value={value} onChange={onChange}/>;
         case "object":
             return (
                 <ToolParameterForm
@@ -112,6 +100,61 @@ function ParameterField({schema, value, onChange}: {
                     onChange={onChange}
                 />
             );
+    }
+}
+
+function ArrayField({value, onChange}: {
+    value: ToolInputDto | undefined;
+    onChange: (v: ToolInputDto) => void;
+}) {
+    const externalJson = JSON.stringify(toolInputToJson(value ?? {type: "array", items: []}));
+    const [text, setText] = useState(() =>
+        JSON.stringify(toolInputToJson(value ?? {type: "array", items: []}), null, 2)
+    );
+    const [error, setError] = useState<string | null>(null);
+    const lastEmittedRef = useRef(externalJson);
+
+    useEffect(() => {
+        if (externalJson !== lastEmittedRef.current) {
+            setText(JSON.stringify(JSON.parse(externalJson), null, 2));
+            setError(null);
+            lastEmittedRef.current = externalJson;
+        }
+    }, [externalJson]);
+
+    return (
+        <TextArea
+            value={text}
+            onChange={(v) => {
+                setText(v);
+                try {
+                    const parsed = JSON.parse(v);
+                    const dto = jsonToToolInput(parsed);
+                    setError(null);
+                    lastEmittedRef.current = JSON.stringify(parsed);
+                    onChange(dto);
+                } catch (e) {
+                    setError(e instanceof Error ? e.message : "Invalid JSON");
+                }
+            }}
+            rows={3}
+            placeholder='["item1", "item2"]'
+            error={error}
+        />
+    );
+}
+
+function toolInputToJson(v: ToolInputDto): unknown {
+    switch (v.type) {
+        case "text": return v.text;
+        case "number": return v.number;
+        case "boolean": return v.boolean;
+        case "array": return v.items.map(toolInputToJson);
+        case "object": {
+            const out: { [k: string]: unknown } = {};
+            for (const [k, item] of Object.entries(v.items)) out[k] = toolInputToJson(item);
+            return out;
+        }
     }
 }
 

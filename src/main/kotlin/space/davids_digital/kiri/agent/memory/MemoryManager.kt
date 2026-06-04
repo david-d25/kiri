@@ -15,7 +15,10 @@ import space.davids_digital.kiri.llm.ChatCompletionRequest
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.REQUIRED
 import space.davids_digital.kiri.llm.ChatCompletionResponse
 import space.davids_digital.kiri.service.MemoryService
+import java.time.Duration
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * This component manages the agent's memory.
@@ -115,7 +118,7 @@ class MemoryManager(
         return result
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::memorize, ::query)
+    override fun getAvailableAgentToolMethods() = listOf(::memorize, ::query, ::forget)
 
     @AgentToolMethod(description = "Remember something to general purpose memory")
     suspend fun memorize(
@@ -151,15 +154,62 @@ class MemoryManager(
     ): String {
         val keys = memoryService.getOrCreateKeys(keyStrings)
         val memories = memoryService.retrieve(keys, 6)
+        if (memories.isEmpty()) {
+            return "No memories found for the provided keys."
+        }
+        val shortIds = memoryService.resolveShortIds(memories.map { it.point.id })
+        val now = ZonedDateTime.now()
         return buildString {
-            appendLine("Most related memories:")
-            for (memory in memories) {
-                append("- ")
-                append(memory.point.value)
-                append(" (score: ")
+            appendLine("Most relevant memories (top to bottom):")
+            memories.forEach { memory ->
+                appendLine()
+                append("[id=")
+                append(shortIds[memory.point.id] ?: memory.point.id.toString().replace("-", ""))
+                append(", relevance=")
                 append(String.format("%.2f", memory.score))
-                appendLine(")")
+                append(", created=")
+                append(formatCreatedAt(memory.point.createdAt, now))
+                appendLine("]")
+                appendLine(memory.point.value)
             }
         }
+    }
+
+    @AgentToolMethod(
+        description = "Forget a memory by its id (as shown in memory_query output). " +
+                "Accepts either the short prefix or the full hex id."
+    )
+    suspend fun forget(
+        @AgentToolParameter(description = "Memory id from memory_query output (short prefix or full hex)")
+        id: String,
+    ): String {
+        val candidates = memoryService.resolveMemoryPointIdFromHex(id)
+        return when (candidates.size) {
+            0 -> "No memory found for id '$id'."
+            1 -> {
+                memoryService.forget(candidates[0])
+                "Forgotten memory $id."
+            }
+            else -> "Ambiguous id '$id' — matches ${candidates.size} memories. " +
+                    "Provide more characters. Candidates: " +
+                    candidates.joinToString(", ") { it.toString().replace("-", "") }
+        }
+    }
+
+    private fun formatCreatedAt(createdAt: ZonedDateTime, now: ZonedDateTime): String {
+        val elapsed = Duration.between(createdAt, now)
+        val seconds = elapsed.seconds
+        return when {
+            seconds < 60 -> "just now"
+            seconds < 3600 -> "${elapsed.toMinutes()}m ago"
+            seconds < 86400 -> "${elapsed.toHours()}h ago"
+            seconds < 30 * 86400 -> "${elapsed.toDays()}d ago"
+            else -> createdAt.withZoneSameInstant(ZoneOffset.UTC).format(ABSOLUTE_DATE_FORMAT)
+        }
+    }
+
+    companion object {
+        private val ABSOLUTE_DATE_FORMAT: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm 'UTC'")
     }
 }

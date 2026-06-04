@@ -1,0 +1,51 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 480px;
+  max-width: 560px;
+}
+
+.modeRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.rruleExamples {
+  font-family: var(--font-mono, monospace), sans-serif;
+  font-size: 11px;
+  background: var(--bg-tertiary);
+  padding: 8px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.error {
+  color: oklch(60% 0.2 25);
+  font-size: 13px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

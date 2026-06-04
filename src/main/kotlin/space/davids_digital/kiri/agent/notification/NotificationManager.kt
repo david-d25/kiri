@@ -12,15 +12,24 @@ class NotificationManager(
     private val frames: FrameBuffer,
     private val eventBus: EngineEventBus,
 ) {
-    fun push(notification: Notification) {
+    /**
+     * Push a notification into the agent's frame buffer.
+     *
+     * @param wake when true (default), also emit a wake-up event so a sleeping agent resumes.
+     *             Pass false for ambient calendar events that should appear in the buffer
+     *             but not interrupt sleep — the agent will see them on its next natural wake.
+     */
+    fun push(notification: Notification, wake: Boolean = true) {
         frames.addStatic {
             tag = "notification"
             content = notification.content
             attributes["sent-at"] = notification.sentAt.asPrettyString()
             attributes.putAll(notification.metadata)
         }
-        runBlocking {
-            eventBus.events.emit(WakeUpRequestEvent()) // TODO
+        if (wake) {
+            runBlocking {
+                eventBus.events.emit(WakeUpRequestEvent())
+            }
         }
     }
 }

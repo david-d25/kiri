@@ -10,7 +10,7 @@ import {
     useUpdateMemoryLink
 } from "@/hooks/memory";
 import Button from "@/components/Button/Button";
-import TextInput from "@/components/TextInput/TextInput";
+import TextArea from "@/components/TextArea/TextArea";
 import NumberInput from "@/components/NumberInput/NumberInput";
 import {toastService} from "@/services/ToastService";
 
@@ -80,17 +80,28 @@ export default function MemoryPointCard({ point, score, onDeleted }: Props) {
                         </span>
                     )}
                     {editing ? (
-                        <div onClick={e => e.stopPropagation()} className={s.editInputWrap}>
-                            <TextInput
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                    e.preventDefault();
+                                    handleSaveEdit();
+                                }
+                                if (e.key === 'Escape') {
+                                    cancelEditRef.current = true;
+                                    setEditing(false);
+                                    setEditValue(point.value);
+                                }
+                            }}
+                            className={s.editInputWrap}
+                        >
+                            <TextArea
                                 className={s.editInput}
                                 value={editValue}
                                 onChange={setEditValue}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter') handleSaveEdit();
-                                    if (e.key === 'Escape') { cancelEditRef.current = true; setEditing(false); setEditValue(point.value); }
-                                }}
-                                onBlur={handleSaveEdit}
+                                rows={Math.min(12, Math.max(3, editValue.split('\n').length))}
                             />
+                            <div className={s.editHint}>Cmd/Ctrl+Enter to save, Esc to cancel</div>
                         </div>
                     ) : (
                         <span className={s.value}>{point.value}</span>
@@ -100,12 +111,25 @@ export default function MemoryPointCard({ point, score, onDeleted }: Props) {
                     <span className={s.keysCount}>{point.linkedKeysCount} keys</span>
                     <span className={s.date}>{createdDate}</span>
                     <div className={s.actions} onClick={e => e.stopPropagation()}>
-                        <Button noStyle onClick={() => { setEditing(true); setEditValue(point.value); }}>
-                            Edit
-                        </Button>
-                        <Button noStyle onClick={handleDelete}>
-                            Delete
-                        </Button>
+                        {editing ? (
+                            <>
+                                <Button noStyle onClick={handleSaveEdit}>
+                                    Save
+                                </Button>
+                                <Button noStyle onClick={() => { cancelEditRef.current = true; setEditing(false); setEditValue(point.value); }}>
+                                    Cancel
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button noStyle onClick={() => { setEditing(true); setEditValue(point.value); }}>
+                                    Edit
+                                </Button>
+                                <Button noStyle onClick={handleDelete}>
+                                    Delete
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

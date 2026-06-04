@@ -169,6 +169,12 @@ class MemoryOrmService(
         memoryPointRepository.deleteById(id)
     }
 
+    @Transactional(readOnly = true)
+    fun findMemoryPointIdsByHexPrefix(prefix: String): List<UUID> {
+        if (prefix.isBlank()) return emptyList()
+        return memoryPointRepository.findIdsByHexPrefix(prefix.lowercase())
+    }
+
     @Transactional
     fun deleteMemoryKey(id: UUID) {
         memoryKeyRepository.deleteById(id)

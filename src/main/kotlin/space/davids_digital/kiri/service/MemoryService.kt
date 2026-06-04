@@ -145,6 +145,52 @@ class MemoryService(
             .map { ScoredMemoryPoint(it.key, it.value) }
     }
 
+    /**
+     * For each id in [ids], returns the shortest hex-prefix (without dashes) that is globally unique
+     * in the memory_points table, or the full 32-char hex (no dashes) if any collision exists.
+     */
+    @Transactional(readOnly = true)
+    fun resolveShortIds(ids: Collection<java.util.UUID>, prefixLength: Int = 8): Map<java.util.UUID, String> {
+        if (ids.isEmpty()) return emptyMap()
+        val result = mutableMapOf<java.util.UUID, String>()
+        val grouped = ids.groupBy { it.toString().replace("-", "").substring(0, prefixLength) }
+        for ((prefix, group) in grouped) {
+            val matches = orm.findMemoryPointIdsByHexPrefix(prefix)
+            val unique = matches.size <= 1 && group.size == 1
+            for (id in group) {
+                result[id] = if (unique) prefix else id.toString().replace("-", "")
+            }
+        }
+        return result
+    }
+
+    /**
+     * Resolves a hex id (with or without dashes, prefix or full) to a single MemoryPoint id.
+     * Returns either a single match, an empty list (not found), or a list of candidates (ambiguous).
+     */
+    @Transactional(readOnly = true)
+    fun resolveMemoryPointIdFromHex(hex: String): List<java.util.UUID> {
+        val normalized = hex.replace("-", "").lowercase()
+        if (normalized.isEmpty()) return emptyList()
+        if (normalized.length == 32) {
+            val full = buildString {
+                append(normalized, 0, 8); append('-')
+                append(normalized, 8, 12); append('-')
+                append(normalized, 12, 16); append('-')
+                append(normalized, 16, 20); append('-')
+                append(normalized, 20, 32)
+            }
+            val uuid = runCatching { java.util.UUID.fromString(full) }.getOrNull() ?: return emptyList()
+            return if (orm.getMemoryPoint(uuid) != null) listOf(uuid) else emptyList()
+        }
+        return orm.findMemoryPointIdsByHexPrefix(normalized)
+    }
+
+    @Transactional
+    fun forget(id: java.util.UUID) {
+        orm.deleteMemoryPoint(id)
+    }
+
     @Transactional
     fun decayMemory() {
         val links = orm.getAllMemoryLinks()
