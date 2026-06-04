@@ -7,6 +7,7 @@ import FormLabel from "@/components/FormLabel/FormLabel";
 import TextInput from "@/components/TextInput/TextInput";
 import TextArea from "@/components/TextArea/TextArea";
 import NumberInput from "@/components/NumberInput/NumberInput";
+import Toggle from "@/components/Toggle/Toggle";
 import {useSettingsFormState} from "@/hooks/useSettingsFormState";
 
 export default function DonationSettings() {
@@ -19,6 +20,10 @@ export default function DonationSettings() {
         save,
         reset,
     } = useSettingsFormState({
+        enabled: {
+            key: "payments.enabled",
+            defaultValue: true,
+        },
         ownerUsername: {
             key: "payments.ownerUsername",
             defaultValue: "",
@@ -56,6 +61,24 @@ export default function DonationSettings() {
                     )}
                     <LoadingOverlay loading={loading}>
                         <div className={s.column}>
+                            <div className={s.field}>
+                                <Toggle
+                                    checked={settings.enabled.value}
+                                    onChange={settings.enabled.setValue}
+                                    disabled={loading}
+                                    label={
+                                        <FormLabel changed={settings.enabled.isChanged}>
+                                            Donations enabled
+                                        </FormLabel>
+                                    }
+                                />
+                                <div className={s.hint}>
+                                    Global switch for donation support. When off, the agent's donation tools
+                                    (sending invoices and refunds) are hidden and incoming donation payments are
+                                    rejected at checkout.
+                                </div>
+                            </div>
+
                             <div className={s.field}>
                                 <FormLabel changed={settings.ownerUsername.isChanged}>Owner username</FormLabel>
                                 <TextInput

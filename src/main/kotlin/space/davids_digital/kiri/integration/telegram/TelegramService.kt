@@ -32,6 +32,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.model.telegram.*
+import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramUserOrmService
@@ -48,7 +49,8 @@ class TelegramService(
     private val chatOrm: TelegramChatOrmService,
     private val userOrm: TelegramUserOrmService,
     private val appProperties: AppProperties,
-    private val mapper: TelegramIntegrationMapper
+    private val mapper: TelegramIntegrationMapper,
+    settings: SettingOrmService
 ) {
     companion object {
         private const val MAX_MESSAGE_LENGTH = 4_096
@@ -99,6 +101,8 @@ class TelegramService(
     private lateinit var self: TelegramService
 
     private val log = LoggerFactory.getLogger(this::class.java)
+
+    private val donationsEnabled by settings.declareBoolean("payments.enabled", true)
 
     private lateinit var bot: TelegramBot
 
@@ -428,6 +432,15 @@ class TelegramService(
     private suspend fun handlePreCheckoutQuery(query: TelegramPreCheckoutQuery) {
         try {
             val isDonationPayload = query.invoicePayload.startsWith(DONATION_PAYLOAD_PREFIX)
+            if (isDonationPayload && !donationsEnabled) {
+                log.warn("Rejecting donation pre-checkout query {}: donations are globally disabled", query.id)
+                answerPreCheckoutQuery(
+                    query.id,
+                    ok = false,
+                    errorMessage = "Donations are currently disabled. Please contact support."
+                )
+                return
+            }
             val isStarsCurrency = query.currency == DONATION_CURRENCY
             val invoiceKnown: Boolean
             val alreadyPaid: Boolean

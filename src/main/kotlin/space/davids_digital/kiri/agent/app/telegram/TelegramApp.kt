@@ -55,6 +55,7 @@ class TelegramApp(
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val autoSwitchOnWake by settings.declareBoolean("apps.telegram.autoSwitchOnWake", true)
+    private val donationsEnabled by settings.declareBoolean("payments.enabled", true)
     private val minHoursBetweenDonationInvoicesPerChat by settings.declareLong(
         "payments.minHoursBetweenInvoicesPerChat",
         24
@@ -76,8 +77,10 @@ class TelegramApp(
             add(::closeChat)
             add(::getChatInfo)
             add(::download)
-            add(::sendDonationInvoice)
-            add(::refundDonation)
+            if (donationsEnabled) {
+                add(::sendDonationInvoice)
+                add(::refundDonation)
+            }
         }
     }
 

@@ -42,7 +42,7 @@ class AppManager(
         availableApps["calendar"] = { calendarAppProvider.getObject() }
     }
 
-    override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close, ::restart)
+    override fun getAvailableAgentToolMethods() = listOf(::listApps, ::open, ::close)
     override fun getSubProviders() = openedApps
 
     @AgentToolMethod(name = "list")
@@ -55,7 +55,7 @@ class AppManager(
         }
     }
 
-    @AgentToolMethod(description = "Opens an app and makes its tools available")
+    @AgentToolMethod
     suspend fun open(id: String): String {
         val foundApp = openedApps.find { it.id == id }
         if (foundApp != null) {
@@ -69,22 +69,12 @@ class AppManager(
         return "Opened '$id'"
     }
 
-    @AgentToolMethod(
-        description = "Closes the app and removes its functions from agent context. " +
-                "Close unused apps to free resources."
-    )
+    @AgentToolMethod
     suspend fun close(id: String): String {
         val app = openedApps.find { it.id == id } ?: return "App with ID '$id' not found"
         app.onClose()
         openedApps.remove(app)
         log.info("Closed app '$id'")
         return "Closed '$id'"
-    }
-
-    @AgentToolMethod
-    suspend fun restart(id: String): String {
-        close(id)
-        open(id)
-        return "Restarted '$id'"
     }
 }
