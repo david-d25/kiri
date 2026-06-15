@@ -315,6 +315,8 @@ class TelegramAppRenderer (
             val buttons = markup.inlineKeyboard.flatten()
             line("[${buttons.size} button(s): ${buttons.joinToString(", ") { "\"${it.text.safe(30)}\"" }}]")
         }
+
+        renderReactionsCompact(message)
     }
 
     private fun buildCompactFlags(message: TelegramMessage): String {
@@ -487,6 +489,45 @@ class TelegramAppRenderer (
         if (message.isAutomaticForward) {
             line("<service>Automatically forwarded channel post</service>")
         }
+        renderReactions(message)
+    }
+
+    private fun FrameContentBuilder.renderReactions(message: TelegramMessage) {
+        val reactions = loadReactions(message)
+        if (reactions.isEmpty()) return
+        line("<reactions>")
+        for (reaction in reactions) {
+            line("${reactionSymbol(reaction)} × ${reaction.count}")
+        }
+        line("</reactions>")
+    }
+
+    private fun FrameContentBuilder.renderReactionsCompact(message: TelegramMessage) {
+        val reactions = loadReactions(message)
+        if (reactions.isEmpty()) return
+        line("[reactions: " + reactions.joinToString(", ") { "${reactionSymbolCompact(it)}×${it.count}" } + "]")
+    }
+
+    private fun loadReactions(message: TelegramMessage): List<TelegramMessageReaction> {
+        return try {
+            service.getReactions(message.chatId, message.messageId)
+        } catch (e: Exception) {
+            log.warn("Failed to load reactions for message {} in chat {}", message.messageId, message.chatId, e)
+            emptyList()
+        }
+    }
+
+    private fun reactionSymbol(reaction: TelegramMessageReaction): String = when {
+        reaction.paid -> "⭐ (paid reaction)"
+        reaction.customEmojiId != null ->
+            "${reaction.fallbackEmoji ?: "❓"} (custom)"
+        else -> reaction.emoji ?: "❓"
+    }
+
+    private fun reactionSymbolCompact(reaction: TelegramMessageReaction): String = when {
+        reaction.paid -> "⭐(paid)"
+        reaction.customEmojiId != null -> "${reaction.fallbackEmoji ?: "❓"}(custom)"
+        else -> reaction.emoji ?: "❓"
     }
 
     private fun FrameContentBuilder.renderDice(dice: TelegramDice) {

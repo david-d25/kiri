@@ -7,8 +7,11 @@ import com.pengrad.telegrambot.model.Chat
 import com.pengrad.telegrambot.model.Update
 import com.pengrad.telegrambot.model.User
 import com.pengrad.telegrambot.model.Message
+import com.pengrad.telegrambot.model.reaction.ReactionType
+import com.pengrad.telegrambot.model.reaction.ReactionTypeEmoji
 import com.pengrad.telegrambot.model.request.InputMediaDocument
 import com.pengrad.telegrambot.model.request.InputMediaPhoto
+import com.pengrad.telegrambot.model.request.InputPollOption
 import com.pengrad.telegrambot.model.request.LabeledPrice
 import com.pengrad.telegrambot.model.request.ReplyParameters
 import com.pengrad.telegrambot.request.*
@@ -35,6 +38,9 @@ import space.davids_digital.kiri.model.telegram.*
 import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
+import space.davids_digital.kiri.orm.service.telegram.TelegramMessageReactionsOrmService
+import space.davids_digital.kiri.orm.service.telegram.TelegramPollAnswerOrmService
+import space.davids_digital.kiri.orm.service.telegram.TelegramPollOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramUserOrmService
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications
 import space.davids_digital.kiri.service.exception.ServiceException
@@ -46,6 +52,9 @@ import kotlin.time.Duration.Companion.seconds
 @Service
 class TelegramService(
     private val messageOrm: TelegramMessageOrmService,
+    private val reactionsOrm: TelegramMessageReactionsOrmService,
+    private val pollOrm: TelegramPollOrmService,
+    private val pollAnswerOrm: TelegramPollAnswerOrmService,
     private val chatOrm: TelegramChatOrmService,
     private val userOrm: TelegramUserOrmService,
     private val appProperties: AppProperties,
@@ -133,7 +142,24 @@ class TelegramService(
     @PostConstruct
     fun start() {
         bot = TelegramBot(appProperties.integration.telegram.apiKey)
-        bot.setUpdatesListener(::processUpdates, ::onBotException)
+        // `message_reaction` and `message_reaction_count` are excluded from Telegram's default allowed_updates, so
+        // they must be requested explicitly. Specifying allowed_updates overrides the defaults entirely, hence the
+        // full list of update types this bot relies on is enumerated here.
+        val getUpdates = GetUpdates().allowedUpdates(
+            "message",
+            "edited_message",
+            "channel_post",
+            "edited_channel_post",
+            "callback_query",
+            "pre_checkout_query",
+            "poll",
+            "poll_answer",
+            "my_chat_member",
+            "chat_member",
+            "message_reaction",
+            "message_reaction_count"
+        )
+        bot.setUpdatesListener(::processUpdates, ::onBotException, getUpdates)
         updateSelfInfo()
     }
 
@@ -183,6 +209,168 @@ class TelegramService(
 
     suspend fun getStickerSet(name: String): TelegramStickerSet {
         return mapper.toModel(bot.execute(GetStickerSet(name)).checkNoErrors().stickerSet())!!
+    }
+
+    /**
+     * Sets (or, with a blank [emoji], clears) the bot's own reaction on a message. Only a single standard emoji
+     * reaction is supported here; it must be one of the emojis Telegram allows as a reaction.
+     */
+    suspend fun setMessageReaction(chatId: Long, messageId: Int, emoji: String?, big: Boolean = false) {
+        val request = if (emoji.isNullOrBlank()) {
+            SetMessageReaction(chatId, messageId)
+        } else {
+            SetMessageReaction(chatId, messageId, ReactionTypeEmoji(emoji)).isBig(big)
+        }
+        bot.execute(request).checkNoErrors("Failed to set reaction on message $messageId in chat $chatId")
+    }
+
+    suspend fun sendPoll(
+        chatId: Long,
+        question: String,
+        options: List<String>,
+        isAnonymous: Boolean = true,
+        allowsMultipleAnswers: Boolean = false
+    ): TelegramMessage {
+        require(options.size in 2..12) { "A poll must have between 2 and 12 options, got ${options.size}" }
+        val request = SendPoll(chatId, question, options.map { InputPollOption(it) })
+        request.isAnonymous = isAnonymous
+        request.allowsMultipleAnswers = allowsMultipleAnswers
+        rateLimiter.acquire()
+        val sent = bot.execute(request).checkNoErrors("Failed to send poll to chat $chatId").message()
+        return messageOrm.save(mapper.toModel(sent)!!.copy(seen = true))
+    }
+
+    suspend fun pinChatMessage(chatId: Long, messageId: Int, disableNotification: Boolean = false) {
+        bot.execute(PinChatMessage(chatId, messageId).disableNotification(disableNotification))
+            .checkNoErrors("Failed to pin message $messageId in chat $chatId")
+    }
+
+    suspend fun unpinChatMessage(chatId: Long, messageId: Int) {
+        bot.execute(UnpinChatMessage(chatId).messageId(messageId))
+            .checkNoErrors("Failed to unpin message $messageId in chat $chatId")
+    }
+
+    fun getReactions(chatId: Long, messageId: Int): List<TelegramMessageReaction> {
+        return reactionsOrm.get(chatId, messageId)
+    }
+
+    /**
+     * Resolves a custom (premium) emoji to the standard emoji it is based on. This is only an approximation of how
+     * the custom emoji actually looks in the Telegram UI. Cached because the mapping is effectively immutable.
+     */
+    @Cacheable(value = ["TelegramService#customEmojiFallback"], key = "#customEmojiId", unless = "#result == null")
+    fun getCustomEmojiFallback(customEmojiId: String): String? {
+        return try {
+            val response = bot.execute(GetCustomEmojiStickers(customEmojiId))
+            if (!response.isOk) {
+                log.warn("Failed to resolve custom emoji {}: {}", customEmojiId, response.description())
+                null
+            } else {
+                response.result()?.firstOrNull()?.emoji()
+            }
+        } catch (e: Exception) {
+            log.warn("Failed to resolve custom emoji $customEmojiId", e)
+            null
+        }
+    }
+
+    /**
+     * Telegram delivers `poll` updates with the current aggregated vote counts (the only signal for anonymous polls).
+     * The poll is stored once at send time with zero votes, so without this its counts would stay at zero forever.
+     */
+    private fun handlePollUpdate(poll: TelegramPoll) {
+        try {
+            pollOrm.save(poll)
+        } catch (e: Exception) {
+            log.error("Failed to update poll ${poll.id}", e)
+        }
+    }
+
+    /**
+     * For non-anonymous polls, Telegram delivers live votes only as `poll_answer` updates (one per voter), without
+     * aggregated counts. Each update carries the voter's full current selection, so the per-option counts are
+     * maintained here by diffing against the voter's previously stored selection. If the bot is offline, Telegram
+     * replays the backlog on reconnect; a vote is only lost if no update for that voter is ever delivered (downtime
+     * beyond Telegram's retention), and there is no Bot API method to re-fetch non-anonymous poll totals.
+     */
+    private fun handlePollAnswer(answer: TelegramPollAnswer) {
+        try {
+            val voterId = answer.user?.id ?: answer.voterChat?.id ?: return
+            val poll = pollOrm.findById(answer.pollId) ?: return
+            val previous = pollAnswerOrm.get(answer.pollId, voterId)
+            val current = answer.optionIds
+            if (previous == current) return
+
+            val counts = poll.options.map { it.voterCount }.toIntArray()
+            previous.forEach { idx -> if (idx in counts.indices) counts[idx] = (counts[idx] - 1).coerceAtLeast(0) }
+            current.forEach { idx -> if (idx in counts.indices) counts[idx] = counts[idx] + 1 }
+            val newOptions = poll.options.mapIndexed { i, option -> option.copy(voterCount = counts[i]) }
+
+            val totalDelta = (if (current.isNotEmpty()) 1 else 0) - (if (previous.isNotEmpty()) 1 else 0)
+            val newTotal = (poll.totalVoterCount + totalDelta).coerceAtLeast(0)
+
+            pollOrm.save(poll.copy(options = newOptions, totalVoterCount = newTotal))
+            pollAnswerOrm.put(answer.pollId, voterId, current)
+        } catch (e: Exception) {
+            log.error("Failed to handle poll answer for poll ${answer.pollId}", e)
+        }
+    }
+
+    private fun handleReactionCount(update: TelegramMessageReactionCountUpdated) {
+        try {
+            val chatId = update.chat.id
+            if (!messageOrm.exists(chatId, update.messageId)) return
+            val reactions = update.reactions.map { toMessageReaction(it.type, it.totalCount) }
+            reactionsOrm.put(chatId, update.messageId, reactions)
+        } catch (e: Exception) {
+            log.error(
+                "Failed to handle reaction count update for message ${update.messageId} in chat ${update.chat.id}", e
+            )
+        }
+    }
+
+    private fun handleReactionDelta(update: TelegramMessageReactionUpdated) {
+        try {
+            val chatId = update.chat.id
+            if (!messageOrm.exists(chatId, update.messageId)) return
+            val byKey = reactionsOrm.get(chatId, update.messageId).associateBy(::reactionKey).toMutableMap()
+            update.oldReaction.forEach { type ->
+                val key = reactionTypeKey(type)
+                byKey[key]?.let { byKey[key] = it.copy(count = it.count - 1) }
+            }
+            update.newReaction.forEach { type ->
+                val key = reactionTypeKey(type)
+                val existing = byKey[key]
+                byKey[key] = existing?.copy(count = existing.count + 1) ?: toMessageReaction(type, 1)
+            }
+            reactionsOrm.put(chatId, update.messageId, byKey.values.filter { it.count > 0 })
+        } catch (e: Exception) {
+            log.error(
+                "Failed to handle reaction update for message ${update.messageId} in chat ${update.chat.id}", e
+            )
+        }
+    }
+
+    private fun toMessageReaction(type: TelegramReactionType, count: Int): TelegramMessageReaction = when (type) {
+        is TelegramReactionType.Emoji -> TelegramMessageReaction(emoji = type.emoji, count = count)
+        is TelegramReactionType.CustomEmoji -> TelegramMessageReaction(
+            customEmojiId = type.customEmojiId,
+            fallbackEmoji = self.getCustomEmojiFallback(type.customEmojiId),
+            count = count
+        )
+        is TelegramReactionType.Paid -> TelegramMessageReaction(paid = true, count = count)
+    }
+
+    private fun reactionKey(r: TelegramMessageReaction): String = when {
+        r.customEmojiId != null -> "custom:${r.customEmojiId}"
+        r.paid -> "paid"
+        else -> "emoji:${r.emoji}"
+    }
+
+    private fun reactionTypeKey(type: TelegramReactionType): String = when (type) {
+        is TelegramReactionType.Emoji -> "emoji:${type.emoji}"
+        is TelegramReactionType.CustomEmoji -> "custom:${type.customEmojiId}"
+        is TelegramReactionType.Paid -> "paid"
     }
 
     private suspend fun sendInternal(chatId: Long, builder: TelegramMessageBuilder): List<TelegramMessage> {
@@ -553,13 +741,20 @@ class TelegramService(
         }
     }
 
+    /**
+     * Edits the text of a message. [html] is parsed with the same HTML subset as outgoing messages. Editing cannot
+     * split overly long text across messages, so over-long text will be rejected by Telegram.
+     */
     suspend fun editMessage(
         chatId: Long,
         messageId: Int,
-        text: String,
+        html: String,
         replyMarkup: TelegramInlineKeyboardMarkup? = null
     ) {
-        val response = bot.execute(EditMessageText(chatId, messageId, text).apply {
+        val parsed = TelegramHtmlMapper.fromHtml(html)
+        val entitiesDto = parsed.entities.mapNotNull { mapper.toDto(it) }.toTypedArray()
+        val response = bot.execute(EditMessageText(chatId, messageId, parsed.text).apply {
+            if (entitiesDto.isNotEmpty()) entities(*entitiesDto)
             replyMarkup?.let { replyMarkup(mapper.toDto(it)!!) }
         })
         if (response.errorCode() == 400 && response.description().contains("exactly the same")) {
@@ -726,6 +921,18 @@ class TelegramService(
                 }
                 if (updateModel.message?.successfulPayment != null) {
                     cleanupDonationInvoiceOnPayment(updateModel.message)
+                }
+                if (updateModel.messageReactionCount != null) {
+                    handleReactionCount(updateModel.messageReactionCount)
+                }
+                if (updateModel.messageReaction != null) {
+                    handleReactionDelta(updateModel.messageReaction)
+                }
+                if (updateModel.poll != null) {
+                    handlePollUpdate(updateModel.poll)
+                }
+                if (updateModel.pollAnswer != null) {
+                    handlePollAnswer(updateModel.pollAnswer)
                 }
                 updatesInternal.emit(updateModel)
             }

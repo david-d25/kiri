@@ -28,6 +28,7 @@ import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications
 import space.davids_digital.kiri.orm.service.SettingOrmService
+import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications.chatId
 import space.davids_digital.kiri.service.TelegramDonationService
 import space.davids_digital.kiri.service.TelegramNotificationService
 import space.davids_digital.kiri.service.TemporaryFilesService
@@ -56,6 +57,11 @@ class TelegramApp(
 
     private val autoSwitchOnWake by settings.declareBoolean("apps.telegram.autoSwitchOnWake", true)
     private val donationsEnabled by settings.declareBoolean("payments.enabled", true)
+    private val reactionToolEnabled by settings.declareBoolean("apps.telegram.tools.reaction.enabled", false)
+    private val editMessageToolEnabled by settings.declareBoolean("apps.telegram.tools.editMessage.enabled", false)
+    private val deleteMessageToolEnabled by settings.declareBoolean("apps.telegram.tools.deleteMessage.enabled", false)
+    private val pollToolEnabled by settings.declareBoolean("apps.telegram.tools.poll.enabled", false)
+    private val pinToolEnabled by settings.declareBoolean("apps.telegram.tools.pin.enabled", false)
     private val minHoursBetweenDonationInvoicesPerChat by settings.declareLong(
         "payments.minHoursBetweenInvoicesPerChat",
         24
@@ -77,6 +83,14 @@ class TelegramApp(
             add(::closeChat)
             add(::getChatInfo)
             add(::download)
+            if (reactionToolEnabled) add(::react)
+            if (editMessageToolEnabled) add(::editMessage)
+            if (deleteMessageToolEnabled) add(::deleteMessage)
+            if (pollToolEnabled) add(::createPoll)
+            if (pinToolEnabled) {
+                add(::pinMessage)
+                add(::unpinMessage)
+            }
             if (donationsEnabled) {
                 add(::sendDonationInvoice)
                 add(::refundDonation)
@@ -310,6 +324,118 @@ class TelegramApp(
         val selectedChatId = selectedChatId ?: return "Chat not opened"
         telegram.sendSticker(selectedChatId, fileId)
         return "sent"
+    }
+
+    @AgentToolMethod
+    suspend fun react(
+        messageId: Int,
+        @AgentToolParameter(
+            description = "a single standard reaction emoji, or empty string to clear the reaction; " +
+                    "Only Telegram's standard reaction emojis are allowed (e.g. 👍 ❤ 🔥 🎉 😁 🤔 👏 🙏)."
+        )
+        emoji: String,
+        @AgentToolParameter(description = "if true, play the big/animated reaction effect")
+        big: Boolean = false
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        return try {
+            telegram.setMessageReaction(chatId, messageId, emoji.ifBlank { null }, big)
+            if (emoji.isBlank()) "Reaction removed." else "Reacted with $emoji."
+        } catch (e: Exception) {
+            "Failed to set reaction: ${e.message}"
+        }
+    }
+
+    @AgentToolMethod
+    suspend fun editMessage(
+        @AgentToolParameter(description = "id of the bot's own message to edit")
+        messageId: Int,
+        @AgentToolParameter(description = "new message text (same HTML subset as the send tool)")
+        message: String
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        val existing = withContext(Dispatchers.IO) { messageOrm.find(chatId, messageId) }
+            ?: return "Message $messageId not found in this chat."
+        if (existing.fromId != telegram.getSelf().id) {
+            return "Can only edit the bot's own messages."
+        }
+        return try {
+            telegram.editMessage(chatId, messageId, message)
+            "edited"
+        } catch (e: Exception) {
+            "Failed to edit message: ${e.message}"
+        }
+    }
+
+    @AgentToolMethod
+    suspend fun deleteMessage(
+        @AgentToolParameter(description = "id of the bot's own message to delete")
+        messageId: Int
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        val existing = withContext(Dispatchers.IO) { messageOrm.find(chatId, messageId) }
+            ?: return "Message $messageId not found in this chat."
+        if (existing.fromId != telegram.getSelf().id) {
+            return "Can only delete the bot's own messages."
+        }
+        return try {
+            telegram.deleteMessage(chatId, messageId)
+            "deleted"
+        } catch (e: Exception) {
+            "Failed to delete message: ${e.message}"
+        }
+    }
+
+    @AgentToolMethod(description = "Send a native poll to the current chat.")
+    suspend fun createPoll(
+        @AgentToolParameter(description = "the poll question (≤300 chars)")
+        question: String,
+        @AgentToolParameter(description = "2 to 12 answer options")
+        options: List<String>,
+        @AgentToolParameter
+        anonymous: Boolean = true,
+        @AgentToolParameter(description = "if true, voters may select multiple options")
+        multipleAnswers: Boolean = false
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        return try {
+            val sent = telegram.sendPoll(chatId, question, options, anonymous, multipleAnswers)
+            "Poll sent (message #${sent.messageId})."
+        } catch (e: IllegalArgumentException) {
+            "Invalid poll: ${e.message}"
+        } catch (e: Exception) {
+            "Failed to send poll: ${e.message}"
+        }
+    }
+
+    @AgentToolMethod
+    suspend fun pinMessage(
+        @AgentToolParameter
+        messageId: Int,
+        @AgentToolParameter(description = "if true, pin without notifying all chat members")
+        disableNotification: Boolean = true
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        return try {
+            telegram.pinChatMessage(chatId, messageId, disableNotification)
+            "pinned"
+        } catch (e: Exception) {
+            "Failed to pin message: ${e.message}"
+        }
+    }
+
+    @AgentToolMethod
+    suspend fun unpinMessage(
+        @AgentToolParameter
+        messageId: Int,
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        return try {
+            telegram.unpinChatMessage(chatId, messageId)
+            "unpinned"
+        } catch (e: Exception) {
+            "Failed to unpin message: ${e.message}"
+        }
     }
 
     @AgentToolMethod(

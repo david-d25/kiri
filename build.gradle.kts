@@ -4,7 +4,7 @@ import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
 
 allprojects {
-    version = "1.22.0"
+    version = "1.23.0"
 }
 
 plugins {
@@ -33,6 +33,10 @@ kapt {
     arguments {
         arg("mapstruct.defaultComponentModel", "spring")
     }
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 tasks.withType<KotlinCompile>().configureEach {

@@ -19,6 +19,11 @@ export default function AppsSettings() {
     } = useSettingsFormState({
         tgAutoSwitchOnWake: { key: "apps.telegram.autoSwitchOnWake", defaultValue: true },
         tgRespondToKiriPrefix: { key: "apps.telegram.respondToKiriPrefix", defaultValue: false },
+        tgReactionTool: { key: "apps.telegram.tools.reaction.enabled", defaultValue: false },
+        tgEditMessageTool: { key: "apps.telegram.tools.editMessage.enabled", defaultValue: false },
+        tgDeleteMessageTool: { key: "apps.telegram.tools.deleteMessage.enabled", defaultValue: false },
+        tgPollTool: { key: "apps.telegram.tools.poll.enabled", defaultValue: false },
+        tgPinTool: { key: "apps.telegram.tools.pin.enabled", defaultValue: false },
     });
 
     function onSave() {
@@ -60,6 +65,62 @@ export default function AppsSettings() {
                                 label={
                                     <FormLabel changed={settings.tgRespondToKiriPrefix.isChanged}>
                                         Respond when message starts with &quot;Kiri&quot; / &quot;Кири&quot;
+                                    </FormLabel>
+                                }
+                            />
+                            <h3>Agent tools</h3>
+                            <Checkbox
+                                className={s.thin}
+                                disabled={loading || !!anyError}
+                                checked={settings.tgReactionTool.value}
+                                onChange={settings.tgReactionTool.setValue}
+                                label={
+                                    <FormLabel changed={settings.tgReactionTool.isChanged}>
+                                        Allow reacting to messages
+                                    </FormLabel>
+                                }
+                            />
+                            <Checkbox
+                                className={s.thin}
+                                disabled={loading || !!anyError}
+                                checked={settings.tgEditMessageTool.value}
+                                onChange={settings.tgEditMessageTool.setValue}
+                                label={
+                                    <FormLabel changed={settings.tgEditMessageTool.isChanged}>
+                                        Allow editing the bot&apos;s own messages
+                                    </FormLabel>
+                                }
+                            />
+                            <Checkbox
+                                className={s.thin}
+                                disabled={loading || !!anyError}
+                                checked={settings.tgDeleteMessageTool.value}
+                                onChange={settings.tgDeleteMessageTool.setValue}
+                                label={
+                                    <FormLabel changed={settings.tgDeleteMessageTool.isChanged}>
+                                        Allow deleting the bot&apos;s own messages
+                                    </FormLabel>
+                                }
+                            />
+                            <Checkbox
+                                className={s.thin}
+                                disabled={loading || !!anyError}
+                                checked={settings.tgPollTool.value}
+                                onChange={settings.tgPollTool.setValue}
+                                label={
+                                    <FormLabel changed={settings.tgPollTool.isChanged}>
+                                        Allow sending polls
+                                    </FormLabel>
+                                }
+                            />
+                            <Checkbox
+                                className={s.thin}
+                                disabled={loading || !!anyError}
+                                checked={settings.tgPinTool.value}
+                                onChange={settings.tgPinTool.setValue}
+                                label={
+                                    <FormLabel changed={settings.tgPinTool.isChanged}>
+                                        Allow pinning messages
                                     </FormLabel>
                                 }
                             />

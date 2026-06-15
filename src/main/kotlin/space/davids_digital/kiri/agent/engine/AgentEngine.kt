@@ -55,7 +55,6 @@ class AgentEngine(
 ) : AgentToolProvider {
     companion object {
         private const val RECOVERY_TIMEOUT_MS = 10000L
-        private const val TEXT_ONLY_RESPONSE_WARN_THRESHOLD = 3
         private const val TEXT_ONLY_RESPONSE_STOP_THRESHOLD = 5
     }
 
@@ -251,14 +250,12 @@ class AgentEngine(
             consecutiveTextOnlyResponses = 0
         } else {
             consecutiveTextOnlyResponses++
+            addSimpleText("system", "Warning: you MUST call tools. Text-only responses are not allowed in agent mode.")
             if (consecutiveTextOnlyResponses >= TEXT_ONLY_RESPONSE_STOP_THRESHOLD) {
                 log.error("Model produced $consecutiveTextOnlyResponses consecutive text-only responses, stopping to prevent credit drain")
                 addSimpleText("system", "Engine stopped: model is not calling tools (possible credit drain).")
                 consecutiveTextOnlyResponses = 0
                 softStop()
-            } else if (consecutiveTextOnlyResponses >= TEXT_ONLY_RESPONSE_WARN_THRESHOLD) {
-                log.warn("Model produced $consecutiveTextOnlyResponses consecutive text-only responses")
-                addSimpleText("system", "Warning: you MUST call tools. Text-only responses are not allowed in agent mode.")
             }
         }
     }
