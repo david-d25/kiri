@@ -54,6 +54,7 @@ data class TelegramMessageEntity(
         PRE,
         TEXT_LINK,
         TEXT_MENTION,
-        CUSTOM_EMOJI
+        CUSTOM_EMOJI,
+        DATE_TIME       // a clickable date/time, added in Bot API 9.5
     }
 }

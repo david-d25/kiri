@@ -4,17 +4,14 @@ import com.pengrad.telegrambot.TelegramBot
 import com.pengrad.telegrambot.TelegramException
 import com.pengrad.telegrambot.UpdatesListener.CONFIRMED_UPDATES_ALL
 import com.pengrad.telegrambot.model.Chat
+import com.pengrad.telegrambot.model.Message
 import com.pengrad.telegrambot.model.Update
 import com.pengrad.telegrambot.model.User
-import com.pengrad.telegrambot.model.Message
-import com.pengrad.telegrambot.model.reaction.ReactionType
 import com.pengrad.telegrambot.model.reaction.ReactionTypeEmoji
-import com.pengrad.telegrambot.model.request.InputMediaDocument
-import com.pengrad.telegrambot.model.request.InputMediaPhoto
-import com.pengrad.telegrambot.model.request.InputPollOption
-import com.pengrad.telegrambot.model.request.LabeledPrice
-import com.pengrad.telegrambot.model.request.ReplyParameters
+import com.pengrad.telegrambot.model.request.*
 import com.pengrad.telegrambot.request.*
+import com.pengrad.telegrambot.model.request.richmessages.InputRichMessage
+import com.pengrad.telegrambot.request.richmessages.SendRichMessage
 import com.pengrad.telegrambot.response.BaseResponse
 import com.pengrad.telegrambot.response.MessagesResponse
 import com.pengrad.telegrambot.response.SendResponse
@@ -36,16 +33,11 @@ import org.springframework.stereotype.Service
 import space.davids_digital.kiri.AppProperties
 import space.davids_digital.kiri.model.telegram.*
 import space.davids_digital.kiri.orm.service.SettingOrmService
-import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
-import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
-import space.davids_digital.kiri.orm.service.telegram.TelegramMessageReactionsOrmService
-import space.davids_digital.kiri.orm.service.telegram.TelegramPollAnswerOrmService
-import space.davids_digital.kiri.orm.service.telegram.TelegramPollOrmService
-import space.davids_digital.kiri.orm.service.telegram.TelegramUserOrmService
+import space.davids_digital.kiri.orm.service.telegram.*
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications
 import space.davids_digital.kiri.service.exception.ServiceException
 import java.time.OffsetDateTime
-import java.util.UUID
+import java.util.*
 import kotlin.math.min
 import kotlin.time.Duration.Companion.seconds
 
@@ -63,6 +55,7 @@ class TelegramService(
 ) {
     companion object {
         private const val MAX_MESSAGE_LENGTH = 4_096
+        private const val MAX_RICH_MESSAGE_LENGTH = 32_768
         private const val MAX_CAPTION_LENGTH = 1_024
         private const val MAX_MEDIA_GROUP_SIZE = 10
         private const val MAX_MESSAGES_PER_SECOND_FREE = 30
@@ -186,7 +179,7 @@ class TelegramService(
         images: List<ByteArray> = emptyList(),
         replyMarkup: TelegramInlineKeyboardMarkup? = null,
         disableNotification: Boolean = false,
-        messageThreadId: Int? = null,
+        messageThreadId: Long? = null,
         replyToMessageId: Int? = null
     ) {
         send(chatId) {
@@ -243,6 +236,36 @@ class TelegramService(
     suspend fun pinChatMessage(chatId: Long, messageId: Int, disableNotification: Boolean = false) {
         bot.execute(PinChatMessage(chatId, messageId).disableNotification(disableNotification))
             .checkNoErrors("Failed to pin message $messageId in chat $chatId")
+    }
+
+    /**
+     * Sends a rich message (Bot API 10.1) built from extended HTML. Unlike [send], rich messages support
+     * block-level structure (headings, lists, tables, quotations, collapsible details, code blocks, formulas) and
+     * a higher length limit, but cannot carry uploaded file bytes — media is referenced by http(s) URL inside the
+     * markup. The sent message's content lives in Telegram's `rich_message` tree (not flat text), so the source
+     * [html] is stored in [TelegramMessage.richMessage] for round-trip into the agent's own view.
+     */
+    suspend fun sendRichMessage(
+        chatId: Long,
+        html: String,
+        replyToMessageId: Int? = null,
+        disableNotification: Boolean = false,
+        messageThreadId: Long? = null
+    ): TelegramMessage {
+        require(html.isNotBlank()) { "Rich message must not be empty" }
+        require(html.length <= MAX_RICH_MESSAGE_LENGTH) {
+            "Rich message must be ≤ $MAX_RICH_MESSAGE_LENGTH characters, got ${html.length}"
+        }
+        val replyParams = replyToMessageId?.let { ReplyParameters(it) }
+        val request = SendRichMessage(chatId, InputRichMessage().html(html)).apply {
+            disableNotification(disableNotification)
+            messageThreadId?.let { messageThreadId(it) }
+            replyParams?.let { replyParameters(it) }
+        }
+        rateLimiter.acquire()
+        val sent = bot.execute(request).checkNoErrors("Failed to send rich message to chat $chatId").message()
+        val model = mapper.toModel(sent) ?: error("Mapper returned null for sent rich message in chat $chatId")
+        return messageOrm.save(model.copy(richMessage = html, seen = true))
     }
 
     suspend fun unpinChatMessage(chatId: Long, messageId: Int) {
@@ -421,7 +444,7 @@ class TelegramService(
         attachments: List<TelegramOutgoingAttachment>,
         replyMarkup: TelegramInlineKeyboardMarkup?,
         disableNotification: Boolean,
-        messageThreadId: Int?,
+        messageThreadId: Long?,
         replyToMessageId: Int?
     ): List<BaseRequest<*, *>> {
         val firstLimit = if (attachments.isNotEmpty()) MAX_CAPTION_LENGTH else MAX_MESSAGE_LENGTH
@@ -449,7 +472,7 @@ class TelegramService(
         attachments: List<TelegramOutgoingAttachment>,
         replyMarkup: TelegramInlineKeyboardMarkup?,
         disableNotification: Boolean,
-        messageThreadId: Int?,
+        messageThreadId: Long?,
         replyToMessageId: Int?
     ): BaseRequest<*, *> {
         require(attachments.size <= MAX_MEDIA_GROUP_SIZE) { "Telegram allows up to $MAX_MEDIA_GROUP_SIZE attachments per message" }
@@ -493,7 +516,7 @@ class TelegramService(
             }
 
             else -> {
-                val media = attachments.mapIndexed { index, att ->
+                val media: List<InputMedia<*>> = attachments.mapIndexed { index, att ->
                     when (att) {
                         is TelegramOutgoingAttachment.Photo -> InputMediaPhoto(att.data)
                         is TelegramOutgoingAttachment.Document -> InputMediaDocument(att.data).apply {

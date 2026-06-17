@@ -165,7 +165,7 @@ class TelegramMessageEntity {
         orphanRemoval = true,
         targetEntity = TelegramMessageEntityEntity::class
     )
-    var captionEntities: List<TelegramMessageEntityEntity> = mutableListOf()
+    var captionEntities: MutableList<TelegramMessageEntityEntity> = mutableListOf()
 
     @Column(name = "show_caption_above_media")
     var showCaptionAboveMedia: Boolean = false
@@ -361,4 +361,7 @@ class TelegramMessageEntity {
 
     @Column(name = "seen")
     var seen: Boolean = false
+
+    @Column(name = "rich_message")
+    var richMessage: String? = null
 }

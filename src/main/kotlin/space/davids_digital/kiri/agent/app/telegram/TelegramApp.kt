@@ -24,11 +24,10 @@ import space.davids_digital.kiri.agent.tool.AgentToolParameter
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.model.telegram.TelegramChat
 import space.davids_digital.kiri.orm.entity.telegram.TelegramMessageEntity
+import space.davids_digital.kiri.orm.service.SettingOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramChatOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramMessageOrmService
 import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications
-import space.davids_digital.kiri.orm.service.SettingOrmService
-import space.davids_digital.kiri.orm.specifications.telegram.TelegramMessageSpecifications.chatId
 import space.davids_digital.kiri.service.TelegramDonationService
 import space.davids_digital.kiri.service.TelegramNotificationService
 import space.davids_digital.kiri.service.TemporaryFilesService
@@ -62,6 +61,7 @@ class TelegramApp(
     private val deleteMessageToolEnabled by settings.declareBoolean("apps.telegram.tools.deleteMessage.enabled", false)
     private val pollToolEnabled by settings.declareBoolean("apps.telegram.tools.poll.enabled", false)
     private val pinToolEnabled by settings.declareBoolean("apps.telegram.tools.pin.enabled", false)
+    private val richMessageToolEnabled by settings.declareBoolean("apps.telegram.tools.richMessage.enabled", false)
     private val minHoursBetweenDonationInvoicesPerChat by settings.declareLong(
         "payments.minHoursBetweenInvoicesPerChat",
         24
@@ -91,6 +91,7 @@ class TelegramApp(
                 add(::pinMessage)
                 add(::unpinMessage)
             }
+            if (richMessageToolEnabled) add(::sendRich)
             if (donationsEnabled) {
                 add(::sendDonationInvoice)
                 add(::refundDonation)
@@ -513,12 +514,12 @@ class TelegramApp(
     suspend fun send(
         @AgentToolParameter(
             description = "message text; " +
-                    "Supported HTML tags: b, i, u, s, tg-spoiler, a[href], tg-emoji[emoji-id], code, pre, " +
+                    "Supported HTML tags: b, i, u, s, tg-spoiler, a[href], code, pre, " +
                     "blockquote, blockquote[expandable]."
         )
         message: String,
 
-        @AgentToolParameter(description = "id of message to reply to, useful if message is old")
+        @AgentToolParameter(description = "optional id of message to reply to, useful if message is old")
         replyTo: Int? = null,
 
         @AgentToolParameter(description = "photo filenames from temporary files; photos are compressed as JPEG")
@@ -537,6 +538,31 @@ class TelegramApp(
             replyToMessageId = replyTo
         }
         return "sent"
+    }
+
+    @AgentToolMethod(
+        description = "Send a rich message with extended formatting. Supported html tags: " +
+                "b, i, u, s, h1..h6, p, ul/ol/li, pre { code[language] }, mark, sub, sup, tg-spoiler, a[href, name?], tg-math, " +
+                "tg-math-block, table[bordered?, striped?] { caption, tr, th, td[colspan, rowspan, align, valign] }, " +
+                "details[open?] { summary }, blockquote { cite }, hr, br, img[src, alt?], video[src], audio[src], footer, " +
+                "tg-reference[name], tg-map[lat, long, zoom], aside { cite }, input[type=\"checkbox\", checked?]. " +
+                "Math blocks use raw LaTeX. Attachments not supported. Up to 32768 characters."
+    )
+    suspend fun sendRich(
+        @AgentToolParameter(description = "message body as extended HTML")
+        message: String,
+        @AgentToolParameter(description = "optional id of a message to reply to, for older messages")
+        replyTo: Int? = null
+    ): String {
+        val chatId = selectedChatId ?: return "Chat not opened"
+        return try {
+            telegram.sendRichMessage(chatId, message, replyTo)
+            "sent"
+        } catch (e: IllegalArgumentException) {
+            "Invalid rich message: ${e.message}"
+        } catch (e: Exception) {
+            "Failed to send rich message: ${e.message}"
+        }
     }
 
     @OnAgentWake

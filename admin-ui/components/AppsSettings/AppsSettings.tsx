@@ -24,6 +24,7 @@ export default function AppsSettings() {
         tgDeleteMessageTool: { key: "apps.telegram.tools.deleteMessage.enabled", defaultValue: false },
         tgPollTool: { key: "apps.telegram.tools.poll.enabled", defaultValue: false },
         tgPinTool: { key: "apps.telegram.tools.pin.enabled", defaultValue: false },
+        tgRichMessageTool: { key: "apps.telegram.tools.richMessage.enabled", defaultValue: false },
     });
 
     function onSave() {
@@ -121,6 +122,17 @@ export default function AppsSettings() {
                                 label={
                                     <FormLabel changed={settings.tgPinTool.isChanged}>
                                         Allow pinning messages
+                                    </FormLabel>
+                                }
+                            />
+                            <Checkbox
+                                className={s.thin}
+                                disabled={loading || !!anyError}
+                                checked={settings.tgRichMessageTool.value}
+                                onChange={settings.tgRichMessageTool.setValue}
+                                label={
+                                    <FormLabel changed={settings.tgRichMessageTool.isChanged}>
+                                        Allow sending rich messages
                                     </FormLabel>
                                 }
                             />
