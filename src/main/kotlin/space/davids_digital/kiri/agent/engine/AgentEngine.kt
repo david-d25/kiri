@@ -433,7 +433,7 @@ class AgentEngine(
         description = "Wait for a specified amount of time. " +
                 "Notifications (i.e. chat mentions) will wake you up. "
     )
-    suspend fun pause(hours: Long, minutes: Long, seconds: Long) {
+    suspend fun pause(hours: Long = 0, minutes: Long = 0, seconds: Long = 0) {
         val effectiveSeconds = hours * 3600 + minutes * 60 + seconds
         log.debug("Agent is going to sleep for $effectiveSeconds seconds")
         val sleptAt = System.currentTimeMillis()
