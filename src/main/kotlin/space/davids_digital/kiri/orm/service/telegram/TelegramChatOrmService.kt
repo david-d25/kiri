@@ -41,6 +41,11 @@ class TelegramChatOrmService(
     }
 
     @Transactional(readOnly = true)
+    fun countAllEnabled(): Long {
+        return repo.countAllEnabled()
+    }
+
+    @Transactional(readOnly = true)
     fun findById(id: Long): TelegramChat? {
         return repo.findById(id).map(::toModel).orElse(null)
     }

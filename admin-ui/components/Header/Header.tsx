@@ -16,7 +16,6 @@ export default function Header() {
                 <HeaderNavButton url="/calendar">Calendar</HeaderNavButton>
                 <HeaderNavButton url="/tg-chats">Telegram Chats</HeaderNavButton>
                 <HeaderNavButton url="/donations">Donations</HeaderNavButton>
-                <HeaderNavButton url="/files">Files</HeaderNavButton>
                 <HeaderNavButton url="/apps">Apps</HeaderNavButton>
                 <HeaderNavButton url="/integrations">Integrations</HeaderNavButton>
                 <HeaderNavButton url="/stats">Stats</HeaderNavButton>

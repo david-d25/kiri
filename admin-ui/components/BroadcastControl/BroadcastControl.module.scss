@@ -1,0 +1,133 @@
+.root {
+  padding: 20px 20px 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.recipients {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.progressHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 0.9em;
+}
+
+.progressStatus {
+  font-weight: 600;
+
+  &[data-status='FAILED'] {
+    color: var(--color-error, #c25);
+  }
+}
+
+.progressCounts {
+  margin-left: auto;
+  color: var(--text-secondary);
+}
+
+.progressBar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: var(--text-secondary);
+  transition: width 0.3s ease;
+
+  &[data-status='COMPLETED'] {
+    background: var(--text-primary);
+  }
+
+  &[data-status='FAILED'] {
+    background: var(--color-error, #c25);
+  }
+}
+
+.failuresHeader {
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+.failures {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  font-size: 0.9em;
+}
+
+.failure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+}
+
+.failureChat {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.failureChatId {
+  color: var(--text-secondary);
+  font-family: monospace;
+  font-size: 0.85em;
+}
+
+.failureError {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.failuresTruncated {
+  color: var(--text-secondary);
+}

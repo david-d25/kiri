@@ -2,6 +2,7 @@ package space.davids_digital.kiri.agent.frame
 
 import space.davids_digital.kiri.llm.ChatCompletionToolUse
 import space.davids_digital.kiri.llm.ChatCompletionToolUseResult
+import space.davids_digital.kiri.agent.engine.AgentEngine
 
 class ToolCallFrame(
     val toolUse: ChatCompletionToolUse,

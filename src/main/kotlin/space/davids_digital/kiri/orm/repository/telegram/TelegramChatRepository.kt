@@ -20,4 +20,10 @@ interface TelegramChatRepository:
             where metadata.enabled
     """)
     fun findAllEnabled(pageable: Pageable): Page<TelegramChatEntity>
+    @Query("""
+        select count(chat) from TelegramChatEntity chat
+            left join TelegramChatMetadataEntity metadata on chat.id = metadata.chatId
+            where metadata.enabled
+    """)
+    fun countAllEnabled(): Long
 }

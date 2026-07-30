@@ -9,7 +9,7 @@ object CommandUtils {
      * Checks if the given message is a command.
      * The rules are:
      * * If the chat is a group (that is, [TelegramChat.Type.GROUP] or [TelegramChat.Type.SUPERGROUP]) and the message
-     * has the format '@botusername /command [args...]', it's a command.
+     * has the format '@botusername /command <args...>', it's a command.
      * * If the chat is private (one-to-one) and the message begins with '/command', it's a command.
      * * In all other cases, it's not a command.
      *
