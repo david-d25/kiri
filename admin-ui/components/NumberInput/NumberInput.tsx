@@ -52,7 +52,7 @@ export default function NumberInput(props: Props) {
             return;
         }
         if (isNaN(+value)) {
-            setInternalError('Это должно быть число');
+            setInternalError('This must be a number');
             return;
         } else {
             props.onChange(clamp(+value, props.minValue ?? null, props.maxValue ?? null));

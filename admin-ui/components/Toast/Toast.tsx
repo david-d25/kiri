@@ -145,7 +145,7 @@ export default function Toast({
                 <button
                     className={styles.toastCloseButton}
                     onClick={handleRemove}
-                    aria-label="Закрыть уведомление"
+                    aria-label="Close notification"
                 >
                     ×
                 </button>

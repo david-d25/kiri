@@ -7,6 +7,7 @@ import space.davids_digital.kiri.model.telegram.TelegramUser
 import space.davids_digital.kiri.orm.service.UserSessionOrmService
 import space.davids_digital.kiri.orm.service.telegram.TelegramUserOrmService
 import java.security.SecureRandom
+import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -16,6 +17,10 @@ class UserSessionService(
     private val telegramUserOrm: TelegramUserOrmService,
     private val telegramUserMetadataService: TelegramUserMetadataService
 ) {
+    companion object {
+        private val SESSION_LIFETIME: Duration = Duration.ofDays(30)
+    }
+
     fun createSession(
         userId: Long,
         firstName: String,
@@ -29,7 +34,7 @@ class UserSessionService(
             id = UUID.randomUUID(),
             userId = userId,
             token = createRandomSessionToken(),
-            validUntil = null,
+            validUntil = ZonedDateTime.now().plus(SESSION_LIFETIME),
             firstName = firstName,
             lastName = lastName,
             username = username,

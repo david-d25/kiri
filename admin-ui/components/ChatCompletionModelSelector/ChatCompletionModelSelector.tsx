@@ -87,8 +87,8 @@ export default function (props: ChatCompletionModelSelectorProps) {
             />
             { modelsRequest.data && modelOptions.length == 0 && (
                 <InfoPanel minimalistic borderless type={'warning'} className={s.infoPanel}>
-                    Нет доступных моделей. Настройте <Link href={'/integrations'}>интеграции</Link> с
-                    AI-провайдерами
+                    No models available. Set up <Link href={'/integrations'}>integrations</Link> with
+                    AI providers
                 </InfoPanel>
             ) }
         </div>

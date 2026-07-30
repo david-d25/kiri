@@ -149,7 +149,6 @@ class AgentEngine(
                 return
             }
             updateToolRegistry()
-            memoryManager.tick()
             val response = generateResponse(modelHandle, chatCompletionService)
             handleResponse(response)
             eventBus.events.emit(TickEvent())

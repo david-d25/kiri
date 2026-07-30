@@ -18,7 +18,6 @@ tasks.register<Copy>("prepareDeployment") {
         include("pages/**")
         include("services/**")
         include("styles/**")
-        include("util/**")
         into("frontend")
     }
 

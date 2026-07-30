@@ -3,6 +3,8 @@ package space.davids_digital.kiri.integration.telegram
 import org.springframework.stereotype.Service
 import space.davids_digital.kiri.AppProperties
 import java.security.MessageDigest
+import java.time.Duration
+import java.time.Instant
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -10,6 +12,14 @@ import javax.crypto.spec.SecretKeySpec
 class TelegramAuthService(
     private val appProperties: AppProperties
 ) {
+    companion object {
+        /**
+         * Telegram redirects to the callback immediately after login, so anything older than this is a
+         * replay of a captured callback URL rather than a fresh sign-in. The window also absorbs clock skew.
+         */
+        private val MAX_AUTH_AGE: Duration = Duration.ofMinutes(5)
+    }
+
     fun validateAuth(
         userId: Long,
         firstName: String?,
@@ -19,8 +29,15 @@ class TelegramAuthService(
         authDate: Long,
         hash: String,
     ): Boolean {
+        val age = Duration.between(Instant.ofEpochSecond(authDate), Instant.now()).abs()
+        if (age > MAX_AUTH_AGE) {
+            return false
+        }
         val computedHash = computeHash(userId, firstName, lastName, username, photoUrl, authDate)
-        return computedHash.equals(hash, ignoreCase = true)
+        return MessageDigest.isEqual(
+            computedHash.lowercase().toByteArray(Charsets.US_ASCII),
+            hash.lowercase().toByteArray(Charsets.US_ASCII)
+        )
     }
 
     fun computeHash(

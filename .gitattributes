@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+*.bat text eol=crlf
+gradlew text eol=lf
+
+*.jar binary
+*.woff2 binary
+*.webp binary
+*.jpg binary
+*.ico binary
+*.afdesign binary
+
+admin-ui/package-lock.json linguist-generated=true

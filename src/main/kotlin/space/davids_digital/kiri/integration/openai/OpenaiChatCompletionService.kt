@@ -64,7 +64,7 @@ class OpenaiChatCompletionService(
 
     @Cacheable(
         value = ["OpenAIChatCompletionService#getStatus"],
-        unless = "#result != T(space.davids_digital.nod3r.model.ExternalServiceGatewayStatus).READY",
+        unless = "#result != T(space.davids_digital.kiri.model.ExternalServiceGatewayStatus).READY",
         cacheManager = "oneHour"
     )
     override suspend fun getStatus(): ExternalServiceGatewayStatus {

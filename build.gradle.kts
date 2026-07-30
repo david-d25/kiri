@@ -35,6 +35,10 @@ kapt {
     }
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         freeCompilerArgs.add("-Xjsr305=strict")
@@ -67,9 +71,6 @@ dependencies {
 
     // Google GenAI
     implementation("com.google.genai:google-genai:1.38.0")
-
-    // Github
-    implementation("org.kohsuke:github-api:1.329")
 
     runtimeOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")

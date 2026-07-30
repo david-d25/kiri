@@ -6,6 +6,7 @@ RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-COPY --from=builder /app .
+COPY --from=builder --chown=node:node /app .
+USER node
 EXPOSE 3000
 CMD ["npm", "run", "start"]

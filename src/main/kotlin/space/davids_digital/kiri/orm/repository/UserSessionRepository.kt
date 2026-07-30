@@ -11,8 +11,8 @@ import java.util.*
 interface UserSessionRepository: CrudRepository<UserSessionEntity, UUID> {
     fun findAllByValidUntilBefore(validUntil: OffsetDateTime): Collection<UserSessionEntity>
 
-    @Query("select e from UserSessionEntity e where e.userId = :userId and (e.validUntil > :validUntil or e.validUntil is null)")
-    fun findAllByUserIdAndValidUntilAfterOrNull(userId: Long, validUntil: OffsetDateTime): Collection<UserSessionEntity>
+    @Query("select e from UserSessionEntity e where e.userId = :userId and e.validUntil > :validUntil")
+    fun findAllByUserIdAndValidUntilAfter(userId: Long, validUntil: OffsetDateTime): Collection<UserSessionEntity>
 
     fun deleteByValidUntilBefore(validUntil: OffsetDateTime)
 }

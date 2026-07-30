@@ -128,6 +128,11 @@ class TelegramApp(
     }
 
     private suspend fun selectChat(chat: TelegramChat): String {
+        // Mirrors listChats, which only lists enabled chats: without this the agent could be talked into
+        // pivoting into a chat the administrator never opted in, and reading or posting there.
+        if (!chat.metadata.enabled) {
+            return "Chat ${chat.id} is not enabled for the agent."
+        }
         val previousChatId = selectedChatId
         selectedChatId = chat.id
         if (previousChatId != null) {

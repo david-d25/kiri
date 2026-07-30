@@ -76,7 +76,7 @@ export default function(props: MultiTextInputProps) {
             { !maxItemsReached && !adding && (
                 <Button className={s.addButton} onClick={onAddClick} disabled={props.disabled}>
                     <AddIcon className={s.addIcon}/>
-                    Добавить
+                    Add
                 </Button>
             ) }
             { adding && (

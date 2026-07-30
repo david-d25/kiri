@@ -47,7 +47,7 @@ class UserSessionOrmService(
 
     @Transactional(readOnly = true)
     fun getUnexpiredUserSessionsByUserId(userId: Long): Collection<UserSession> {
-        return userSessionRepository.findAllByUserIdAndValidUntilAfterOrNull(userId, OffsetDateTime.now())
+        return userSessionRepository.findAllByUserIdAndValidUntilAfter(userId, OffsetDateTime.now())
             .map { toModel(it) }
             .toList()
     }

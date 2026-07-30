@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: kiri-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kiri
+      POSTGRES_USER: kiri
+      POSTGRES_PASSWORD: kiri
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - kiri-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kiri -d kiri"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kiri-postgres-data:

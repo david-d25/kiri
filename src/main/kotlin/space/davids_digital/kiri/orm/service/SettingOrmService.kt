@@ -204,29 +204,6 @@ class SettingOrmService(
         }
     }
 
-//    fun declareMutable(
-//        key: String,
-//        defaultValue: String,
-//        encrypt: Boolean = false,
-//        writeDefaultIfAbsent: Boolean = false,
-//    ): ReadWriteProperty<Any?, String> {
-//        return object : ReadWriteProperty<Any?, String> {
-//            override fun getValue(thisRef: Any?, property: KProperty<*>): String {
-//                val current = self.getValue(key)
-//                if (current != null) return current
-//
-//                if (writeDefaultIfAbsent) {
-//                    self.set(key, defaultValue, encrypt = encrypt)
-//                }
-//                return defaultValue
-//            }
-//
-//            override fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
-//                self.set(key, value, encrypt = encrypt)
-//            }
-//        }
-//    }
-
     private fun toModel(entity: SettingEntity): Setting {
         val rawValue = entity.value
         if (entity.encrypted) {

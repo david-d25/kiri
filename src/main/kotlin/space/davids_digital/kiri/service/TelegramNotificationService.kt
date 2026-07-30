@@ -1,5 +1,6 @@
 package space.davids_digital.kiri.service
 
+import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
@@ -16,7 +17,6 @@ import space.davids_digital.kiri.model.telegram.TelegramUser
 import space.davids_digital.kiri.orm.service.SettingOrmService
 import java.time.ZonedDateTime
 import java.util.concurrent.ConcurrentSkipListSet
-import javax.annotation.PostConstruct
 
 @Service
 class TelegramNotificationService (

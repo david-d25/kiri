@@ -13,14 +13,6 @@ export default function IntegrationSettings() {
         <div className={styles.root}>
             <Container>
                 <div className={styles.body}>
-                    <h2>GitHub</h2>
-                    <div className={styles.settings}>
-                        <Setting settingKey={'integration.github.apiKey'} label={'API key'} encrypt={true}/>
-                        <ExternalLink href="https://github.com/settings/personal-access-tokens">
-                            Create API key
-                        </ExternalLink>
-                    </div>
-
                     <h2>OpenAI</h2>
                     <div className={styles.settings}>
                         <Setting settingKey={'integration.openai.apiKey'} label={'API key'} encrypt={true}/>
@@ -44,10 +36,6 @@ export default function IntegrationSettings() {
                             Create API key
                         </ExternalLink>
                     </div>
-
-                    {/*For future:*/}
-                    {/*<h2>Discord</h2>*/}
-                    {/*<Setting settingKey={'integration.discord.apiKey'} label={'API-ключ'} encrypt={true}/>*/}
                 </div>
             </Container>
         </div>

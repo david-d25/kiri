@@ -35,7 +35,7 @@ class AppManager(
     @PostConstruct
     private fun init() {
         availableApps["telegram"] = { telegramAppProvider.getObject() }
-        availableApps["notepad"] = { scratchpadAppProvider.getObject() }
+        availableApps["scratchpad"] = { scratchpadAppProvider.getObject() }
         availableApps["image"] = { imageAppProvider.getObject() }
         availableApps["svg"] = { svgAppProvider.getObject() }
         availableApps["files"] = { filesAppProvider.getObject() }
