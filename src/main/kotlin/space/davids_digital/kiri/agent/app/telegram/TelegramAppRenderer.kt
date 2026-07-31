@@ -13,7 +13,6 @@ import space.davids_digital.kiri.integration.openai.OpenaiTranscriptionService
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.llm.ChatCompletionImageType
 import space.davids_digital.kiri.model.telegram.*
-import space.davids_digital.kiri.service.TelegramChatService
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit.MINUTES
@@ -21,7 +20,6 @@ import java.time.temporal.ChronoUnit.MINUTES
 @Component
 class TelegramAppRenderer (
     private val service: TelegramService,
-    private val telegramChatService: TelegramChatService,
     private val transcriptionService: OpenaiTranscriptionService
 ) {
     companion object {
@@ -237,6 +235,7 @@ class TelegramAppRenderer (
 
         // Text content
         message.text?.let { line(toHtml(it.safe(), message.entities)) }
+        message.richMessage?.let { line("[rich message] ${it.safe()}") }
 
         // Photos — keep Image ContentPart
         if (message.photo.isNotEmpty()) {
@@ -315,6 +314,8 @@ class TelegramAppRenderer (
             val buttons = markup.inlineKeyboard.flatten()
             line("[${buttons.size} button(s): ${buttons.joinToString(", ") { "\"${it.text.safe(30)}\"" }}]")
         }
+
+        renderReactionsCompact(message)
     }
 
     private fun buildCompactFlags(message: TelegramMessage): String {
@@ -405,6 +406,7 @@ class TelegramAppRenderer (
             renderCaption(message.caption, message.captionEntities)
         }
         message.text?.let {                             line(toHtml(it.safe(), message.entities))                   }
+        message.richMessage?.let {                      renderRichMessage(it)                                       }
         message.sticker?.let {                          renderSticker(it)                                           }
         message.webAppData?.let {                       renderWebAppData()                                          }
         message.giveaway?.let {                         renderGiveaway(it)                                          }
@@ -487,6 +489,58 @@ class TelegramAppRenderer (
         if (message.isAutomaticForward) {
             line("<service>Automatically forwarded channel post</service>")
         }
+        renderReactions(message)
+    }
+
+    private fun FrameContentBuilder.renderRichMessage(html: String) {
+        // The bot authored this rich message as HTML, so show it back verbatim (not HTML-escaped) — consistent with
+        // how normal messages render real formatting tags. Only cap the length to protect the context window.
+        line("<rich-message>")
+        if (html.length > MAX_TEXT_LENGTH) {
+            line(html.substring(0, MAX_TEXT_LENGTH))
+            line("...<warning>rich message too long: ${html.length}/$MAX_TEXT_LENGTH, truncated</warning>")
+        } else {
+            line(html)
+        }
+        line("</rich-message>")
+    }
+
+    private fun FrameContentBuilder.renderReactions(message: TelegramMessage) {
+        val reactions = loadReactions(message)
+        if (reactions.isEmpty()) return
+        line("<reactions>")
+        for (reaction in reactions) {
+            line("${reactionSymbol(reaction)} × ${reaction.count}")
+        }
+        line("</reactions>")
+    }
+
+    private fun FrameContentBuilder.renderReactionsCompact(message: TelegramMessage) {
+        val reactions = loadReactions(message)
+        if (reactions.isEmpty()) return
+        line("[reactions: " + reactions.joinToString(", ") { "${reactionSymbolCompact(it)}×${it.count}" } + "]")
+    }
+
+    private fun loadReactions(message: TelegramMessage): List<TelegramMessageReaction> {
+        return try {
+            service.getReactions(message.chatId, message.messageId)
+        } catch (e: Exception) {
+            log.warn("Failed to load reactions for message {} in chat {}", message.messageId, message.chatId, e)
+            emptyList()
+        }
+    }
+
+    private fun reactionSymbol(reaction: TelegramMessageReaction): String = when {
+        reaction.paid -> "⭐ (paid reaction)"
+        reaction.customEmojiId != null ->
+            "${reaction.fallbackEmoji ?: "❓"} (custom)"
+        else -> reaction.emoji ?: "❓"
+    }
+
+    private fun reactionSymbolCompact(reaction: TelegramMessageReaction): String = when {
+        reaction.paid -> "⭐(paid)"
+        reaction.customEmojiId != null -> "${reaction.fallbackEmoji ?: "❓"}(custom)"
+        else -> reaction.emoji ?: "❓"
     }
 
     private fun FrameContentBuilder.renderDice(dice: TelegramDice) {

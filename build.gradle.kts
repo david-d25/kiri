@@ -4,18 +4,18 @@ import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
 
 allprojects {
-    version = "1.23.0"
+    version = "1.26.0"
 }
 
 plugins {
     id("org.springframework.boot") version "3.5.4"
     id("io.spring.dependency-management") version "1.1.7"
-    kotlin("jvm") version "2.1.10"
-    kotlin("kapt") version "2.1.10"
-    kotlin("plugin.allopen") version "2.1.10"
-    kotlin("plugin.spring") version "2.1.10"
-    kotlin("plugin.jpa") version "2.1.10"
-    kotlin("plugin.serialization") version "2.1.10"
+    kotlin("jvm") version "2.3.21"
+    kotlin("kapt") version "2.3.21"
+    kotlin("plugin.allopen") version "2.3.21"
+    kotlin("plugin.spring") version "2.3.21"
+    kotlin("plugin.jpa") version "2.3.21"
+    kotlin("plugin.serialization") version "2.3.21"
 }
 
 allOpen {
@@ -61,7 +61,7 @@ dependencies {
     kapt("org.mapstruct:mapstruct-processor:1.6.3")
 
     // Telegram
-    implementation("com.github.pengrad:java-telegram-bot-api:9.2.0")
+    implementation("com.github.pengrad:java-telegram-bot-api:10.1.0")
 
     // OpenAI
     implementation("com.openai:openai-java:4.18.0")
@@ -74,7 +74,7 @@ dependencies {
 
     runtimeOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.10")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.3.21")
     implementation("com.google.code.gson:gson:2.12.1")
     implementation("org.apache.commons:commons-text:1.14.0")
     implementation("org.postgresql:postgresql")

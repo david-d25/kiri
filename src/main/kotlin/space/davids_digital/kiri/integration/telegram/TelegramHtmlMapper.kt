@@ -7,8 +7,6 @@ import org.jsoup.nodes.TextNode
 import org.jsoup.parser.Parser
 import space.davids_digital.kiri.model.telegram.TelegramMessageEntity
 import space.davids_digital.kiri.model.telegram.TelegramMessageEntity.Type
-import kotlin.compareTo
-import kotlin.text.compareTo
 
 /**
  * Bidirectional mapper between Telegram raw text + entities and lightweight HTML understood by LLM.
@@ -242,6 +240,8 @@ object TelegramHtmlMapper {
         Type.PHONE_NUMBER -> "<a data-entity=\"${e.type.name.lowercase()}\">" to "</a>"
         // CUSTOM_EMOJI currently kept as raw char without markup.
         Type.CUSTOM_EMOJI -> null
+        // DATE_TIME is an auto-detected entity (Bot API 9.5); keep the underlying text as-is, no markup.
+        Type.DATE_TIME -> null
         // Bot commands are rare in content destined for LLM, still map as <span>.
         Type.BOT_COMMAND  -> "<span data-entity=\"bot_command\">" to "</span>"
     }

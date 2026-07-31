@@ -9,7 +9,7 @@ class TelegramMessageBuilder {
     val attachments: MutableList<TelegramOutgoingAttachment> = mutableListOf()
     var replyMarkup: TelegramInlineKeyboardMarkup? = null
     var disableNotification: Boolean = false
-    var messageThreadId: Int? = null
+    var messageThreadId: Long? = null
     var replyToMessageId: Int? = null
 
     fun html(html: String) {

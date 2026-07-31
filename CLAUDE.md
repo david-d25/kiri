@@ -2,7 +2,7 @@
 
 ## Project Overview
 Kiri is a self-driving LLM agent with a Telegram front end. Full-stack application:
-- **Backend:** Kotlin 2.1.10 + Spring Boot 3.5.4 (Gradle 8.14.3, JDK 21 toolchain)
+- **Backend:** Kotlin 2.3.21 + Spring Boot 3.5.4 (Gradle 8.14.3, JDK 21 toolchain)
 - **Frontend:** TypeScript + React 19 + Next.js 15 (Turbopack)
 - **Database:** PostgreSQL with Flyway migrations + pgvector
 - **Version:** see `version` in `build.gradle.kts`

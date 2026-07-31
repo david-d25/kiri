@@ -2,7 +2,7 @@ package space.davids_digital.kiri.model.telegram
 
 import java.time.ZonedDateTime
 
-class TelegramPoll (
+data class TelegramPoll (
     val id: String,
     /**
      * Poll question, 1-300 characters.

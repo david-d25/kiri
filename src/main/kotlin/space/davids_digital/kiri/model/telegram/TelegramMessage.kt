@@ -14,7 +14,7 @@ data class TelegramMessage (
     /**
      * Unique identifier of a message thread to which the message belongs; for supergroups only.
      */
-    val messageThreadId: Int? = null,
+    val messageThreadId: Long? = null,
     /**
      * Sender of the message; may be empty for messages sent to channels.
      * For backward compatibility, if the message was sent on behalf of a chat,
@@ -367,4 +367,10 @@ data class TelegramMessage (
      * Replaces the chat-level last-read cursor with a per-message flag.
      */
     val seen: Boolean = false,
+    /**
+     * Rich message content (Bot API 10.1). Rich messages carry a structured block tree instead of flat text +
+     * entities; we store the source HTML the bot sent via `sendRichMessage` here. A non-null value marks this as a
+     * rich message, in which case [text] is null.
+     */
+    val richMessage: String? = null,
 ): TelegramMaybeInaccessibleMessage(chatId, messageId)

@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import space.davids_digital.kiri.model.telegram.TelegramPoll
 import space.davids_digital.kiri.orm.mapper.telegram.TelegramPollEntityMapper
 import space.davids_digital.kiri.orm.repository.telegram.TelegramPollRepository
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class TelegramPollOrmService(
@@ -14,5 +15,10 @@ class TelegramPollOrmService(
     @Transactional
     fun save(model: TelegramPoll): TelegramPoll {
         return mapper.toModel(repo.save(mapper.toEntity(model)!!))!!
+    }
+
+    @Transactional(readOnly = true)
+    fun findById(id: String): TelegramPoll? {
+        return repo.findById(id).getOrNull()?.let(mapper::toModel)
     }
 }

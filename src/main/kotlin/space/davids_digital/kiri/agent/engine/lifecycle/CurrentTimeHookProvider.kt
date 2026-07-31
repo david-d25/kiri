@@ -26,7 +26,6 @@ class CurrentTimeHookProvider : LifecycleHookProvider {
         val dayOfYear = now.dayOfYear
         val daysInYear = if (now.toLocalDate().isLeapYear) 366 else 365
         val weekdayLong = now.dayOfWeek.fullName()
-        val weekdayShort = now.dayOfWeek.shortName()
         val monthLong = now.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
 
         val human = buildString {
@@ -37,16 +36,10 @@ class CurrentTimeHookProvider : LifecycleHookProvider {
 
         frames.addStatic {
             tag = "current_time"
-            attributes["iso"] = now.toOffsetDateTime().toString()
-            attributes["weekday"] = weekdayShort
-            attributes["week-of-year"] = weekOfYear.toString()
-            attributes["day-of-year"] = dayOfYear.toString()
-            attributes["zone"] = now.zone.id
             content = dataFrameContent { text(human) }
         }
     }
 
     private fun DayOfWeek.fullName() = getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-    private fun DayOfWeek.shortName() = getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
     private fun Int.pad() = toString().padStart(2, '0')
 }

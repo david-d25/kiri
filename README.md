@@ -80,7 +80,7 @@ automatically.
 
 **Agent apps**
 
-- `telegram` — read and send messages, react, browse chat history
+- `telegram` — read, send and edit messages, react, poll, pin, browse chat history
 - `calendar` — events with RFC 5545 recurrence rules
 - `scratchpad` — free-form notes that persist across ticks
 - `files` — read/write/edit temporary text files
@@ -194,8 +194,9 @@ Spring imports `./local/application-local.yml` and `./config/application.yml` if
 **Runtime settings** live in the database and are editable from the admin UI without a restart —
 provider API keys (encrypted), the selected model, the system prompt, reasoning and token budgets,
 Telegram behaviour toggles, and payment texts. Keys are namespaced: `agent.enabled`,
-`agent.engine.*`, `apps.telegram.*`, `integration.openai.apiKey` (and `.anthropic`,
-`.google.genAi`), `payments.*`.
+`agent.engine.*`, `apps.telegram.*` (including per-tool switches under
+`apps.telegram.tools.*.enabled` for reactions, polls, pins, message editing and rich messages),
+`integration.openai.apiKey` (and `.anthropic`, `.google.genAi`), `payments.*`.
 
 ## Deployment
 

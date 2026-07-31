@@ -3,7 +3,6 @@ package space.davids_digital.kiri.integration.anthropic
 import com.anthropic.client.AnthropicClient
 import com.anthropic.client.okhttp.AnthropicOkHttpClient
 import com.anthropic.core.*
-import com.anthropic.models.*
 import com.anthropic.models.messages.Base64ImageSource
 import com.anthropic.models.messages.CacheControlEphemeral
 import com.anthropic.models.messages.ContentBlockParam
@@ -19,6 +18,7 @@ import com.anthropic.models.messages.StopReason.Companion.TOOL_USE
 import com.anthropic.models.messages.TextBlockParam
 import com.anthropic.models.messages.ThinkingBlockParam
 import com.anthropic.models.messages.ThinkingConfigAdaptive
+import com.anthropic.models.messages.ThinkingConfigDisabled
 import com.anthropic.models.messages.ThinkingConfigEnabled
 import com.anthropic.models.messages.ThinkingConfigParam
 import com.anthropic.models.messages.Tool
@@ -197,6 +197,7 @@ class AnthropicChatCompletionService(
             "claude-opus-4-7",
             "claude-opus-4-8",
             "claude-sonnet-4-6",
+            "claude-sonnet-5",
         )
         if (supported.contains(modelId)) {
             return ChatCompletionModel.ReasoningType.OPTIONAL
@@ -227,6 +228,7 @@ class AnthropicChatCompletionService(
             "claude-opus-4-7",
             "claude-opus-4-8",
             "claude-sonnet-4-6",
+            "claude-sonnet-5",
         )
         return supported.contains(modelId)
     }
@@ -275,20 +277,32 @@ class AnthropicChatCompletionService(
             "claude-opus-4-7",
             "claude-opus-4-8",
             "claude-sonnet-4-6",
+            "claude-sonnet-5",
         )
         return adaptiveCapable.any { modelId.startsWith(it) }
     }
 
     /**
-     * True for models that reject any `temperature` other than 1.0 (returns 400).
-     * Currently Opus 4.7+; older models including Opus/Sonnet 4.6 still accept temperature.
+     * True for models that reject any non-default sampling parameter, including `temperature`
+     * (returns 400) — the safe path is to omit `temperature` entirely. Currently Opus 4.7+ and
+     * Sonnet 5; older models including Opus/Sonnet 4.6 still accept temperature.
      */
     private fun rejectsNonDefaultTemperature(modelId: String): Boolean {
         val rejectsTemperature = listOf(
             "claude-opus-4-7",
             "claude-opus-4-8",
+            "claude-sonnet-5",
         )
         return rejectsTemperature.any { modelId.startsWith(it) }
+    }
+
+    /**
+     * True for models where adaptive thinking is ON by default (e.g. Sonnet 5). For these we must
+     * send `thinking: {type: "disabled"}` to honor `reasoning.enabled = false`; for off-by-default
+     * adaptive models (Opus 4.7/4.8) omitting the thinking parameter is enough.
+     */
+    private fun thinkingOnByDefault(modelId: String): Boolean {
+        return modelId.startsWith("claude-sonnet-5")
     }
 
     private fun buildParams(request: ChatCompletionRequest) = MessageCreateParams.builder().apply {
@@ -327,6 +341,10 @@ class AnthropicChatCompletionService(
                     )
                 }
             )
+        } else if (thinkingOnByDefault(model)) {
+            // Sonnet 5 turns adaptive thinking on by default, so disable it explicitly to honor
+            // reasoning.enabled = false (Opus 4.7/4.8 are off by default and need no such param).
+            thinking(ThinkingConfigParam.ofDisabled(ThinkingConfigDisabled.builder().build()))
         }
         if (!rejectsNonDefaultTemperature(model)) {
             @Suppress("DEPRECATION")
