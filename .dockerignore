@@ -1,0 +1,3 @@
+# The backend image needs the jar and nothing else. admin-ui has its own.
+*
+!build/libs/kiri.jar

@@ -1,0 +1,75 @@
+# Stops and removes the running containers. By hand only.
+#
+# Leaves `.env` and `application.yml` on the server, so the next deploy — a
+# push to main or a manual run of Deploy — brings everything back as it was.
+# The database is outside this project and is never touched.
+
+name: Undeploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "kiri" to confirm
+        required: true
+      remove-images:
+        description: Also delete the pulled Kiri images from the server
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Shared with deploy, so the two never run over each other.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  undeploy:
+    name: Undeploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check inputs
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          if [ "$CONFIRM" != "kiri" ]; then
+            echo "::error::Confirmation does not match; nothing was done"
+            exit 1
+          fi
+          if [ -z "$HOST" ]; then
+            echo "::error::DEPLOY_HOST is not set"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Authorise
+        uses: ./.github/actions/ssh-setup
+        with:
+          key: ${{ secrets.DEPLOY_KEY }}
+          host: ${{ vars.DEPLOY_HOST }}
+          host-key: ${{ vars.DEPLOY_HOST_KEY }}
+          user: ${{ vars.DEPLOY_USER }}
+
+      # Images are removed by name rather than with `down --rmi all`, which
+      # would also try to remove nginx — an image other projects on the same
+      # host may be running.
+      - name: Stop and remove
+        env:
+          DIR: ${{ vars.DEPLOY_PATH }}
+          REMOVE_IMAGES: ${{ inputs.remove-images }}
+          IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+        run: |
+          ssh deploy-target "
+            set -eu
+            cd '$DIR'
+            docker compose down --remove-orphans
+            if [ '$REMOVE_IMAGES' = 'true' ]; then
+              docker image ls -q --filter 'reference=$IMAGE_PREFIX/*' \
+                | sort -u \
+                | xargs -r docker image rm -f
+            fi
+          "

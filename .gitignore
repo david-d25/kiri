@@ -27,3 +27,6 @@ config/
 # OS
 .DS_Store
 Thumbs.db
+
+# Per-server deployment settings and secrets
+deployment/application.yml

@@ -1,9 +1,10 @@
+# Checks on the way in. Nothing here publishes or deploys anything; pushes to
+# main are checked by the Deploy workflow, which runs the same build.
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

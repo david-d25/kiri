@@ -15,7 +15,7 @@ Kiri is a self-driving LLM agent with a Telegram front end. Full-stack applicati
 ./gradlew test           # Run tests (JUnit Platform)
 ./gradlew bootRun        # Run Spring Boot locally (port 8080)
 ```
-`./gradlew build` (without the leading colon) also builds `admin-ui` and the deployment zip, which is
+`./gradlew build` (without the leading colon) also builds `admin-ui`, which is
 slow — use `:build` while working on the backend.
 
 The Gradle daemon JVM is pinned to 21 in `gradle/gradle-daemon-jvm.properties` and is downloaded
@@ -31,10 +31,10 @@ npm run build            # Production build
 ```
 
 ### Deployment
-```bash
-./gradlew prepareDeployment   # Copies artifacts into deployment/build/staging
-./gradlew packageDeployment   # Creates docker-compose-<version>.zip
-```
+GitHub Actions: `deploy.yml` (push to `main`) builds both Docker images — `Dockerfile` (backend, copies
+`build/libs/kiri.jar`) and `admin-ui/Dockerfile` (Next standalone) — pushes them to GHCR and restarts
+`deployment/compose.yaml` on the VDS over SSH; `undeploy.yml` (manual) takes it down.
+See `deployment/README.md`.
 
 ### Local database
 ```bash
@@ -65,7 +65,7 @@ kiri/
 ├── src/main/resources/
 │   └── db/migration/     # Flyway SQL (V<n>__name.sql)
 ├── admin-ui/             # Next.js frontend (components/, pages/, hooks/, lib/, services/)
-├── deployment/           # Docker Compose overlay + Dockerfiles + nginx config
+├── deployment/           # Server-side compose stack + nginx config (shipped by CI)
 ├── local/                # Local dev config (gitignored overrides)
 └── build.gradle.kts      # Root Gradle build file
 ```
