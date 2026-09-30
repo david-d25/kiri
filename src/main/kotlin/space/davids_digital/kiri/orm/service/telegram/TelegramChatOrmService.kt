@@ -28,7 +28,8 @@ class TelegramChatOrmService(
     private val metadataRepo: TelegramChatMetadataRepository,
     private val mapper: TelegramChatEntityMapper,
     private val metadataMapper: TelegramChatMetadataEntityMapper,
-    private val telegramChatMetadataService: TelegramChatMetadataService
+    private val telegramChatMetadataService: TelegramChatMetadataService,
+    private val messageOrm: TelegramMessageOrmService,
 ) {
     @Transactional(readOnly = true)
     suspend fun findAll(pageable: Pageable): Page<TelegramChat> {
@@ -96,6 +97,8 @@ class TelegramChatOrmService(
 
     @Transactional
     fun save(chat: TelegramChat): TelegramChat {
+        // The cascade only inserts the message row; its media (video, sticker, ...) must exist first.
+        chat.pinnedMessage?.let(messageOrm::save)
         val chatEntity = mapper.toEntity(chat)!!
         val metadataEntity = metadataMapper.toEntity(chat.metadata, chat.id)!!
         val savedChatEntity = repo.save(chatEntity)
