@@ -28,14 +28,14 @@ abstract class TelegramChatDtoMapper {
     @Suppress("unused") // Used here
     @Named("smallPhotoUrl")
     fun smallPhotoUrl(chat: TelegramChat?): String? =
-        chat?.photo?.let {
-            telegramChatService.createChatPhotoUrl(it.smallFileId)
+        chat?.takeIf { it.photo != null }?.let {
+            telegramChatService.createChatPhotoUrl(it.id, TelegramChatService.PhotoSize.SMALL)
         }
 
     @Suppress("unused") // Used here
     @Named("bigPhotoUrl")
     fun bigPhotoUrl(chat: TelegramChat?): String? =
-        chat?.photo?.let {
-            telegramChatService.createChatPhotoUrl(it.bigFileId)
+        chat?.takeIf { it.photo != null }?.let {
+            telegramChatService.createChatPhotoUrl(it.id, TelegramChatService.PhotoSize.BIG)
         }
 }

@@ -198,6 +198,7 @@ class AnthropicChatCompletionService(
             "claude-opus-4-8",
             "claude-sonnet-4-6",
             "claude-sonnet-5",
+            "claude-sonnet-5-5",
         )
         if (supported.contains(modelId)) {
             return ChatCompletionModel.ReasoningType.OPTIONAL
@@ -229,6 +230,7 @@ class AnthropicChatCompletionService(
             "claude-opus-4-8",
             "claude-sonnet-4-6",
             "claude-sonnet-5",
+            "claude-sonnet-5-5",
         )
         return supported.contains(modelId)
     }
@@ -285,7 +287,7 @@ class AnthropicChatCompletionService(
     /**
      * True for models that reject any non-default sampling parameter, including `temperature`
      * (returns 400) — the safe path is to omit `temperature` entirely. Currently Opus 4.7+ and
-     * Sonnet 5; older models including Opus/Sonnet 4.6 still accept temperature.
+     * Sonnet 5/5.5 (prefix match); older models including Opus/Sonnet 4.6 still accept temperature.
      */
     private fun rejectsNonDefaultTemperature(modelId: String): Boolean {
         val rejectsTemperature = listOf(
@@ -297,12 +299,34 @@ class AnthropicChatCompletionService(
     }
 
     /**
-     * True for models where adaptive thinking is ON by default (e.g. Sonnet 5). For these we must
-     * send `thinking: {type: "disabled"}` to honor `reasoning.enabled = false`; for off-by-default
+     * True for models where adaptive thinking is ON by default (Sonnet 5, Sonnet 5.5). For these we
+     * must turn thinking off explicitly to honor `reasoning.enabled = false`; for off-by-default
      * adaptive models (Opus 4.7/4.8) omitting the thinking parameter is enough.
      */
     private fun thinkingOnByDefault(modelId: String): Boolean {
         return modelId.startsWith("claude-sonnet-5")
+    }
+
+    /**
+     * Sonnet 5.5 rejects `thinking: {type: "disabled"}` (400) — its lowest setting is
+     * `{type: "between_tools"}`, which only this model accepts.
+     */
+    private fun usesBetweenToolsToDisableThinking(modelId: String): Boolean {
+        return modelId.startsWith("claude-sonnet-5-5")
+    }
+
+    /** Models that reject forced tool use (`tool_choice` `any`/`tool` → 400). */
+    private fun rejectsForcedToolChoice(modelId: String): Boolean {
+        return modelId.startsWith("claude-sonnet-5-5")
+    }
+
+    /**
+     * Models that support server-side refusal fallback with `fallbacks: "default"`: on a
+     * `cyber`/`frontier_llm` refusal the API reruns the request on an older model instead of
+     * returning an empty `refusal` turn.
+     */
+    private fun supportsDefaultFallback(modelId: String): Boolean {
+        return modelId.startsWith("claude-sonnet-5-5")
     }
 
     private fun buildParams(request: ChatCompletionRequest) = MessageCreateParams.builder().apply {
@@ -342,9 +366,19 @@ class AnthropicChatCompletionService(
                 }
             )
         } else if (thinkingOnByDefault(model)) {
-            // Sonnet 5 turns adaptive thinking on by default, so disable it explicitly to honor
+            // Sonnet 5/5.5 turn adaptive thinking on by default, so turn it off explicitly to honor
             // reasoning.enabled = false (Opus 4.7/4.8 are off by default and need no such param).
-            thinking(ThinkingConfigParam.ofDisabled(ThinkingConfigDisabled.builder().build()))
+            if (usesBetweenToolsToDisableThinking(model)) {
+                // No SDK type for it yet. Valid only at effort `high` or below — we never set effort,
+                // so the API default (`high`) applies.
+                putAdditionalBodyProperty("thinking", JsonValue.from(mapOf("type" to "between_tools")))
+            } else {
+                thinking(ThinkingConfigParam.ofDisabled(ThinkingConfigDisabled.builder().build()))
+            }
+        }
+        if (supportsDefaultFallback(model)) {
+            putAdditionalHeader("anthropic-beta", "server-side-fallback-2026-07-01")
+            putAdditionalBodyProperty("fallbacks", JsonValue.from("default"))
         }
         if (!rejectsNonDefaultTemperature(model)) {
             @Suppress("DEPRECATION")
@@ -357,11 +391,21 @@ class AnthropicChatCompletionService(
                         .disableParallelToolUse(!request.tools.allowParallelUse)
                         .build()
                 )
-                ChatCompletionRequest.Tools.ToolChoice.REQUIRED -> ToolChoice.ofAny(
-                    ToolChoiceAny.builder()
-                        .disableParallelToolUse(!request.tools.allowParallelUse)
-                        .build()
-                )
+                // Forced tool use is a 400 on some models; fall back to auto — callers already
+                // handle a response without tool calls.
+                ChatCompletionRequest.Tools.ToolChoice.REQUIRED -> if (rejectsForcedToolChoice(model)) {
+                    ToolChoice.ofAuto(
+                        ToolChoiceAuto.builder()
+                            .disableParallelToolUse(!request.tools.allowParallelUse)
+                            .build()
+                    )
+                } else {
+                    ToolChoice.ofAny(
+                        ToolChoiceAny.builder()
+                            .disableParallelToolUse(!request.tools.allowParallelUse)
+                            .build()
+                    )
+                }
                 ChatCompletionRequest.Tools.ToolChoice.NONE -> ToolChoice.ofNone(ToolChoiceNone.builder().build())
             }
         )

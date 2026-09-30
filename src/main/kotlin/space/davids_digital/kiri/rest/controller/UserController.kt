@@ -20,6 +20,7 @@ import space.davids_digital.kiri.rest.dto.UserUpdateRequest
 import space.davids_digital.kiri.rest.mapper.UserDtoMapper
 import space.davids_digital.kiri.security.RequiresOwnerRole
 import space.davids_digital.kiri.service.TelegramChatService
+import space.davids_digital.kiri.service.TelegramChatService.PhotoSize
 import space.davids_digital.kiri.service.UserService
 import space.davids_digital.kiri.service.exception.ServiceException
 
@@ -53,8 +54,8 @@ class UserController(
             mapper.toDto(
                 user,
                 telegramUser,
-                chat?.photo?.smallFileId?.let { chatService.createChatPhotoUrl(it) },
-                chat?.photo?.bigFileId?.let { chatService.createChatPhotoUrl(it) }
+                chat?.takeIf { it.photo != null }?.let { chatService.createChatPhotoUrl(it.id, PhotoSize.SMALL) },
+                chat?.takeIf { it.photo != null }?.let { chatService.createChatPhotoUrl(it.id, PhotoSize.BIG) }
             )
         }
     }
@@ -68,8 +69,8 @@ class UserController(
         return mapper.toDto(
             createdUser,
             telegramUser,
-            chat?.photo?.smallFileId?.let { chatService.createChatPhotoUrl(it) },
-            chat?.photo?.bigFileId?.let { chatService.createChatPhotoUrl(it) }
+            chat?.takeIf { it.photo != null }?.let { chatService.createChatPhotoUrl(it.id, PhotoSize.SMALL) },
+            chat?.takeIf { it.photo != null }?.let { chatService.createChatPhotoUrl(it.id, PhotoSize.BIG) }
         )!!
     }
 
@@ -82,8 +83,8 @@ class UserController(
         return mapper.toDto(
             updatedUser,
             telegramUser,
-            chat?.photo?.smallFileId?.let { chatService.createChatPhotoUrl(it) },
-            chat?.photo?.bigFileId?.let { chatService.createChatPhotoUrl(it) }
+            chat?.takeIf { it.photo != null }?.let { chatService.createChatPhotoUrl(it.id, PhotoSize.SMALL) },
+            chat?.takeIf { it.photo != null }?.let { chatService.createChatPhotoUrl(it.id, PhotoSize.BIG) }
         )!!
     }
 

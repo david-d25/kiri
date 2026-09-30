@@ -13,6 +13,7 @@ import space.davids_digital.kiri.integration.openai.OpenaiTranscriptionService
 import space.davids_digital.kiri.integration.telegram.TelegramService
 import space.davids_digital.kiri.llm.ChatCompletionImageType
 import space.davids_digital.kiri.model.telegram.*
+import space.davids_digital.kiri.service.TelegramChatService
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit.MINUTES
@@ -20,6 +21,7 @@ import java.time.temporal.ChronoUnit.MINUTES
 @Component
 class TelegramAppRenderer (
     private val service: TelegramService,
+    private val chatService: TelegramChatService,
     private val transcriptionService: OpenaiTranscriptionService
 ) {
     companion object {
@@ -64,11 +66,17 @@ class TelegramAppRenderer (
                 line("</description>")
             }
             if (chat.photo != null) {
-                line("<chat-photo file-id=\"${chat.photo.bigFileId}\">")
-                try {
-                    renderImage(chat.photo.bigFileId)
+                val photo = try {
+                    runBlocking { chatService.getChatPhotoContent(chat.id, TelegramChatService.PhotoSize.BIG) }
                 } catch (e: Exception) {
-                    log.error("Failed to render chat photo for chat id=${chat.id}", e)
+                    log.warn("Failed to load chat photo for chat id=${chat.id}: ${e.message}")
+                    null
+                }
+                // The stored file_id may have been refreshed, so show the one that actually worked.
+                line("<chat-photo file-id=\"${photo?.fileId ?: chat.photo.bigFileId}\">")
+                if (photo != null) {
+                    renderImage(photo.bytes)
+                } else {
                     line("unavailable")
                 }
                 line("</chat-photo>")
@@ -1141,7 +1149,10 @@ class TelegramAppRenderer (
     }
 
     private fun FrameContentBuilder.renderImage(fileId: String) {
-        val file = runBlocking { service.getFileContent(fileId) }
+        renderImage(runBlocking { service.getFileContent(fileId) })
+    }
+
+    private fun FrameContentBuilder.renderImage(file: ByteArray) {
         val imageType = file.getImageType()
         if (imageType == null) {
             line("This image type is not supported by your Telegram App. " +
