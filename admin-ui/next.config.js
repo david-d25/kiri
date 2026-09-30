@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The Docker image ships only the traced server, not the whole project.
+  output: 'standalone',
   basePath: '/kiri',
   assetPrefix: '/kiri/',
   productionBrowserSourceMaps: false,

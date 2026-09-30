@@ -200,42 +200,21 @@ Telegram behaviour toggles, and payment texts. Keys are namespaced: `agent.enabl
 
 ## Deployment
 
-```bash
-./gradlew packageDeployment
-```
+Every push to `main` runs the **Deploy** workflow: it builds and tests the backend, builds the admin UI,
+publishes both as images to GHCR (`ghcr.io/david-d25/kiri/backend` and `/admin-ui`, tagged with the
+commit and the version) and, once a deploy host is configured, restarts the stack on it over SSH.
+**Undeploy** is its manual counterpart. [`deployment/README.md`](deployment/README.md) covers the
+one-time server and repository setup.
 
-Produces `deployment/build/distributions/docker-compose-<version>.zip` containing the backend jar,
-the frontend sources, Dockerfiles and an nginx config that serves the UI at `/kiri` and the API at
-`/kiri/api`. Unpack it on the target host and:
-
-```bash
-CONFIG_PATH=/path/to/application.yml docker compose up -d --build
-```
-
-The compose file expects an externally managed PostgreSQL instance and terminates plain HTTP on the
-published port, so put it behind your own TLS terminator — the auth cookies are `Secure` and will not
+On the host, `deployment/compose.yaml` runs an nginx gateway that serves the UI at `/kiri` and the API
+at `/kiri/api`. It expects an externally managed PostgreSQL instance and publishes plain HTTP on
+`127.0.0.1`, so put it behind your own TLS terminator — the auth cookies are `Secure` and will not
 survive a plain-HTTP origin.
 
-The mounted config must set at least:
-
-```yaml
-server:
-  servlet:
-    context-path: /kiri/api   # nginx forwards the full path; without this every API call 404s
-app:
-  frontend:
-    host: https://your.domain
-    cookiesDomain: your.domain
-  auth:
-    telegram:
-      callbackUrl: https://your.domain/kiri/api/auth/telegram/callback
-spring:
-  datasource:
-    url: jdbc:postgresql://your-db-host:5432/kiri
-```
-
-The defaults for all of these point at `localhost`, so leaving them out sends your login redirect to the
-wrong place. Remember to `/setdomain` your production domain with BotFather too.
+The mounted config ([`deployment/application.example.yml`](deployment/application.example.yml)) must
+set at least the context path, the frontend host and cookie domain, the Telegram callback URL and the
+datasource. The defaults for all of these point at `localhost`, so leaving them out sends your login
+redirect to the wrong place. Remember to `/setdomain` your production domain with BotFather too.
 
 ## Project layout
 
@@ -258,7 +237,7 @@ src/main/kotlin/space/davids_digital/kiri/
 └── service/          Application services
 
 admin-ui/             Next.js 15 admin panel (React 19, SCSS modules)
-deployment/           Docker Compose overlay and packaging
+deployment/           Compose stack and nginx config for the server
 ```
 
 ## Development
@@ -266,7 +245,7 @@ deployment/           Docker Compose overlay and packaging
 ```bash
 ./gradlew :build      # compile and test the backend
 ./gradlew test        # tests only
-./gradlew build       # everything, including the admin UI and the deployment zip
+./gradlew build       # everything, including the admin UI
 cd admin-ui && npm run build   # production build of the admin UI
 ```
 

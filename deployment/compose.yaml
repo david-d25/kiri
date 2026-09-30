@@ -1,0 +1,47 @@
+# Kiri as it runs on the VDS.
+#
+# Nothing is built here: both images come from GHCR, built by CI and tagged
+# with the commit. Nothing here should be reachable from the outside except
+# through the host's own TLS-terminating nginx.
+
+name: kiri
+
+x-logging: &logging
+  # Docker's default JSON driver grows without limit.
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:80"
+    volumes:
+      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+
+  backend:
+    image: ghcr.io/david-d25/kiri/backend:${TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    # The 'deploy' user's own uid, so the mounted config can stay owned by it
+    # with mode 600. Falls back to the image's non-root 1000.
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    volumes:
+      - ${CONFIG_PATH:-./application.yml}:/app/config/application.yml:ro
+    extra_hosts:
+      # PostgreSQL runs on the host, outside of this project.
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    image: ghcr.io/david-d25/kiri/admin-ui:${TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      - backend

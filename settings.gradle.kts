@@ -10,4 +10,4 @@ plugins {
 }
 
 rootProject.name = "kiri"
-include("admin-ui", "deployment")
+include("admin-ui")

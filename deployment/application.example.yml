@@ -1,0 +1,28 @@
+# Copy to `application.yml` next to compose.yaml (or wherever CONFIG_PATH
+# points) and fill it in. Not in git. Everything left out falls back to
+# src/main/resources/application.yml, whose defaults all point at localhost.
+
+server:
+  servlet:
+    context-path: /kiri/api   # nginx forwards the full path; without this every API call 404s
+
+app:
+  security:
+    encryptionKeyBase64:      # openssl rand -base64 32; losing it makes stored API keys unreadable
+  frontend:
+    host: https://your.domain
+    cookiesDomain: your.domain
+  auth:
+    telegram:
+      callbackUrl: https://your.domain/kiri/api/auth/telegram/callback
+      botUsername:
+  integration:
+    telegram:
+      botId:
+      apiKey:
+
+spring:
+  datasource:
+    url: jdbc:postgresql://host.docker.internal:5432/kiri
+    username: kiri
+    password:

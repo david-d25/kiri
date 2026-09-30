@@ -2,9 +2,10 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.Copy
 import org.gradle.kotlin.dsl.named
+import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 allprojects {
-    version = "1.27.0"
+    version = "1.28.0"
 }
 
 plugins {
@@ -47,6 +48,16 @@ tasks.withType<KotlinCompile>().configureEach {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+// The Dockerfile copies the jar by a fixed name, and the plain (non-executable)
+// jar is never deployed, so it is not built at all.
+tasks.named<BootJar>("bootJar") {
+    archiveFileName.set("${rootProject.name}.jar")
+}
+
+tasks.named<Jar>("jar") {
+    enabled = false
 }
 
 tasks.named<Copy>("processResources") {
