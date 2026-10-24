@@ -121,9 +121,10 @@ class AnthropicChatCompletionService(
     @EvictCacheOnException(cacheNames = ["AnthropicChatCompletionService#getStatus"])
     override suspend fun request(request: ChatCompletionRequest): ChatCompletionResponse {
         val client = requireClient()
-        val params = buildParams(mergeConsecutiveMessages(cleanup(optimize(request))))
+        val params = buildParams(mergeConsecutiveMessages(dropStaleReasoning(cleanup(optimize(request)))))
         val startedAt = System.nanoTime()
         val response = client.messages().create(params)
+        logInputTransformations(response)
         val parsed = parseResponse(response)
         val durationMs = (System.nanoTime() - startedAt) / 1_000_000
         val modelId = request.modelHandle.substringAfter('/')
@@ -329,6 +330,36 @@ class AnthropicChatCompletionService(
         return modelId.startsWith("claude-sonnet-5-5")
     }
 
+    /**
+     * Models that bind each thinking block to the system prompt, tool set and every message before it
+     * ("preserved thinking"). Replaying a block after any of those changed is a 400 for accounts
+     * created on or after 2026-08-31.
+     */
+    private fun bindsThinkingToConversation(modelId: String): Boolean {
+        return modelId.startsWith("claude-sonnet-5-5")
+    }
+
+    /**
+     * Drops reasoning the frame buffer marked stale (its prefix was trimmed, or the tool set changed)
+     * so that preserved-thinking models don't reject the request. This is the only guard with
+     * `between_tools`, which doesn't accept `block_binding`.
+     */
+    private fun dropStaleReasoning(request: ChatCompletionRequest): ChatCompletionRequest {
+        if (!bindsThinkingToConversation(request.modelHandle.substringAfter('/'))) return request
+        val messages = request.messages.mapNotNull { message ->
+            val content = message.content.filterNot { it is Message.ContentItem.Reasoning && it.stale }
+            if (content.isEmpty()) null else message.copy(content = content)
+        }
+        return request.copy(messages = messages)
+    }
+
+    private fun logInputTransformations(response: com.anthropic.models.messages.Message) {
+        val transformations = response._additionalProperties()["input_transformations"] as? JsonArray ?: return
+        if (transformations.values.isNotEmpty()) {
+            log.warn("Anthropic dropped or flagged replayed thinking blocks: {}", transformations.values)
+        }
+    }
+
     private fun buildParams(request: ChatCompletionRequest) = MessageCreateParams.builder().apply {
         val (provider, model) = request.modelHandle.split("/", limit = 2)
         require(provider == serviceHandle) { "Unsupported model provider: $provider" }
@@ -347,6 +378,7 @@ class AnthropicChatCompletionService(
         maxTokens(request.maxOutputTokens)
         messages(buildMessages(request.messages))
         tools(buildTools(request.tools))
+        val betas = mutableListOf<String>()
         val adaptiveThinking = useAdaptiveThinking(model)
         if (request.reasoning.enabled) {
             thinking(
@@ -354,6 +386,17 @@ class AnthropicChatCompletionService(
                     ThinkingConfigParam.ofAdaptive(
                         ThinkingConfigAdaptive.builder()
                             .display(ThinkingConfigAdaptive.Display.SUMMARIZED)
+                            .apply {
+                                if (bindsThinkingToConversation(model)) {
+                                    // Safety net for edits dropStaleReasoning doesn't know about: drop
+                                    // the mismatched blocks instead of failing the tick with a 400.
+                                    betas += "thinking-binding-controls-2026-08-01"
+                                    putAdditionalProperty(
+                                        "block_binding",
+                                        JsonValue.from(mapOf("prefix_mismatch_behavior" to "drop_block"))
+                                    )
+                                }
+                            }
                             .build()
                     )
                 } else {
@@ -377,8 +420,11 @@ class AnthropicChatCompletionService(
             }
         }
         if (supportsDefaultFallback(model)) {
-            putAdditionalHeader("anthropic-beta", "server-side-fallback-2026-07-01")
+            betas += "server-side-fallback-2026-07-01"
             putAdditionalBodyProperty("fallbacks", JsonValue.from("default"))
+        }
+        if (betas.isNotEmpty()) {
+            putAdditionalHeader("anthropic-beta", betas.joinToString(","))
         }
         if (!rejectsNonDefaultTemperature(model)) {
             @Suppress("DEPRECATION")

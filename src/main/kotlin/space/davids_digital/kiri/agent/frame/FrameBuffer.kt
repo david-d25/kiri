@@ -22,6 +22,24 @@ class FrameBuffer : Iterable<Frame> {
 
     var hardLimit = 32
 
+    /**
+     * Once [hardLimit] is exceeded, frames are dropped in one batch down to this size rather than one
+     * per append: between trims the history is append-only, which keeps reasoning replayable (see
+     * [epoch]) and the prompt cache warm.
+     */
+    val trimTarget get() = hardLimit * 2 / 3
+
+    /**
+     * Bumped whenever the history before the newest frame changes — a front trim, a clear, or an
+     * outside change such as a different tool set ([invalidateReasoning]). Some providers (Anthropic,
+     * from Claude Sonnet 5.5) bind reasoning to the exact history, system prompt and tools it was
+     * produced with and reject it once any of those change.
+     */
+    val epoch get() = epochInternal
+
+    @Volatile
+    private var epochInternal: Long = 0
+
     val size get() = frames.size
 
     data class Snapshot(
@@ -35,13 +53,17 @@ class FrameBuffer : Iterable<Frame> {
 
     fun clear() = synchronized(lock) {
         frames.clear()
+        epochInternal++
         incrementSequenceCounter()
     }
 
     fun trim(keepLastN: Int) {
         synchronized(lock) {
-            while (frames.size > keepLastN) {
-                frames.poll()
+            if (frames.size > keepLastN) {
+                while (frames.size > keepLastN) {
+                    frames.poll()
+                }
+                epochInternal++
             }
             incrementSequenceCounter()
         }
@@ -63,14 +85,26 @@ class FrameBuffer : Iterable<Frame> {
         add(builder.build())
     }
 
+    fun addReasoning(content: String, signature: String, reasoningId: String?) = synchronized(lock) {
+        add(ReasoningFrame(content, signature, reasoningId, epoch))
+    }
+
+    fun invalidateReasoning() = synchronized(lock) {
+        epochInternal++
+    }
+
+    fun isStale(frame: ReasoningFrame) = frame.epoch < epoch
+
     override fun iterator(): Iterator<Frame> = sequence {
         yieldAll(frames)
     }.iterator()
 
     private fun trimLocked() {
-        while (frames.size > hardLimit) {
+        if (frames.size <= hardLimit) return
+        while (frames.size > trimTarget) {
             frames.poll()
         }
+        epochInternal++
     }
 
     private fun incrementSequenceCounter() {

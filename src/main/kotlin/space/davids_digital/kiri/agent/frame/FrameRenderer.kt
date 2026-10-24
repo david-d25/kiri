@@ -14,7 +14,7 @@ class FrameRenderer {
                 is ToolCallFrame -> renderToolCallFrame(frame)
                 is NativeWebSearchFrame -> assistantMessage { webSearch(frame.webSearch) }
                 is ReasoningFrame -> assistantMessage {
-                    reasoning(frame.reasoningId, frame.content, frame.signature)
+                    reasoning(frame.reasoningId, frame.content, frame.signature, stale = frames.isStale(frame))
                 }
             }
         }

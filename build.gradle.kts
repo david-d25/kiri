@@ -5,7 +5,7 @@ import org.gradle.kotlin.dsl.named
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 allprojects {
-    version = "1.29.1"
+    version = "1.30.0"
 }
 
 plugins {

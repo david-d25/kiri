@@ -35,7 +35,16 @@ data class ChatCompletionRequest (
 
             data class ToolUse (val toolUse: ChatCompletionToolUse) : ContentItem
             data class ToolResult (val toolResult: ChatCompletionToolUseResult) : ContentItem
-            data class Reasoning (val id: String?, val content: String?, val signature: String) : ContentItem
+            /**
+             * [stale]: the history, instructions or tools changed since this reasoning was produced.
+             * Providers that bind reasoning to the conversation can't replay it.
+             */
+            data class Reasoning (
+                val id: String?,
+                val content: String?,
+                val signature: String,
+                val stale: Boolean = false,
+            ) : ContentItem
             data class RedactedReasoning (val data: String) : ContentItem
         }
     }

@@ -93,8 +93,8 @@ open class ChatCompletionRequestMessageBuilder {
         content.add(ToolResult(ChatCompletionToolUseResultBuilder().apply(block).build()))
     }
 
-    fun reasoning(id: String?, reasoningContent: String, signature: String) {
-        content.add(ChatCompletionRequest.Message.ContentItem.Reasoning(id, reasoningContent, signature))
+    fun reasoning(id: String?, reasoningContent: String, signature: String, stale: Boolean = false) {
+        content.add(ChatCompletionRequest.Message.ContentItem.Reasoning(id, reasoningContent, signature, stale))
     }
 
     fun redactedReasoning(data: String) {

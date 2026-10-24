@@ -20,6 +20,7 @@ import space.davids_digital.kiri.agent.frame.*
 import space.davids_digital.kiri.agent.frame.dsl.dataFrameContent
 import space.davids_digital.kiri.agent.memory.MemoryManager
 import space.davids_digital.kiri.agent.tool.*
+import space.davids_digital.kiri.llm.ChatCompletionRequest
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Reasoning.Effort
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.AUTO
 import space.davids_digital.kiri.llm.ChatCompletionRequest.Tools.ToolChoice.REQUIRED
@@ -84,6 +85,8 @@ class AgentEngine(
     private val wakePending = AtomicBoolean(false)
 
     private var consecutiveTextOnlyResponses = 0
+
+    private var lastPrefixKey: PrefixKey? = null
 
     private val mutableState = MutableStateFlow(EngineState.PAUSED)
 
@@ -199,7 +202,31 @@ class AgentEngine(
         } else {
             maxOutputTokens
         }
-        val request = chatCompletionRequest {
+        var request = buildRequest(modelHandle, maxOutputTokensWithReasoning)
+        // Reasoning is bound to the instructions and tool set it was produced with, and apps open and
+        // close between ticks, so a change makes every earlier reasoning frame stale.
+        val prefixKey = PrefixKey(
+            request.instructions,
+            request.tools.functions.sortedBy { it.name },
+            request.tools.external,
+        )
+        if (lastPrefixKey != null && lastPrefixKey != prefixKey) {
+            frames.invalidateReasoning()
+            request = buildRequest(modelHandle, maxOutputTokensWithReasoning)
+        }
+        lastPrefixKey = prefixKey
+        log.info("${request.tools.functions.size} function tools available for this request")
+        return chatCompletionService.request(request)
+    }
+
+    private data class PrefixKey(
+        val instructions: String,
+        val functions: List<ChatCompletionRequest.Tools.Function>,
+        val external: ChatCompletionRequest.Tools.External,
+    )
+
+    private fun buildRequest(modelHandle: String, maxOutputTokensWithReasoning: Long) =
+        chatCompletionRequest {
             this.modelHandle = modelHandle
             this@chatCompletionRequest.instructions = this@AgentEngine.instructions
             maxOutputTokens = maxOutputTokensWithReasoning
@@ -234,9 +261,6 @@ class AgentEngine(
                 render(frames)
             }
         }
-        log.info("${request.tools.functions.size} function tools available for this request")
-        return chatCompletionService.request(request)
-    }
 
     private suspend fun handleResponse(response: ChatCompletionResponse) {
         for (item in response.content) {
@@ -274,8 +298,10 @@ class AgentEngine(
 
     private suspend fun handleResponseItem(item: ChatCompletionResponse.ContentItem.Reasoning) {
         val content = item.content
-        if (!content.isNullOrBlank()) {
-            frames.add(ReasoningFrame(content, item.signature, item.id))
+        // A signed block with no visible text (Anthropic's omitted display) still has to be replayed:
+        // thinking blocks are chained, so a gap invalidates every later block.
+        if (!content.isNullOrBlank() || item.signature.isNotBlank()) {
+            frames.addReasoning(content.orEmpty(), item.signature, item.id)
         }
     }
 
